@@ -241,6 +241,33 @@ paths:
                   $ref: "#/components/schemas/AuthorizationAuditLog"
         "401": {$ref: "#/components/responses/Unauthorized"}
         "403": {$ref: "#/components/responses/Forbidden"}
+  /users/search:
+    get:
+      operationId: searchOrganizationMembers
+      tags: [authorization]
+      summary: Search active organization members
+      description: Searches active users with active organization memberships by display name or email. Non-platform administrators are restricted to their active organization.
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema: {type: string, minLength: 2, maxLength: 100}
+        - name: limit
+          in: query
+          required: false
+          schema: {type: integer, minimum: 1, maximum: 50, default: 20}
+      responses:
+        "200":
+          description: Matching active organization members
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OrganizationMemberSearchResult"
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
   /users/{userId}/role-bindings:
     parameters:
       - {$ref: "#/components/parameters/UserId"}
@@ -1123,6 +1150,16 @@ components:
       properties:
         error: {type: string}
         policyVersion: {type: string, format: uuid}
+    OrganizationMemberSearchResult:
+      type: object
+      required: [userId, displayName, email, organizationId, organizationName, membershipRole]
+      properties:
+        userId: {type: string, format: uuid}
+        displayName: {type: string}
+        email: {type: string, format: email}
+        organizationId: {type: string, format: uuid}
+        organizationName: {type: string}
+        membershipRole: {$ref: "#/components/schemas/CanonicalRole"}
     UserRoleBinding:
       type: object
       required: [id, userId, organizationId, roleId, version, scopeType, status]

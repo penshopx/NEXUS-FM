@@ -398,6 +398,27 @@ test("authorization routes run through a real HTTP app with injected currentUser
     return { response, body: await response.json() as Record<string, unknown> | unknown[] };
   };
   try {
+    const [targetUser] = await db.select().from(usersTable).where(eq(usersTable.id, target.userId));
+    const [managerUser] = await db.select().from(usersTable).where(eq(usersTable.id, manager.userId));
+    assert.ok(targetUser && managerUser);
+
+    const platformSearch = await request(`/users/search?query=${encodeURIComponent(targetUser.email)}`);
+    assert.equal(platformSearch.response.status, 200);
+    assert.ok((platformSearch.body as Array<{ userId: string; organizationId: string }>)
+      .some((row) => row.userId === target.userId && row.organizationId === target.organizationId));
+
+    actorId = manager.userId;
+    const scopedOwnSearch = await request(`/users/search?query=${encodeURIComponent(managerUser.email)}`);
+    assert.equal(scopedOwnSearch.response.status, 200);
+    assert.ok((scopedOwnSearch.body as Array<{ userId: string; organizationId: string }>)
+      .some((row) => row.userId === manager.userId && row.organizationId === manager.organizationId));
+    const scopedCrossOrgSearch = await request(`/users/search?query=${encodeURIComponent(targetUser.email)}`);
+    assert.equal(scopedCrossOrgSearch.response.status, 200);
+    assert.deepEqual(scopedCrossOrgSearch.body, []);
+    const invalidSearch = await request("/users/search?query=x");
+    assert.equal(invalidSearch.response.status, 400);
+    actorId = platform.userId;
+
     const permissions = await request("/permissions");
     assert.equal(permissions.response.status, 200);
     const roles = await request("/roles");

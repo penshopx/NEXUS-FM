@@ -43,6 +43,7 @@ import type {
   MyPermissions,
   NotFoundResponse,
   OrganizationAccess,
+  OrganizationMemberSearchResult,
   OrganizationSelection,
   Permission,
   PreconditionRequiredResponse,
@@ -55,6 +56,7 @@ import type {
   SearchAssetsParams,
   SearchBuildingsParams,
   SearchFacilitiesParams,
+  SearchOrganizationMembersParams,
   SearchSpacesParams,
   SearchSystemsParams,
   Space,
@@ -884,6 +886,91 @@ export function useGetAuthorizationAuditLogs<TData = Awaited<ReturnType<typeof g
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetAuthorizationAuditLogsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSearchOrganizationMembersUrl = (params: SearchOrganizationMembersParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/users/search?${stringifiedParams}` : `/api/users/search`
+}
+
+/**
+ * Searches active users with active organization memberships by display name or email. Non-platform administrators are restricted to their active organization.
+ * @summary Search active organization members
+ */
+export const searchOrganizationMembers = async (params: SearchOrganizationMembersParams, options?: Parameters<typeof customFetch>[1]): Promise<OrganizationMemberSearchResult[]> => {
+
+  return customFetch<OrganizationMemberSearchResult[]>(getSearchOrganizationMembersUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getSearchOrganizationMembersQueryKey = (params?: SearchOrganizationMembersParams,) => {
+    return [
+    `/api/users/search`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getSearchOrganizationMembersQueryOptions = <TData = Awaited<ReturnType<typeof searchOrganizationMembers>>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(params: SearchOrganizationMembersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof searchOrganizationMembers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getSearchOrganizationMembersQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof searchOrganizationMembers>>> = ({ signal }) => searchOrganizationMembers(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof searchOrganizationMembers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type SearchOrganizationMembersQueryResult = NonNullable<Awaited<ReturnType<typeof searchOrganizationMembers>>>
+export type SearchOrganizationMembersQueryError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>
+
+
+/**
+ * @summary Search active organization members
+ */
+
+export function useSearchOrganizationMembers<TData = Awaited<ReturnType<typeof searchOrganizationMembers>>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(
+ params: SearchOrganizationMembersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof searchOrganizationMembers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getSearchOrganizationMembersQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

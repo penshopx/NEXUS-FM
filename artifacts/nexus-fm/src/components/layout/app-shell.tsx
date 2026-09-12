@@ -51,7 +51,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const hasAuthAccess = (() => {
     if (!myPermissions) return false;
-    const required = ['ROLE.MANAGE', 'USER.MANAGE', 'AUDIT_LOG.VIEW_AUDIT'];
+    const required = ['ROLE.MANAGE', 'USER.VIEW', 'USER.MANAGE', 'AUDIT_LOG.VIEW_AUDIT'];
     for (const permCode of required) {
       const grants = myPermissions.permissions.filter(p => p.code === permCode);
       const isDenied = grants.some(g => g.effect === 'DENY');

@@ -230,6 +230,34 @@ export const GetAuthorizationAuditLogsResponse = zod.array(GetAuthorizationAudit
 
 
 /**
+ * Searches active users with active organization memberships by display name or email. Non-platform administrators are restricted to their active organization.
+ * @summary Search active organization members
+ */
+export const searchOrganizationMembersQueryQueryMin = 2;
+export const searchOrganizationMembersQueryQueryMax = 100;
+
+export const searchOrganizationMembersQueryLimitDefault = 20;
+export const searchOrganizationMembersQueryLimitMax = 50;
+
+
+
+export const SearchOrganizationMembersQueryParams = zod.object({
+  "query": zod.coerce.string().min(searchOrganizationMembersQueryQueryMin).max(searchOrganizationMembersQueryQueryMax),
+  "limit": zod.coerce.number().int().min(1).max(searchOrganizationMembersQueryLimitMax).default(searchOrganizationMembersQueryLimitDefault)
+})
+
+export const SearchOrganizationMembersResponseItem = zod.object({
+  "userId": zod.string().uuid(),
+  "displayName": zod.string(),
+  "email": zod.string().email(),
+  "organizationId": zod.string().uuid(),
+  "organizationName": zod.string(),
+  "membershipRole": zod.enum(['PLATFORM_ADMIN', 'FACILITY_MANAGER', 'FACILITY_SUPERVISOR', 'INSPECTOR', 'MAINTENANCE_TECHNICIAN', 'WAREHOUSE_SUPERVISOR', 'VENDOR'])
+})
+export const SearchOrganizationMembersResponse = zod.array(SearchOrganizationMembersResponseItem)
+
+
+/**
  * @summary Read a user's scoped role bindings
  */
 export const GetUserRoleBindingsParams = zod.object({

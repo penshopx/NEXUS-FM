@@ -24,7 +24,7 @@ type RoleRule = {
 const foundation: Record<CanonicalRole, RoleRule[]> = {
   PLATFORM_ADMIN: [
     { resource: "ORGANIZATION", actions: ["MANAGE"], scope: "PLATFORM" },
-    { resource: "USER", actions: ["MANAGE"], scope: "PLATFORM" },
+    { resource: "USER", actions: ["VIEW", "MANAGE"], scope: "PLATFORM" },
     { resource: "ROLE", actions: ["MANAGE"], scope: "PLATFORM" },
     { resource: "PERMISSION", actions: ["MANAGE"], scope: "PLATFORM" },
     { resource: "SESSION", actions: ["MANAGE"], scope: "PLATFORM" },
@@ -259,7 +259,7 @@ async function seedAuthorizationCatalogOnce() {
 const matrix: MatrixRow[] = [
   ["ORGANIZATION", "PLATFORM_ADMIN", ["MANAGE"], "PLATFORM"],
   ["ORGANIZATION", "FACILITY_MANAGER", ["VIEW"], "ORGANIZATION"],
-  ["USER", "PLATFORM_ADMIN", ["MANAGE"], "PLATFORM"],
+  ["USER", "PLATFORM_ADMIN", ["VIEW", "MANAGE"], "PLATFORM"],
   ["USER", "FACILITY_MANAGER", ["VIEW"], "ORGANIZATION"],
   ["ROLE", "PLATFORM_ADMIN", ["MANAGE"], "PLATFORM"],
   ["PERMISSION", "PLATFORM_ADMIN", ["MANAGE"], "PLATFORM"],

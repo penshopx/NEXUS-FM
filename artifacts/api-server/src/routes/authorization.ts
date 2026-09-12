@@ -1,17 +1,19 @@
 import { Router, type IRouter } from "express";
 import { randomUUID } from "node:crypto";
-import { and, desc, eq, gt, isNull, lte, or } from "drizzle-orm";
+import { and, asc, desc, eq, gt, ilike, isNull, lte, or } from "drizzle-orm";
 import {
   authorizationAuditLogsTable,
   canonicalRoleValues,
   db,
   membershipsTable,
+  organizationsTable,
   permissionsTable,
   rolePermissionsTable,
   rolesTable,
   scopeTypeValues,
   userContextsTable,
   userRoleBindingsTable,
+  usersTable,
 } from "@workspace/db";
 import { currentUser as defaultCurrentUser } from "./foundation";
 import {
@@ -269,8 +271,53 @@ router.get("/audit-logs", async (req, res): Promise<void> => {
   res.json(rows);
 });
 
+router.get("/users/search", async (req, res): Promise<void> => {
+  const admin = await requireAdmin(req, res, "USER.VIEW", resolveCurrentUser, database);
+  if (!admin) return;
+
+  const query = typeof req.query.query === "string" ? req.query.query.trim() : "";
+  const rawLimit = typeof req.query.limit === "string" ? Number(req.query.limit) : 20;
+  if (query.length < 2 || query.length > 100 || !Number.isInteger(rawLimit) || rawLimit < 1 || rawLimit > 50) {
+    res.status(400).json({ error: "query must be 2-100 characters and limit must be an integer from 1-50" });
+    return;
+  }
+  if (admin.scopeType !== "PLATFORM" && !admin.organizationId) {
+    res.status(403).json({ error: "Active organization context required" });
+    return;
+  }
+
+  const filters = [
+    eq(usersTable.isActive, true),
+    eq(membershipsTable.isActive, true),
+    eq(organizationsTable.isActive, true),
+    or(
+      ilike(usersTable.displayName, `%${query}%`),
+      ilike(usersTable.email, `%${query}%`),
+    )!,
+  ];
+  if (admin.scopeType !== "PLATFORM") {
+    filters.push(eq(membershipsTable.organizationId, admin.organizationId!));
+  }
+
+  const rows = await database.select({
+    userId: usersTable.id,
+    displayName: usersTable.displayName,
+    email: usersTable.email,
+    organizationId: membershipsTable.organizationId,
+    organizationName: organizationsTable.name,
+    membershipRole: membershipsTable.role,
+  }).from(membershipsTable)
+    .innerJoin(usersTable, eq(membershipsTable.userId, usersTable.id))
+    .innerJoin(organizationsTable, eq(membershipsTable.organizationId, organizationsTable.id))
+    .where(and(...filters))
+    .orderBy(asc(usersTable.displayName), asc(usersTable.email), asc(organizationsTable.name))
+    .limit(rawLimit);
+
+  res.json(rows);
+});
+
 router.get("/users/:userId/role-bindings", async (req, res): Promise<void> => {
-  const admin = await requireAdmin(req, res, "USER.MANAGE", resolveCurrentUser, database);
+  const admin = await requireAdmin(req, res, "USER.VIEW", resolveCurrentUser, database);
   if (!admin) return;
   const rows = await database.select().from(userRoleBindingsTable).where(eq(userRoleBindingsTable.userId, req.params.userId));
   res.json(admin.scopeType === "PLATFORM"

@@ -23,7 +23,8 @@ export function AuthorizationPage() {
   };
 
   const showRoles = hasAll(['ROLE.MANAGE']);
-  const showBindings = hasAll(['USER.MANAGE', 'ROLE.MANAGE']);
+  const canManageBindings = hasAll(['USER.MANAGE', 'ROLE.MANAGE']);
+  const showBindings = hasAll(['USER.VIEW']) || canManageBindings;
   const showAudit = hasAll(['AUDIT_LOG.VIEW_AUDIT']);
 
   const hasNoAccess = !isLoading && !showRoles && !showBindings && !showAudit;
@@ -55,7 +56,7 @@ export function AuthorizationPage() {
 
   if (hasNoAccess) {
     return (
-      <AuthGate anyOf={['ROLE.MANAGE', 'USER.MANAGE', 'AUDIT_LOG.VIEW_AUDIT']}>
+      <AuthGate anyOf={['ROLE.MANAGE', 'USER.VIEW', 'USER.MANAGE', 'AUDIT_LOG.VIEW_AUDIT']}>
         {/* Will never reach here because AuthGate will deny it, which is the desired behavior */}
         <div />
       </AuthGate>
@@ -63,7 +64,7 @@ export function AuthorizationPage() {
   }
 
   return (
-    <AuthGate anyOf={['ROLE.MANAGE', 'USER.MANAGE', 'AUDIT_LOG.VIEW_AUDIT']}>
+    <AuthGate anyOf={['ROLE.MANAGE', 'USER.VIEW', 'USER.MANAGE', 'AUDIT_LOG.VIEW_AUDIT']}>
       <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div>
           <div className="flex items-center gap-3 mb-2">
@@ -117,7 +118,7 @@ export function AuthorizationPage() {
             
             {showBindings && (
               <TabsContent value="bindings" className="m-0 focus-visible:outline-none">
-                <BindingsTab />
+                <BindingsTab canManage={canManageBindings} />
               </TabsContent>
             )}
             

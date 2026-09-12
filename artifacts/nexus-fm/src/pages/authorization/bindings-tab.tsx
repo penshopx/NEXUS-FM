@@ -6,7 +6,9 @@ import {
   useRevokeUserRoleBinding,
   useListRoles,
   useGetSession,
+  useSearchOrganizationMembers,
   UserRoleBinding,
+  OrganizationMemberSearchResult,
   ScopeType,
   UserRoleBindingUpdateStatus,
   Role,
@@ -17,7 +19,9 @@ import {
 } from '@workspace/api-client-react';
 import { 
   getGetUserRoleBindingsQueryKey,
-  getGetAuthorizationAuditLogsQueryKey
+  getGetAuthorizationAuditLogsQueryKey,
+  getSearchOrganizationMembersQueryKey,
+  getListRolesQueryKey
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
@@ -30,7 +34,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Search, UserPlus, Trash2, Calendar, Edit2, Play, Pause, AlertTriangle } from 'lucide-react';
+import { Search, UserPlus, Trash2, Calendar, Edit2, Play, Pause, AlertTriangle, Mail, Building2, UserRound } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -44,55 +48,129 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-export function BindingsTab() {
-  const [targetUserId, setTargetUserId] = useState('');
-  const [activeUserId, setActiveUserId] = useState('');
+export function BindingsTab({ canManage }: { canManage: boolean }) {
+  const [searchInput, setSearchInput] = useState('');
+  const [submittedQuery, setSubmittedQuery] = useState('');
+  const [selectedMember, setSelectedMember] = useState<OrganizationMemberSearchResult | null>(null);
+  const search = useSearchOrganizationMembers(
+    { query: submittedQuery, limit: 20 },
+    {
+      query: {
+        enabled: submittedQuery.length >= 2,
+        queryKey: getSearchOrganizationMembersQueryKey({ query: submittedQuery, limit: 20 }),
+      },
+    },
+  );
   
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (targetUserId.trim()) {
-      setActiveUserId(targetUserId.trim());
-    }
+    const query = searchInput.trim();
+    if (query.length >= 2) setSubmittedQuery(query);
   };
 
   return (
     <div className="space-y-6">
-      <div className="p-6 border border-border rounded-lg bg-card shadow-sm flex flex-col sm:flex-row gap-4 items-end">
-        <div className="flex-1 space-y-1 w-full">
-          <label className="text-sm font-medium">Target User ID</label>
+      <div className="p-6 border border-border rounded-lg bg-card shadow-sm">
+        <div className="space-y-2">
+          <label className="text-sm font-medium" htmlFor="member-search">Find a member</label>
           <form onSubmit={handleSearch} className="flex gap-2">
             <Input 
-              placeholder="usr_..." 
-              value={targetUserId}
-              onChange={(e) => setTargetUserId(e.target.value)}
-              className="font-mono"
+              id="member-search"
+              placeholder="Search by name or email"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               data-testid="input-target-user"
             />
-            <Button type="submit" data-testid="button-search-user">
-              <Search className="size-4 mr-2" /> Lookup
+            <Button type="submit" disabled={searchInput.trim().length < 2 || search.isFetching} data-testid="button-search-user">
+              <Search className="size-4 mr-2" /> {search.isFetching ? 'Searching...' : 'Search'}
             </Button>
           </form>
+          <p className="text-xs text-muted-foreground">
+            Results include active members in the organizations you are allowed to administer.
+          </p>
         </div>
-        <div className="text-sm text-muted-foreground bg-muted/30 p-3 rounded border border-border w-full sm:w-1/2">
-          <strong>Note:</strong> Cross-org and self-escalation restrictions are enforced by the server. Any invalid assignment will be rejected.
-        </div>
+
+        {search.isError && (
+          <div className="mt-4 p-3 rounded border border-destructive/30 bg-destructive/10 text-sm text-destructive">
+            Member search failed. Check your organization access and try again.
+          </div>
+        )}
+
+        {submittedQuery && !search.isFetching && !search.isError && (
+          <div className="mt-4 border border-border rounded-md overflow-hidden" data-testid="member-search-results">
+            {search.data?.length ? (
+              <div className="divide-y divide-border">
+                {search.data.map((member) => {
+                  const isSelected = selectedMember?.userId === member.userId &&
+                    selectedMember.organizationId === member.organizationId;
+                  return (
+                    <button
+                      key={`${member.userId}-${member.organizationId}`}
+                      type="button"
+                      onClick={() => setSelectedMember(member)}
+                      className={`w-full p-4 text-left flex flex-col md:flex-row md:items-center justify-between gap-3 transition-colors ${
+                        isSelected ? 'bg-primary/10' : 'hover:bg-muted/40'
+                      }`}
+                      data-testid={`member-result-${member.userId}-${member.organizationId}`}
+                    >
+                      <div className="min-w-0">
+                        <div className="font-medium flex items-center gap-2">
+                          <UserRound className="size-4 text-muted-foreground shrink-0" />
+                          <span className="truncate">{member.displayName}</span>
+                        </div>
+                        <div className="mt-1 text-sm text-muted-foreground flex items-center gap-2">
+                          <Mail className="size-3.5 shrink-0" />
+                          <span className="truncate">{member.email}</span>
+                        </div>
+                        <code className="mt-1 block text-[11px] text-muted-foreground">{member.userId}</code>
+                      </div>
+                      <div className="md:text-right">
+                        <div className="text-sm flex md:justify-end items-center gap-2">
+                          <Building2 className="size-4 text-muted-foreground" />
+                          {member.organizationName}
+                        </div>
+                        <div className="mt-1 flex md:justify-end gap-2">
+                          <Badge variant="outline">{member.membershipRole}</Badge>
+                          <code className="text-[10px] text-muted-foreground self-center">{member.organizationId}</code>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="p-8 text-center text-sm text-muted-foreground">
+                No active members matched “{submittedQuery}”.
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {activeUserId && (
-        <BindingsManager userId={activeUserId} />
+      {selectedMember && (
+        <BindingsManager userId={selectedMember.userId} member={selectedMember} canManage={canManage} />
       )}
     </div>
   );
 }
 
-function BindingsManager({ userId }: { userId: string }) {
+function BindingsManager({ userId, member, canManage }: {
+  userId: string;
+  member: OrganizationMemberSearchResult;
+  canManage: boolean;
+}) {
   const { data: bindings, isLoading } = useGetUserRoleBindings(userId, {
     query: {
       enabled: !!userId,
       queryKey: getGetUserRoleBindingsQueryKey(userId)
     }
   });
-  const { data: roles } = useListRoles();
+  const { data: roles } = useListRoles({
+    query: {
+      enabled: canManage,
+      queryKey: getListRolesQueryKey(),
+    },
+  });
   const { data: session } = useGetSession();
   
   const activeOrgId = session?.activeOrganization?.organization.id;
@@ -110,15 +188,21 @@ function BindingsManager({ userId }: { userId: string }) {
   return (
     <div className="border border-border rounded-lg bg-card overflow-hidden">
       <div className="p-4 border-b border-border bg-muted/20 flex justify-between items-center">
-        <h3 className="font-semibold flex items-center gap-2">
-          Role Bindings for <code className="text-xs bg-muted px-1.5 py-0.5 rounded" data-testid={`display-userid-${userId}`}>{userId}</code>
-        </h3>
-        <Button size="sm" onClick={() => setIsCreateOpen(true)} disabled={!activeOrgId} data-testid="button-new-binding">
-          <UserPlus className="size-4 mr-2" /> New Binding
-        </Button>
+        <div>
+          <h3 className="font-semibold">Role Bindings for {member.displayName}</h3>
+          <div className="mt-1 text-xs text-muted-foreground">
+            {member.email} · {member.organizationName} ·{' '}
+            <code data-testid={`display-userid-${userId}`}>{userId}</code>
+          </div>
+        </div>
+        {canManage && (
+          <Button size="sm" onClick={() => setIsCreateOpen(true)} disabled={!activeOrgId} data-testid="button-new-binding">
+            <UserPlus className="size-4 mr-2" /> New Binding
+          </Button>
+        )}
       </div>
 
-      {!activeOrgId && (
+      {canManage && !activeOrgId && (
         <div className="p-4 bg-destructive/10 text-destructive text-sm flex items-center gap-2">
           <AlertTriangle className="size-4" />
           You must have an active organization selected to manage bindings.
@@ -140,13 +224,14 @@ function BindingsManager({ userId }: { userId: string }) {
               binding={binding} 
               roles={roles || []} 
               userId={userId}
+              canManage={canManage}
               onEdit={() => setEditingBinding(binding)}
             />
           ))}
         </div>
       )}
 
-      {activeOrgId && (
+      {canManage && activeOrgId && (
         <CreateBindingDialog 
           userId={userId}
           orgId={activeOrgId}
@@ -156,7 +241,7 @@ function BindingsManager({ userId }: { userId: string }) {
         />
       )}
 
-      {editingBinding && (
+      {canManage && editingBinding && (
         <EditBindingDialog
           binding={editingBinding}
           userId={userId}
@@ -168,7 +253,13 @@ function BindingsManager({ userId }: { userId: string }) {
   );
 }
 
-function BindingRow({ binding, roles, userId, onEdit }: { binding: UserRoleBinding, roles: Role[], userId: string, onEdit: () => void }) {
+function BindingRow({ binding, roles, userId, canManage, onEdit }: {
+  binding: UserRoleBinding;
+  roles: Role[];
+  userId: string;
+  canManage: boolean;
+  onEdit: () => void;
+}) {
   const roleName = roles.find(r => r.id === binding.roleId)?.code || binding.roleId;
   const isExpired = binding.status === 'EXPIRED';
   const isSuspended = binding.status === 'SUSPENDED';
@@ -246,7 +337,7 @@ function BindingRow({ binding, roles, userId, onEdit }: { binding: UserRoleBindi
         )}
       </div>
 
-      <div className="flex items-center gap-2">
+      {canManage && <div className="flex items-center gap-2">
         <Button 
           variant="outline" 
           size="sm" 
@@ -294,7 +385,7 @@ function BindingRow({ binding, roles, userId, onEdit }: { binding: UserRoleBindi
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      </div>
+      </div>}
     </div>
   );
 }

@@ -264,6 +264,15 @@ export interface RolePermissionConflict {
   policyVersion: string;
 }
 
+export interface OrganizationMemberSearchResult {
+  userId: string;
+  displayName: string;
+  email: string;
+  organizationId: string;
+  organizationName: string;
+  membershipRole: CanonicalRole;
+}
+
 export type UserRoleBindingStatus = typeof UserRoleBindingStatus[keyof typeof UserRoleBindingStatus];
 
 
@@ -425,6 +434,19 @@ export type LimitParameter = number;
 export type GetAuthorizationAuditLogsParams = {
 resource?: string;
 resourceId?: string;
+};
+
+export type SearchOrganizationMembersParams = {
+/**
+ * @minLength 2
+ * @maxLength 100
+ */
+query: string;
+/**
+ * @minimum 1
+ * @maximum 50
+ */
+limit?: number;
 };
 
 export type ListFacilitiesParams = {
