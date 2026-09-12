@@ -1,0 +1,119 @@
+## Task — Make Authorization Schema Checks Finish Without Destructive Prompts
+
+### Objective
+
+Fix the authorization schema-check/reconciliation workflow so it can run non-interactively and finish successfully without triggering Drizzle Kit's unsafe truncate confirmation.
+
+The live development database is already correct:
+
+* nullable binding uniqueness constraint exists;
+* PostgreSQL inspection passes;
+* duplicate-binding tests pass;
+* authorization schema is already in the intended state.
+
+The problem is specifically that Drizzle Kit's reconciliation path interprets the existing schema state as requiring an unsafe truncate during non-interactive execution.
+
+### Hard Safety Rules
+
+1. **Do not truncate any table.**
+2. **Do not delete authorization data.**
+3. **Do not drop and recreate authorization tables.**
+4. **Do not use `drizzle-kit push --force`.**
+5. **Do not bypass the safety prompt by automatically answering `yes`.**
+6. **Do not modify the migration journal to hide the discrepancy.**
+7. **Do not use destructive schema recovery.**
+8. Do not weaken or remove the nullable uniqueness constraint merely to satisfy Drizzle Kit.
+9. Do not modify Task #02 Facility & Space Registry.
+10. Do not alter the locked authorization behavior unless a concrete regression is demonstrated.
+
+### Required Approach
+
+First identify exactly why Drizzle Kit wants to truncate during reconciliation.
+
+Compare:
+
+* current Drizzle schema definitions;
+* generated migration state;
+* live PostgreSQL schema;
+* indexes and constraints;
+* nullable uniqueness semantics;
+* migration journal state.
+
+The canonical database state must remain the source of truth for the already-applied authorization baseline.
+
+If the live schema is already equivalent to the intended schema, make the schema-check path **non-destructive and deterministic** rather than forcing Drizzle Kit to reconcile through a destructive operation.
+
+Prefer one of these safe approaches, in order:
+
+1. **Use migration-based verification instead of schema push/reconciliation** when the migration history is authoritative.
+2. If a generated diff is genuinely required, make the migration explicitly represent the already-verified PostgreSQL state rather than relying on an interactive destructive reconciliation.
+3. If the mismatch is only a Drizzle introspection/diff limitation around nullable uniqueness, isolate that comparison and implement an explicit PostgreSQL inspection check for the constraint instead of destructive reconciliation.
+4. Keep schema verification separate from schema mutation.
+
+### Required Automated Check
+
+The final schema-check command must be able to run non-interactively:
+
+```bash
+CI=true <schema-check-command>
+```
+
+and must:
+
+* exit `0` when the authorization schema is correct;
+* produce a clear success signal;
+* never request interactive confirmation;
+* never truncate;
+* never drop/recreate authorization tables;
+* never modify production/development authorization data.
+
+### Required Verification
+
+Verify all of the following against PostgreSQL:
+
+* authorization tables exist;
+* required enums/types exist;
+* foreign keys exist;
+* required indexes exist;
+* nullable binding uniqueness exists with the intended semantics;
+* duplicate active/null-scope bindings are rejected;
+* valid distinct bindings remain insertable;
+* existing authorization data remains intact.
+
+Also run the existing authorization tests.
+
+### Regression Protection
+
+Run:
+
+```text
+schema inspection
+→ authorization constraint tests
+→ authorization API tests
+→ existing regression suite
+→ application/API health check
+```
+
+The result must clearly distinguish:
+
+```text
+SCHEMA VERIFIED
+DESTRUCTIVE OPERATION: NONE
+AUTHORIZATION DATA PRESERVED
+REGRESSION: PASS
+```
+
+### Completion Criteria
+
+This task is complete only when:
+
+* automated schema check exits successfully;
+* no destructive prompt appears;
+* no truncate/drop/recreate occurs;
+* live PostgreSQL schema remains unchanged except for explicitly required non-destructive migration changes;
+* nullable binding uniqueness remains intact;
+* duplicate tests continue to pass;
+* authorization behavior remains unchanged;
+* existing locked tasks remain untouched.
+
+If Drizzle Kit still proposes a destructive operation, **stop and report the exact diff** instead of accepting the destructive operation.
