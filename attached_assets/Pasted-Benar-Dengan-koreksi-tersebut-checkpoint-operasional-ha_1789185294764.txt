@@ -1,0 +1,61 @@
+Benar. Dengan koreksi tersebut, **checkpoint operasional harus diperbarui**. Status sebelumnya yang saya berikan untuk Task #02 sudah tidak berlaku.
+
+### Checkpoint terbaru
+
+```text
+TASK #01
+VERIFIED → STABLE → LOCKED
+
+TASK #02 — Authorization & Permission
+E2E VERIFIED → STABLE → LOCKED
+MERGED
+
+TASK — Administrasi Akses
+IN_PROGRESS
+
+TASK — Fasilitas
+PENDING
+
+TASK — Schema Check / Hardening
+PENDING
+```
+
+### Governance yang tetap berlaku
+
+* **Migration journal:** jangan diubah lagi.
+* Tidak ada schema push/destructive recovery.
+* Post-merge setup: **PASS**
+* Migration: **PASS**
+* API Server: **HEALTHY / 200**
+* Workflow existing: **HEALTHY**
+* Task yang `LOCKED` tidak disentuh kecuali ada regresi yang terbukti.
+* Task `PENDING` tidak dikerjakan sebelum ditugaskan.
+* Task `IN_PROGRESS` menjadi **isolated working boundary** saat ini.
+
+### Boundary kerja sekarang
+
+```text
+                    ┌─────────────────────────────┐
+                    │ Task #01                    │
+                    │ LOCKED                       │
+                    └──────────────┬──────────────┘
+                                   │
+                    ┌──────────────▼──────────────┐
+                    │ Task #02 Authorization       │
+                    │ VERIFIED → STABLE → LOCKED  │
+                    │ MERGED                       │
+                    └──────────────┬──────────────┘
+                                   │
+                     ┌─────────────▼─────────────┐
+                     │ Administrasi Akses         │
+                     │ IN_PROGRESS                │
+                     │ ← CURRENT ISOLATION        │
+                     └────────────────────────────┘
+
+Fasilitas              → PENDING
+Schema Check/Hardening → PENDING
+```
+
+**Artinya, pekerjaan berikutnya harus berangkat dari Task Administrasi Akses yang sedang `IN_PROGRESS`, bukan mengulang Authorization Task #02.**
+
+Dan tujuan task tersebut juga sudah jelas dari checkpoint: **memberikan administrator UI yang aman untuk mengelola access/permission/role-binding, sementara API tetap menjadi security boundary.**
