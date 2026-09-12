@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import express from "express";
 import { createServer } from "node:http";
 import { setTimeout as delay } from "node:timers/promises";
+import { EventEmitter } from "node:events";
 import { and, eq, inArray } from "drizzle-orm";
 import {
   authorizationAuditLogsTable,
@@ -48,7 +49,7 @@ import {
   getAppSession,
 } from "../src/services/foundation.ts";
 import { createAuthorizationRouter } from "../src/routes/authorization.ts";
-import { createFacilitiesRouter } from "../src/routes/facilities.ts";
+import { createFacilitiesRouter, waitForCsvDrain } from "../src/routes/facilities.ts";
 import { authorizeRegistryObject, resolveRegistryObject } from "../src/services/facilities.ts";
 
 type Fixture = {
@@ -969,6 +970,24 @@ test("facility registry resolves trusted ancestors and enforces every route surf
     const exported = await request("/assets/export");
     assert.equal(exported.response.status, 200);
     assert.match(exported.text, /Air Handler/);
+    const bulkAssets = Array.from({ length: 501 }, (_, index) => ({
+      organizationId: manager.organizationId,
+      facilityId: facility.id,
+      buildingId: building.id,
+      spaceId: space.id,
+      systemId: system.id,
+      name: `Bulk Asset ${String(index).padStart(3, "0")}`,
+    }));
+    await db.insert(assetsTable).values(bulkAssets);
+    const pagedAssets = await request("/assets?limit=1&page=2");
+    assert.equal(pagedAssets.response.status, 200);
+    const pagedAssetsBody = JSON.parse(pagedAssets.text) as { items: unknown[]; total: number };
+    assert.equal(pagedAssetsBody.items.length, 1);
+    assert.equal(pagedAssetsBody.total, 502);
+    const batchedExport = await request("/assets/export");
+    assert.equal(batchedExport.response.status, 200);
+    assert.match(batchedExport.text, /Bulk Asset 500/);
+    assert.equal(batchedExport.text.trim().split("\n").length, 503);
     const updated = await request(`/assets/${asset.id}`, {
       method: "PATCH",
       body: JSON.stringify({ name: "Air Handler Updated" }),
@@ -1216,6 +1235,122 @@ test("registry HTTP adversarial matrix excludes unauthorized rows across every b
     }
     await db.delete(organizationsTable).where(eq(organizationsTable.id, otherOrganization[0]!.id));
   }
+});
+
+test("narrow registry scopes cannot authorize unrelated rows with colliding UUIDs", async () => {
+  const cases = [
+    { scopeType: "BUILDING" as const, resourcePath: "facilities" },
+    { scopeType: "SPACE" as const, resourcePath: "buildings" },
+    { scopeType: "ASSET" as const, resourcePath: "spaces" },
+  ];
+  for (const testCase of cases) {
+    const actor = await makeFixture("FACILITY_MANAGER", testCase.scopeType);
+    const collisionId = randomUUID();
+    const [decoyFacility] = await db.insert(facilitiesTable).values({
+      id: testCase.resourcePath === "facilities" ? collisionId : randomUUID(),
+      organizationId: actor.organizationId,
+      name: "Collision Decoy Facility",
+    }).returning();
+    assert.ok(decoyFacility);
+    const [decoyBuilding] = await db.insert(buildingsTable).values({
+      id: testCase.resourcePath === "buildings" ? collisionId : randomUUID(),
+      organizationId: actor.organizationId,
+      facilityId: decoyFacility.id,
+      name: "Collision Decoy Building",
+    }).returning();
+    assert.ok(decoyBuilding);
+    const [decoySpace] = await db.insert(spacesTable).values({
+      id: testCase.resourcePath === "spaces" ? collisionId : randomUUID(),
+      organizationId: actor.organizationId,
+      facilityId: decoyFacility.id,
+      buildingId: decoyBuilding.id,
+      name: "Collision Decoy Space",
+    }).returning();
+    assert.ok(decoySpace);
+
+    const [scopeFacility] = await db.insert(facilitiesTable).values({
+      organizationId: actor.organizationId,
+      name: "Scope Facility",
+    }).returning();
+    const [scopeBuilding] = await db.insert(buildingsTable).values({
+      id: testCase.scopeType === "BUILDING" ? collisionId : randomUUID(),
+      organizationId: actor.organizationId,
+      facilityId: scopeFacility!.id,
+      name: "Scope Building",
+    }).returning();
+    const [scopeSpace] = await db.insert(spacesTable).values({
+      id: testCase.scopeType === "SPACE" ? collisionId : randomUUID(),
+      organizationId: actor.organizationId,
+      facilityId: scopeFacility!.id,
+      buildingId: scopeBuilding!.id,
+      name: "Scope Space",
+    }).returning();
+    if (testCase.scopeType === "ASSET") {
+      await db.insert(assetsTable).values({
+        id: collisionId,
+        organizationId: actor.organizationId,
+        facilityId: scopeFacility!.id,
+        buildingId: scopeBuilding!.id,
+        spaceId: scopeSpace!.id,
+        name: "Scope Asset",
+      });
+    }
+    await db.update(userRoleBindingsTable).set({ scopeId: collisionId })
+      .where(eq(userRoleBindingsTable.id, actor.bindingId));
+    await db.insert(userContextsTable).values({
+      userId: actor.userId,
+      activeOrganizationId: actor.organizationId,
+    });
+
+    const resource = testCase.resourcePath === "facilities"
+      ? decoyFacility
+      : testCase.resourcePath === "buildings" ? decoyBuilding : decoySpace;
+    const app = express();
+    app.use(createFacilitiesRouter({
+      currentUser: async () => (await db.select().from(usersTable).where(eq(usersTable.id, actor.userId)))[0] ?? null,
+    }));
+    const server = createServer(app);
+    await new Promise<void>((resolve) => server.listen(0, resolve));
+    const address = server.address();
+    assert.ok(address && typeof address === "object");
+    const base = `http://127.0.0.1:${address.port}`;
+    try {
+      const detail = await fetch(`${base}/${testCase.resourcePath}/${resource.id}`);
+      assert.equal(detail.status, 403);
+      const list = await fetch(`${base}/${testCase.resourcePath}`);
+      const listBody = await list.json() as { items: Array<{ id: string }>; total: number };
+      assert.equal(listBody.items.some((row) => row.id === resource.id), false);
+      assert.equal(listBody.total, 0);
+      const search = await fetch(`${base}/${testCase.resourcePath}/search?q=Collision`);
+      const searchBody = await search.json() as { items: unknown[]; total: number };
+      assert.deepEqual(searchBody.items, []);
+      assert.equal(searchBody.total, 0);
+      const exported = await fetch(`${base}/${testCase.resourcePath}/export`);
+      assert.equal((await exported.text()).includes(resource.name), false);
+    } finally {
+      server.close();
+    }
+  }
+});
+
+test("CSV backpressure listeners remain bounded across slow-consumer drain cycles", async () => {
+  const response = Object.assign(new EventEmitter(), { destroyed: false });
+  for (let index = 0; index < 2_000; index += 1) {
+    const drained = waitForCsvDrain(response);
+    assert.equal(response.listenerCount("drain"), 1);
+    assert.equal(response.listenerCount("close"), 1);
+    assert.equal(response.listenerCount("error"), 1);
+    response.emit("drain");
+    await drained;
+    assert.equal(response.listenerCount("drain"), 0);
+    assert.equal(response.listenerCount("close"), 0);
+    assert.equal(response.listenerCount("error"), 0);
+  }
+  response.destroyed = true;
+  await assert.rejects(waitForCsvDrain(response), /client disconnected/);
+  assert.equal(response.listenerCount("drain"), 0);
+  assert.equal(response.listenerCount("close"), 0);
+  assert.equal(response.listenerCount("error"), 0);
 });
 
 test("empty facility collection exposes server-derived bootstrap create capability", async () => {

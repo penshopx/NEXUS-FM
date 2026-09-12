@@ -15,9 +15,11 @@ import { currentUser as defaultCurrentUser } from "./foundation";
 import { authorize } from "../services/authorization";
 import {
   authorizeRegistryObject,
-  csvForRows,
-  listRegistryRows,
+  csvForRow,
+  listAuthorizedRegistryBatch,
+  queryAuthorizedRegistryRows,
   REGISTRY_KINDS,
+  registryCsvHeader,
   resolveRegistryObject,
   type RegistryKind,
   type RegistryRow,
@@ -35,6 +37,38 @@ type RegistryCapabilities = {
 };
 type RegistryCollectionCapabilities = { create: boolean };
 type AuthorizedRegistryRow = RegistryRow & { capabilities: RegistryCapabilities };
+
+type DrainableResponse = {
+  destroyed: boolean;
+  once(event: "drain" | "close" | "error", listener: (...args: any[]) => void): unknown;
+  removeListener(event: "drain" | "close" | "error", listener: (...args: any[]) => void): unknown;
+};
+
+export function waitForCsvDrain(response: DrainableResponse) {
+  return new Promise<void>((resolve, reject) => {
+    const cleanup = () => {
+      response.removeListener("drain", onDrain);
+      response.removeListener("close", onClose);
+      response.removeListener("error", onError);
+    };
+    const onDrain = () => {
+      cleanup();
+      resolve();
+    };
+    const onClose = () => {
+      cleanup();
+      reject(new Error("CSV export client disconnected"));
+    };
+    const onError = (error: unknown) => {
+      cleanup();
+      reject(error);
+    };
+    response.once("drain", onDrain);
+    response.once("close", onClose);
+    response.once("error", onError);
+    if (response.destroyed) onClose();
+  });
+}
 
 export type FacilitiesRouteDependencies = {
   currentUser?: CurrentUser;
@@ -85,10 +119,6 @@ async function actorContext(
     return null;
   }
   return { user, organizationId };
-}
-
-function resourceTypeFor(kind: RegistryKind) {
-  return kind;
 }
 
 const childKinds: Record<RegistryKind, RegistryKind[]> = {
@@ -200,32 +230,34 @@ async function authorizedRows(
   actorUserId: string,
   query: string | undefined,
   requestId: string,
+  page: number,
+  limit: number,
+  parent?: { kind: "FACILITY" | "BUILDING" | "SPACE" | "SYSTEM"; id: string },
 ) {
-  const candidates = await listRegistryRows(database, kind, organizationId, query);
+  const result = await queryAuthorizedRegistryRows({
+    database,
+    kind,
+    organizationId,
+    actorUserId,
+    query,
+    parent,
+    limit,
+    offset: (page - 1) * limit,
+  });
   const rows: AuthorizedRegistryRow[] = [];
-  for (const candidate of candidates) {
+  for (const candidate of result.rows) {
     const resolved = await resolveRegistryObject(database, kind, candidate.id, organizationId);
     if (!resolved.found) continue;
-    const decision = await authorize({
-      database,
-      actorUserId,
-      organizationId,
-      permission: `${resourceTypeFor(kind)}.VIEW`,
-      resourceType: resourceTypeFor(kind),
-      resourceId: candidate.id,
-      verifiedContext: resolved.value.verifiedContext,
-      requestId,
+    const capabilities = await registryCapabilities(
+      database, kind, resolved, actorUserId, organizationId, requestId,
+    );
+    if (!capabilities.view) continue;
+    rows.push({
+      ...candidate,
+      capabilities,
     });
-    if (decision.allowed) {
-      rows.push({
-        ...candidate,
-        capabilities: await registryCapabilities(
-          database, kind, resolved, actorUserId, organizationId, requestId, decision,
-        ),
-      });
-    }
   }
-  return rows;
+  return { rows, total: result.total };
 }
 
 async function insertRegistryRow(database: any, kind: RegistryKind, values: Record<string, unknown>) {
@@ -329,15 +361,15 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
         String(req.id),
       )
       : { create: false };
-    const all = await authorizedRows(database, kind, actor.organizationId, actor.user.id,
-      typeof req.query.q === "string" ? req.query.q : undefined, String(req.id));
     const page = parsePage(req.query.page, 1, 1_000_000);
     const limit = parsePage(req.query.limit, 50, 100);
+    const result = await authorizedRows(database, kind, actor.organizationId, actor.user.id,
+      typeof req.query.q === "string" ? req.query.q : undefined, String(req.id), page, limit);
     res.json({
-      items: all.slice((page - 1) * limit, page * limit),
+      items: result.rows,
       page,
       limit,
-      total: all.length,
+      total: result.total,
       collectionCapabilities,
     });
   }
@@ -345,9 +377,30 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
   async function exportRows(req: import("express").Request, res: import("express").Response, kind: RegistryKind) {
     const actor = await actorContext(req, res, resolveCurrentUser, database);
     if (!actor) return;
-    const rows = await authorizedRows(database, kind, actor.organizationId, actor.user.id,
-      typeof req.query.q === "string" ? req.query.q : undefined, String(req.id));
-    res.type("text/csv").set("Content-Disposition", `attachment; filename="${plural[kind]}.csv"`).send(csvForRows(rows));
+    res.type("text/csv").set("Content-Disposition", `attachment; filename="${plural[kind]}.csv"`);
+    const write = async (chunk: string) => {
+      if (res.destroyed) throw new Error("CSV export client disconnected");
+      if (!res.write(chunk)) await waitForCsvDrain(res);
+    };
+    await write(registryCsvHeader);
+    const batchSize = 500;
+    let after: { name: string; id: string } | undefined;
+    for (;;) {
+      const rows = await listAuthorizedRegistryBatch({
+        database,
+        kind,
+        organizationId: actor.organizationId,
+        actorUserId: actor.user.id,
+        query: typeof req.query.q === "string" ? req.query.q : undefined,
+        limit: batchSize,
+        after,
+      });
+      for (const row of rows) await write(csvForRow(row));
+      if (rows.length < batchSize) break;
+      const last = rows.at(-1)!;
+      after = { name: last.name, id: last.id };
+    }
+    res.end();
   }
 
   async function create(req: import("express").Request, res: import("express").Response, kind: RegistryKind) {
@@ -610,18 +663,19 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
         res.status(403).json({ error: "Authorization denied", reasonCode: parent.decision.reasonCode });
         return;
       }
-      const rows = await authorizedRows(
+      const page = parsePage(req.query.page, 1, 1_000_000);
+      const limit = parsePage(req.query.limit, 50, 100);
+      const result = await authorizedRows(
         database,
         childKind,
         actor.organizationId,
         actor.user.id,
         typeof req.query.q === "string" ? req.query.q : undefined,
         String(req.id),
+        page,
+        limit,
+        { kind: parentKind as "FACILITY" | "BUILDING" | "SPACE" | "SYSTEM", id: req.params.parentId },
       );
-      const key = parentKind === "FACILITY" ? "facilityId" : parentKind === "BUILDING" ? "buildingId" : parentKind === "SPACE" ? "spaceId" : "systemId";
-      const filtered = rows.filter((row) => (row as unknown as Record<string, unknown>)[key] === req.params.parentId);
-      const page = parsePage(req.query.page, 1, 1_000_000);
-      const limit = parsePage(req.query.limit, 50, 100);
       const collectionCapabilities = await collectionCreateCapability(
         database,
         childKind,
@@ -632,10 +686,10 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
         String(req.id),
       );
       res.json({
-        items: filtered.slice((page - 1) * limit, page * limit),
+        items: result.rows,
         page,
         limit,
-        total: filtered.length,
+        total: result.total,
         collectionCapabilities,
       });
     });

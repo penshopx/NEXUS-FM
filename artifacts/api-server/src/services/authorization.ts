@@ -339,12 +339,13 @@ export async function authorize(request: AuthorizationRequest): Promise<Authoriz
     const objectProof = context.scopeVerified === true &&
       stringValue(context, "organizationId", "resourceOrganizationId") === request.organizationId;
     const restrictedResources = ["ORGANIZATION", "USER", "ROLE", "PERMISSION", "SESSION", "AUDIT_LOG", "DOCUMENT", "REPORT", "NOTIFICATION"];
-    const contextScopeId = (scope: string) => stringValue(
-      context,
-      `${scope.toLowerCase()}Id`,
-      "scopeId",
-      "resourceScopeId",
-    );
+    const contextScopeId = (scope: string) => {
+      const exactScopeId = stringValue(context, `${scope.toLowerCase()}Id`);
+      if (exactScopeId) return exactScopeId;
+      const registryResources = ["FACILITY", "BUILDING", "SPACE", "SYSTEM", "ASSET"];
+      if (registryResources.includes(request.resourceType) && request.resourceType !== scope) return undefined;
+      return request.resourceId ?? stringValue(context, "scopeId", "resourceScopeId");
+    };
     // Facility registration is the one bootstrap operation that is necessarily
     // performed before a facility binding can exist. An organization binding
     // may therefore create a new facility, but it still cannot view or mutate
