@@ -1,4 +1,4 @@
-import { and, eq, gt, isNull, lte, or } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNull, lte, or } from "drizzle-orm";
 import {
   authorizationAuditLogsTable,
   bindingStatusValues,
@@ -31,6 +31,8 @@ export type AuthorizationRequest = {
   /** Only populated by trusted server-side resource resolvers. */
   verifiedContext?: Record<string, unknown>;
   requestId?: string;
+  /** Trusted transaction connection used by mutation services. */
+  database?: any;
 };
 
 export type AuthorizationDecision = {
@@ -203,7 +205,7 @@ async function auditDecision(request: AuthorizationRequest, decision: Authorizat
   // Only authorization-safe fields are persisted. Request bodies, credentials,
   // tokens and arbitrary client context are intentionally never recorded.
   if (!request.actorUserId) return;
-  await db.insert(authorizationAuditLogsTable).values({
+  await (request.database ?? db).insert(authorizationAuditLogsTable).values({
     actorUserId: request.actorUserId,
     organizationId: request.organizationId ?? null,
     action: request.permission.split(".")[1] ?? "UNKNOWN",
@@ -221,6 +223,7 @@ function denied(request: AuthorizationRequest, reasonCode: AuthorizationReasonCo
 }
 
 export async function authorize(request: AuthorizationRequest): Promise<AuthorizationDecision> {
+  const database = request.database ?? db;
   const permission = request.permission;
   // Client supplied actionContext is intentionally diagnostic only. It never
   // proves an object relationship or assignment; services must supply a
@@ -239,18 +242,24 @@ export async function authorize(request: AuthorizationRequest): Promise<Authoriz
   if (!canonicalPermissions.includes(permission as never)) {
     return denyAndAudit("PERMISSION_MISSING");
   }
-  const [user] = await db.select({ id: usersTable.id }).from(usersTable).where(and(eq(usersTable.id, request.actorUserId), eq(usersTable.isActive, true)));
+  // Mutation callers hold these locks through the registry write and both
+  // audit records. Revocation and policy updates therefore linearize either
+  // before this decision or after the mutation commits.
+  if (request.database && request.actorUserId && request.organizationId) {
+    await lockAuthorizationState(database, request.actorUserId, request.organizationId);
+  }
+   const [user] = await database.select({ id: usersTable.id }).from(usersTable).where(and(eq(usersTable.id, request.actorUserId), eq(usersTable.isActive, true)));
   if (!user) return denyAndAudit("USER_INACTIVE");
   if (!request.organizationId) return denyAndAudit("ORGANIZATION_MISMATCH");
-  const [organization] = await db.select({ id: organizationsTable.id }).from(organizationsTable).where(and(eq(organizationsTable.id, request.organizationId), eq(organizationsTable.isActive, true)));
+   const [organization] = await database.select({ id: organizationsTable.id }).from(organizationsTable).where(and(eq(organizationsTable.id, request.organizationId), eq(organizationsTable.isActive, true)));
   if (!organization) return denyAndAudit("ORGANIZATION_MISMATCH");
-  const [membership] = await db.select({ userId: membershipsTable.userId })
+   const [membership] = await database.select({ userId: membershipsTable.userId })
     .from(membershipsTable)
     .where(and(eq(membershipsTable.userId, request.actorUserId), eq(membershipsTable.organizationId, request.organizationId), eq(membershipsTable.isActive, true)));
   if (!membership) return denyAndAudit("ORGANIZATION_MISMATCH");
 
   const now = new Date();
-  const bindings = await db.select({
+   const bindings = await database.select({
     binding: userRoleBindingsTable,
     role: rolesTable,
   }).from(userRoleBindingsTable)
@@ -267,7 +276,7 @@ export async function authorize(request: AuthorizationRequest): Promise<Authoriz
     return denyAndAudit("BINDING_INACTIVE");
   }
 
-  const grants = await db.select({
+   const grants = await database.select({
     permission: permissionsTable,
     rolePermission: rolePermissionsTable,
     binding: userRoleBindingsTable,
@@ -283,7 +292,7 @@ export async function authorize(request: AuthorizationRequest): Promise<Authoriz
       eq(userRoleBindingsTable.organizationId, request.organizationId),
       eq(userRoleBindingsTable.status, "ACTIVE"),
     ));
-  const activeGrants = grants.filter(({ binding }) => {
+  const activeGrants = grants.filter(({ binding }: { binding: any }) => {
     const state = validateRoleBindingState({
       scopeType: binding.scopeType,
       scopeId: binding.scopeId,
@@ -296,7 +305,7 @@ export async function authorize(request: AuthorizationRequest): Promise<Authoriz
       (!binding.startsAt || binding.startsAt <= now) &&
       (!binding.endsAt || binding.endsAt > now);
   });
-  const denies = activeGrants.filter(({ rolePermission }) => rolePermission.effect === "DENY");
+  const denies = activeGrants.filter(({ rolePermission }: { rolePermission: any }) => rolePermission.effect === "DENY");
   if (denies.length) {
     const decision = { ...denied(request, "EXPLICIT_DENY"), scopeType: denies[0]?.rolePermission.defaultScopeType };
     await auditDecision(request, decision);
@@ -317,7 +326,13 @@ export async function authorize(request: AuthorizationRequest): Promise<Authoriz
     // A broad binding cannot satisfy an operational permission. Operational
     // defaults require a compatible explicit binding at the same or narrower
     // scope; the verified object context is still required below.
-    if (grant.binding.scopeType === "ORGANIZATION" && !["ORGANIZATION"].includes(defaultScope)) continue;
+    const facilityRegistrationBootstrap =
+      request.resourceType === "FACILITY" &&
+      permission === "FACILITY.CREATE" &&
+      grant.binding.scopeType === "ORGANIZATION";
+    if (grant.binding.scopeType === "ORGANIZATION" &&
+      !["ORGANIZATION"].includes(defaultScope) &&
+      !facilityRegistrationBootstrap) continue;
     if (grant.binding.scopeType === "PLATFORM" && defaultScope !== "PLATFORM") continue;
     const bindingScope = grant.binding.scopeType;
     const bindingScopeId = grant.binding.scopeId;
@@ -326,11 +341,15 @@ export async function authorize(request: AuthorizationRequest): Promise<Authoriz
     const restrictedResources = ["ORGANIZATION", "USER", "ROLE", "PERMISSION", "SESSION", "AUDIT_LOG", "DOCUMENT", "REPORT", "NOTIFICATION"];
     const contextScopeId = (scope: string) => stringValue(
       context,
+      `${scope.toLowerCase()}Id`,
       "scopeId",
       "resourceScopeId",
-      `${scope.toLowerCase()}Id`,
     );
-    if (!isBindingScopeCompatible(defaultScope, bindingScope)) continue;
+    // Facility registration is the one bootstrap operation that is necessarily
+    // performed before a facility binding can exist. An organization binding
+    // may therefore create a new facility, but it still cannot view or mutate
+    // an existing facility outside an explicit facility binding.
+    if (!facilityRegistrationBootstrap && !isBindingScopeCompatible(defaultScope, bindingScope)) continue;
     const evaluateScope = (scope: string, scopeId?: string | null, bindingRestriction = false) => {
       if (scope === "PLATFORM") return restrictedResources.includes(request.resourceType);
       if (scope === "ORGANIZATION") return true;
@@ -399,6 +418,33 @@ export function requirePermission(permission: string) {
 
 export function canCrossOrganizationFoundation(scopeType: string | undefined, activeOrganizationId: string | undefined, targetOrganizationId: string) {
   return scopeType === "PLATFORM" || activeOrganizationId === targetOrganizationId;
+}
+
+async function lockAuthorizationState(database: any, actorUserId: string, organizationId: string) {
+  const lock = async (query: any) => typeof query.for === "function" ? query.for("update") : query;
+  const [user] = await lock(database.select().from(usersTable).where(eq(usersTable.id, actorUserId)).orderBy(asc(usersTable.id)));
+  const [organization] = await lock(database.select().from(organizationsTable).where(eq(organizationsTable.id, organizationId)).orderBy(asc(organizationsTable.id)));
+  const memberships = await lock(database.select().from(membershipsTable).where(and(
+    eq(membershipsTable.userId, actorUserId),
+    eq(membershipsTable.organizationId, organizationId),
+  )).orderBy(asc(membershipsTable.userId), asc(membershipsTable.organizationId)));
+  const bindings = await lock(database.select().from(userRoleBindingsTable).where(and(
+    eq(userRoleBindingsTable.userId, actorUserId),
+    eq(userRoleBindingsTable.organizationId, organizationId),
+  )).orderBy(asc(userRoleBindingsTable.id)));
+  const roleIds: string[] = Array.from(new Set<string>(bindings.map((binding: any) => binding.roleId as string))).sort();
+  const roles = roleIds.length
+    ? await lock(database.select().from(rolesTable).where(inArray(rolesTable.id, roleIds)).orderBy(asc(rolesTable.id)))
+    : [];
+  const rolePermissions = roleIds.length
+    ? await lock(database.select().from(rolePermissionsTable).where(inArray(rolePermissionsTable.roleId, roleIds))
+      .orderBy(asc(rolePermissionsTable.roleId), asc(rolePermissionsTable.permissionId), asc(rolePermissionsTable.defaultScopeType)))
+    : [];
+  const permissionIds: string[] = Array.from(new Set<string>(rolePermissions.map((permission: any) => permission.permissionId as string))).sort();
+  const permissions = permissionIds.length
+    ? await lock(database.select().from(permissionsTable).where(inArray(permissionsTable.id, permissionIds)).orderBy(asc(permissionsTable.id)))
+    : [];
+  return { user, organization, memberships, bindings, roles, rolePermissions, permissions };
 }
 
 export function authorizationProbeAvailable(environment = process.env.NODE_ENV) {

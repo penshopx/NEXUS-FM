@@ -7,8 +7,8 @@ Task #02 = IMPLEMENTED
 Task #02 = VERIFIED
 ```
 
-This document is intentionally limited to the current authorization
-implementation. Future operational modules remain outside its scope.
+This document covers the authorization foundation and the Task #02
+organization-scoped facility registry.
 
 ## Current implementation
 
@@ -45,7 +45,29 @@ implementation. Future operational modules remain outside its scope.
 - Production `/authorization/check` is disabled with `404`.
 - Router production behavior defaults to the existing Clerk-backed
   `currentUser`; tests use only the dependency-injectable router factory.
-- No operational domain modules or object resolvers were fabricated.
+- Facility, building, space, system, and asset records are organization
+  scoped. Composite organization-plus-ancestor foreign keys prevent a row
+  from pointing at a parent in another organization or at a mismatched
+  ancestor.
+- Trusted server-side resolvers load every persisted ancestor before creating
+  verified authorization context. Missing, cross-organization, and malformed
+  ancestor chains fail closed.
+- Registry routes cover list, detail, name/code search, pagination, nested
+  access, CSV export, and create/update/delete mutations. Every surface
+  filters by active organization and evaluates the resolved ancestor context
+  against the actor's persisted binding.
+- Facility registration has a narrowly scoped bootstrap rule: an
+  organization binding may satisfy `FACILITY.CREATE` for a new facility.
+  The same binding cannot view, update, or delete an existing facility;
+  those operations still require an explicit compatible facility binding.
+- Registry mutations resolve and lock the trusted object, evaluate
+  authorization against the same transaction connection, write, and append
+  successful mutation audit records atomically. Decision audits use that same
+  transaction connection, so both the decision and mutation-success audit
+  roll back together if the write fails.
+- Authorization row locks use a fixed order (user, organization, membership,
+  bindings, roles, role permissions, permissions) with deterministic key
+  ordering.
 
 ## Migration chain
 
@@ -59,6 +81,9 @@ The committed chain is:
    keys, current enum names and columns, policy/binding CAS versions,
    canonical audit columns, and the current role-permission/binding
    constraints.
+5. `0004_facility_registry.sql` — organization-scoped facilities, buildings,
+   spaces, systems, and assets with composite ancestor foreign keys,
+   organization indexes, and parent identity uniqueness constraints.
 
 The forward migration preserves old authorization rows where possible. Legacy
 terminal binding rows are mapped to current `EXPIRED`; the current schema has
@@ -96,7 +121,11 @@ database.
   rejection.
 - **Task #01-shaped target:** applies only the foundation baseline, runs
   `adopt-foundation-baseline.mjs`, applies authorization migrations, and runs
-  the same current-schema and authorization checks.
+  the same current-schema, authorization, and registry checks.
+
+The migration assertions also insert a complete facility → building → space →
+system → asset chain and verify that a cross-ancestor space insert fails with
+PostgreSQL `23503`.
 
 The existing adoption refusal suite remains available:
 
@@ -115,7 +144,7 @@ pnpm --filter @workspace/api-server run test
 Result:
 
 ```text
-15 tests passed
+18 tests passed
 0 failed
 ```
 
@@ -145,6 +174,22 @@ Node `fetch`. Coverage includes:
   `SCOPE_MISMATCH`;
 - production authorization-probe `404`;
 - audit sanitization and concurrent foundation bootstrap.
+- real facility/building/space/system/asset rows and complete trusted ancestor
+  context;
+- list filtering and pagination, search, detail, nested listing/creation,
+  CSV export, update, and create mutation routes;
+- same-organization outside-facility denial, cross-organization `404`
+  isolation, tampered child-parent rejection, and database-level composite
+  ancestor FK rejection;
+- organization bootstrap `FACILITY.CREATE` allow with explicit existing
+  facility VIEW/UPDATE/MANAGE denials.
+- table-driven adversarial HTTP coverage for FACILITY, BUILDING, SPACE, and
+  ASSET bindings across rows/totals/pages, search, CSV, detail, nested,
+  create, update, and delete surfaces, including pagination boundaries and
+  same/cross-organization exclusions.
+- deterministic transaction-lock concurrency coverage proving revocation and
+  policy DENY wait for a mutation's authorization/write transaction and deny
+  only on the subsequent authorization.
 
 ## Build and generation checks
 
@@ -152,7 +197,9 @@ Completed successfully:
 
 ```text
 pnpm --filter @workspace/api-spec run codegen
-pnpm run typecheck
+pnpm run typecheck:libs
+pnpm --filter @workspace/api-server run typecheck
+pnpm --filter @workspace/db exec drizzle-kit check --config ./drizzle.config.ts
 pnpm --filter @workspace/api-server run test
 pnpm --filter @workspace/api-server run build
 PORT=3000 BASE_PATH=/ pnpm --filter @workspace/nexus-fm run build
@@ -161,7 +208,19 @@ PORT=3000 BASE_PATH=/ pnpm --filter @workspace/nexus-fm run build
 The web build reports only existing source-map and chunk-size warnings.
 `drizzle-kit check` reports `Everything's fine`.
 
-The API test command now bundles `pg` while resolving external packages from
+The aggregate `pnpm run typecheck` remains blocked by pre-existing
+`nexus-fm-animated-film` DOM/video TypeScript errors; the changed DB and API
+packages pass their focused checks above.
+
+The full API suite, including the focused registry test, was executed against
+a disposable database after
+`drizzle-kit migrate`:
+
+```text
+18 tests passed, 0 failed
+```
+
+The API test command bundles `pg` while resolving external packages from
 disposable `/tmp` test directories. It does not create or modify a workspace
 `node_modules` symlink.
 
@@ -181,9 +240,9 @@ After the rebased migration work, both workflows were restarted cleanly;
 `/api/healthz` returned `200`, while anonymous `/api/session` and
 `/api/me/permissions` returned `401`.
 
-Future Facility, Asset, Inspection, Work Order, Project, Finance, Compliance,
-and nested/list/search/export endpoint checks are not applicable because
-those modules do not exist.
+Future Inspection, Work Order, Project, Finance, and Compliance modules remain
+outside this task. Facility registry list/search/export/nested endpoint checks
+are covered by the focused test above.
 
 Final architecture/security review found no blocker or high-severity issue.
 It confirmed that both migration paths converge to the runtime schema and

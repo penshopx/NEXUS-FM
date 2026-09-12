@@ -3,16 +3,22 @@ import { after, before, test } from "node:test";
 import { randomUUID } from "node:crypto";
 import express from "express";
 import { createServer } from "node:http";
+import { setTimeout as delay } from "node:timers/promises";
 import { and, eq, inArray } from "drizzle-orm";
 import {
   authorizationAuditLogsTable,
+  assetsTable,
+  buildingsTable,
   canonicalRoleValues,
   db,
+  facilitiesTable,
   membershipsTable,
   organizationsTable,
   permissionsTable,
   rolePermissionsTable,
   rolesTable,
+  spacesTable,
+  systemsTable,
   userContextsTable,
   userRoleBindingsTable,
   usersTable,
@@ -42,6 +48,8 @@ import {
   getAppSession,
 } from "../src/services/foundation.ts";
 import { createAuthorizationRouter } from "../src/routes/authorization.ts";
+import { createFacilitiesRouter } from "../src/routes/facilities.ts";
+import { authorizeRegistryObject, resolveRegistryObject } from "../src/services/facilities.ts";
 
 type Fixture = {
   userId: string;
@@ -56,7 +64,7 @@ let seededPermissions: Map<string, string>;
 
 async function makeFixture(
   roleCode: string,
-  scopeType: "PLATFORM" | "ORGANIZATION" | "FACILITY" | "BUILDING" | "ASSIGNED" | "TEAM" | "VENDOR_ASSIGNMENT",
+  scopeType: "PLATFORM" | "ORGANIZATION" | "FACILITY" | "BUILDING" | "SPACE" | "ASSET" | "ASSIGNED" | "TEAM" | "VENDOR_ASSIGNMENT",
   scopeId?: string,
 ) {
   const [user] = await db.insert(usersTable).values({
@@ -579,9 +587,10 @@ test("authorization routes run through a real HTTP app with injected currentUser
     assert.equal(selfDelete.response.status, 403);
     actorId = manager.userId;
     const organizationAudit = await request("/audit-logs");
-    assert.equal(organizationAudit.response.status, 200);
-    assert.ok((organizationAudit.body as Array<{ organizationId: string | null }>)
-      .every((row) => row.organizationId === manager.organizationId));
+    // The role replacement above intentionally persisted explicit DENY rows,
+    // including AUDIT_LOG.VIEW_AUDIT; the manager must remain denied until
+    // the test's finally block restores the canonical matrix.
+    assert.equal(organizationAudit.response.status, 403);
     const crossOrgList = await request(`/users/${target.userId}/role-bindings`);
     assert.equal(crossOrgList.response.status, 403);
     const crossOrgCreate = await request(`/users/${target.userId}/role-bindings`, {
@@ -781,4 +790,492 @@ test("concurrent foundation bootstrap remains one user, membership, context and 
   assert.equal(contexts.length, 1);
   assert.equal(bindings.length, 1);
   await db.delete(usersTable).where(eq(usersTable.id, userId));
+});
+
+test("facility registry resolves trusted ancestors and enforces every route surface", async () => {
+  const manager = await makeFixture("FACILITY_MANAGER", "ORGANIZATION");
+  const [facility] = await db.insert(facilitiesTable).values({
+    organizationId: manager.organizationId,
+    name: "North Campus",
+    code: "NORTH",
+  }).returning();
+  const [outsideFacility] = await db.insert(facilitiesTable).values({
+    organizationId: manager.organizationId,
+    name: "Restricted Campus",
+    code: "RESTRICTED",
+  }).returning();
+  assert.ok(facility && outsideFacility);
+  await db.update(userRoleBindingsTable).set({
+    scopeType: "FACILITY",
+    scopeId: facility.id,
+  }).where(eq(userRoleBindingsTable.id, manager.bindingId));
+
+  const [building] = await db.insert(buildingsTable).values({
+    organizationId: manager.organizationId,
+    facilityId: facility.id,
+    name: "Main Building",
+  }).returning();
+  const [space] = await db.insert(spacesTable).values({
+    organizationId: manager.organizationId,
+    facilityId: facility.id,
+    buildingId: building!.id,
+    name: "Mechanical Room",
+  }).returning();
+  const [system] = await db.insert(systemsTable).values({
+    organizationId: manager.organizationId,
+    facilityId: facility.id,
+    buildingId: building!.id,
+    spaceId: space!.id,
+    name: "HVAC",
+  }).returning();
+  const [asset] = await db.insert(assetsTable).values({
+    organizationId: manager.organizationId,
+    facilityId: facility.id,
+    buildingId: building!.id,
+    spaceId: space!.id,
+    systemId: system!.id,
+    name: "Air Handler",
+  }).returning();
+  assert.ok(building && space && system && asset);
+  await db.insert(userContextsTable).values({
+    userId: manager.userId,
+    activeOrganizationId: manager.organizationId,
+  }).onConflictDoUpdate({
+    target: userContextsTable.userId,
+    set: { activeOrganizationId: manager.organizationId },
+  });
+
+  const resolved = await resolveRegistryObject(db, "ASSET", asset.id, manager.organizationId);
+  assert.equal(resolved.found, true);
+  if (resolved.found) {
+    assert.deepEqual(resolved.value.verifiedContext, {
+      organizationId: manager.organizationId,
+      resourceOrganizationId: manager.organizationId,
+      scopeVerified: true,
+      assetId: asset.id,
+      resourceScopeId: asset.id,
+      facilityId: facility.id,
+      buildingId: building.id,
+      spaceId: space.id,
+      systemId: system.id,
+    });
+  }
+  const outsideDecision = await authorizeRegistryObject({
+    database: db,
+    actorUserId: manager.userId,
+    organizationId: manager.organizationId,
+    kind: "FACILITY",
+    action: "VIEW",
+    id: outsideFacility.id,
+  });
+  assert.equal(outsideDecision.decision.reasonCode, "SCOPE_MISMATCH");
+
+  const [otherOrganization] = await db.insert(organizationsTable).values({
+    name: "Other Organization",
+    slug: `task02-registry-other-${randomUUID()}`,
+  }).returning();
+  const [otherFacility] = await db.insert(facilitiesTable).values({
+    organizationId: otherOrganization!.id,
+    name: "Other Campus",
+  }).returning();
+
+  const app = express();
+  app.use(express.json());
+  app.use(createFacilitiesRouter({
+    currentUser: async () => (await db.select().from(usersTable).where(eq(usersTable.id, manager.userId)))[0] ?? null,
+  }));
+  const server = createServer(app);
+  await new Promise<void>((resolve) => server.listen(0, resolve));
+  const address = server.address();
+  assert.ok(address && typeof address === "object");
+  const base = `http://127.0.0.1:${address.port}`;
+  const request = async (path: string, init: RequestInit = {}) => {
+    const response = await fetch(`${base}${path}`, {
+      ...init,
+      headers: { "content-type": "application/json", ...(init.headers ?? {}) },
+    });
+    return { response, text: await response.text() };
+  };
+  try {
+    const listed = await request("/facilities?limit=1&page=1");
+    assert.equal(listed.response.status, 200);
+    const listedBody = JSON.parse(listed.text) as { items: Array<{ id: string }>; total: number };
+    // The second facility is in the same organization but outside the
+    // actor's persisted facility binding and must not be enumerable.
+    assert.equal(listedBody.total, 1);
+    assert.equal(listedBody.items.length, 1);
+    const searched = await request("/facilities/search?q=North");
+    assert.equal(searched.response.status, 200);
+    assert.equal((JSON.parse(searched.text) as { items: Array<{ id: string }> }).items[0]?.id, facility.id);
+    const detail = await request(`/facilities/${facility.id}`);
+    assert.equal(detail.response.status, 200);
+    const outsideDetail = await request(`/facilities/${outsideFacility.id}`);
+    assert.equal(outsideDetail.response.status, 403);
+    const crossOrganizationDetail = await request(`/facilities/${otherFacility!.id}`);
+    assert.equal(crossOrganizationDetail.response.status, 404);
+    const nested = await request(`/facilities/${facility.id}/buildings`);
+    assert.equal(nested.response.status, 200);
+    assert.equal((JSON.parse(nested.text) as { items: Array<{ id: string }> }).items[0]?.id, building.id, nested.text);
+    const exported = await request("/assets/export");
+    assert.equal(exported.response.status, 200);
+    assert.match(exported.text, /Air Handler/);
+    const updated = await request(`/assets/${asset.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ name: "Air Handler Updated" }),
+    });
+    assert.equal(updated.response.status, 200);
+    const deniedUpdate = await request(`/facilities/${outsideFacility.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ name: "Tampered" }),
+    });
+    assert.equal(deniedUpdate.response.status, 403);
+    const created = await request("/buildings", {
+      method: "POST",
+      body: JSON.stringify({ facilityId: facility.id, name: "Annex" }),
+    });
+    assert.equal(created.response.status, 201, created.text);
+    const tamperedCreate = await request("/buildings", {
+      method: "POST",
+      body: JSON.stringify({ facilityId: outsideFacility.id, name: "Outside Annex" }),
+    });
+    assert.equal(tamperedCreate.response.status, 403);
+    const nestedCreated = await request(`/facilities/${facility.id}/buildings`, {
+      method: "POST",
+      body: JSON.stringify({ name: "Nested Annex" }),
+    });
+    assert.equal(nestedCreated.response.status, 201, nestedCreated.text);
+  } finally {
+    server.close();
+  }
+
+  const bootstrap = await makeFixture("FACILITY_MANAGER", "ORGANIZATION");
+  await db.insert(userContextsTable).values({
+    userId: bootstrap.userId,
+    activeOrganizationId: bootstrap.organizationId,
+  }).onConflictDoUpdate({
+    target: userContextsTable.userId,
+    set: { activeOrganizationId: bootstrap.organizationId },
+  });
+  const bootstrapId = randomUUID();
+  const bootstrapDecision = await authorize({
+    actorUserId: bootstrap.userId,
+    organizationId: bootstrap.organizationId,
+    permission: "FACILITY.CREATE",
+    resourceType: "FACILITY",
+    resourceId: bootstrapId,
+    verifiedContext: {
+      organizationId: bootstrap.organizationId,
+      facilityId: bootstrapId,
+      resourceScopeId: bootstrapId,
+      scopeVerified: true,
+    },
+  });
+  assert.equal(bootstrapDecision.allowed, true, JSON.stringify(bootstrapDecision));
+  const bootstrapFacility = await db.insert(facilitiesTable).values({
+    organizationId: bootstrap.organizationId,
+    name: "Bootstrap Facility",
+  }).returning();
+  const bootstrapView = await authorizeRegistryObject({
+    database: db,
+    actorUserId: bootstrap.userId,
+    organizationId: bootstrap.organizationId,
+    kind: "FACILITY",
+    action: "VIEW",
+    id: bootstrapFacility[0]!.id,
+  });
+  assert.equal(bootstrapView.decision.reasonCode, "SCOPE_MISMATCH");
+  const bootstrapUpdate = await authorizeRegistryObject({
+    database: db,
+    actorUserId: bootstrap.userId,
+    organizationId: bootstrap.organizationId,
+    kind: "FACILITY",
+    action: "UPDATE",
+    id: bootstrapFacility[0]!.id,
+  });
+  assert.equal(bootstrapUpdate.decision.reasonCode, "SCOPE_MISMATCH");
+  const bootstrapDelete = await authorizeRegistryObject({
+    database: db,
+    actorUserId: bootstrap.userId,
+    organizationId: bootstrap.organizationId,
+    kind: "FACILITY",
+    action: "MANAGE",
+    id: bootstrapFacility[0]!.id,
+  });
+  assert.equal(bootstrapDelete.decision.reasonCode, "SCOPE_MISMATCH");
+
+  await assert.rejects(
+    db.insert(spacesTable).values({
+      organizationId: manager.organizationId,
+      facilityId: outsideFacility.id,
+      buildingId: building.id,
+      name: "Cross Facility Tamper",
+    }),
+    (error: unknown) => (error as { cause?: { code?: string } }).cause?.code === "23503",
+  );
+  await db.delete(organizationsTable).where(eq(organizationsTable.id, otherOrganization!.id));
+});
+
+test("registry HTTP adversarial matrix excludes unauthorized rows across every binding scope", async () => {
+  type Kind = "FACILITY" | "BUILDING" | "SPACE" | "ASSET";
+  type Chain = {
+    facility: typeof facilitiesTable.$inferSelect;
+    building: typeof buildingsTable.$inferSelect;
+    space: typeof spacesTable.$inferSelect;
+    system: typeof systemsTable.$inferSelect;
+    asset: typeof assetsTable.$inferSelect;
+  };
+  const makeChain = async (organizationId: string, label: string): Promise<Chain> => {
+    const [facility] = await db.insert(facilitiesTable).values({ organizationId, name: `${label} Facility` }).returning();
+    assert.ok(facility);
+    const [building] = await db.insert(buildingsTable).values({ organizationId, facilityId: facility.id, name: `${label} Building` }).returning();
+    assert.ok(building);
+    const [space] = await db.insert(spacesTable).values({ organizationId, facilityId: facility.id, buildingId: building.id, name: `${label} Space` }).returning();
+    assert.ok(space);
+    const [system] = await db.insert(systemsTable).values({ organizationId, facilityId: facility.id, buildingId: building.id, spaceId: space.id, name: `${label} System` }).returning();
+    assert.ok(system);
+    const [asset] = await db.insert(assetsTable).values({ organizationId, facilityId: facility.id, buildingId: building.id, spaceId: space.id, systemId: system.id, name: `${label} Asset` }).returning();
+    assert.ok(asset);
+    return { facility, building, space, system, asset };
+  };
+  const cases: Array<{
+    kind: Kind;
+    scopeType: "FACILITY" | "BUILDING" | "SPACE" | "ASSET";
+    plural: string;
+    nested: (chain: Chain) => string;
+    createBody: (chain: Chain, organizationId: string) => Record<string, string>;
+    row: (chain: Chain) => { id: string; name: string };
+  }> = [
+    { kind: "FACILITY", scopeType: "FACILITY", plural: "facilities", nested: (c) => `/facilities/${c.facility.id}/buildings`, createBody: (_, organizationId) => ({ organizationId, name: "Rejected Facility" }), row: (c) => c.facility },
+    { kind: "BUILDING", scopeType: "BUILDING", plural: "buildings", nested: (c) => `/buildings/${c.building.id}/spaces`, createBody: (c) => ({ facilityId: c.facility.id, name: "Rejected Building" }), row: (c) => c.building },
+    { kind: "SPACE", scopeType: "SPACE", plural: "spaces", nested: (c) => `/spaces/${c.space.id}/systems`, createBody: (c) => ({ facilityId: c.facility.id, buildingId: c.building.id, name: "Rejected Space" }), row: (c) => c.space },
+    { kind: "ASSET", scopeType: "ASSET", plural: "assets", nested: (c) => `/spaces/${c.space.id}/assets`, createBody: (c) => ({ facilityId: c.facility.id, buildingId: c.building.id, spaceId: c.space.id, name: "Rejected Asset" }), row: (c) => c.asset },
+  ];
+
+  for (const testCase of cases) {
+    const actor = await makeFixture("FACILITY_MANAGER", testCase.scopeType);
+    const target = await makeChain(actor.organizationId, "Allowed");
+    const denied = await makeChain(actor.organizationId, "Denied");
+    const otherOrganization = await db.insert(organizationsTable).values({
+      name: "Registry Matrix Other",
+      slug: `task02-matrix-${randomUUID()}`,
+    }).returning();
+    assert.ok(otherOrganization[0]);
+    const crossOrganization = await makeChain(otherOrganization[0]!.id, "Cross Organization");
+    const targetRow = testCase.row(target);
+    const deniedRow = testCase.row(denied);
+    const crossRow = testCase.row(crossOrganization);
+    await db.update(userRoleBindingsTable).set({
+      scopeType: testCase.scopeType,
+      scopeId: targetRow.id,
+    }).where(eq(userRoleBindingsTable.id, actor.bindingId));
+    await db.insert(userContextsTable).values({
+      userId: actor.userId,
+      activeOrganizationId: actor.organizationId,
+    }).onConflictDoUpdate({
+      target: userContextsTable.userId,
+      set: { activeOrganizationId: actor.organizationId },
+    });
+
+    const app = express();
+    app.use(express.json());
+    app.use(createFacilitiesRouter({
+      currentUser: async () => (await db.select().from(usersTable).where(eq(usersTable.id, actor.userId)))[0] ?? null,
+    }));
+    const server = createServer(app);
+    await new Promise<void>((resolve) => server.listen(0, resolve));
+    const address = server.address();
+    assert.ok(address && typeof address === "object");
+    const base = `http://127.0.0.1:${address.port}`;
+    const request = async (path: string, init: RequestInit = {}) => {
+      const response = await fetch(`${base}${path}`, {
+        ...init,
+        headers: { "content-type": "application/json", ...(init.headers ?? {}) },
+      });
+      return { response, text: await response.text() };
+    };
+    try {
+      const list = await request(`/${testCase.plural}?limit=1&page=1`);
+      assert.equal(list.response.status, 200);
+      const listBody = JSON.parse(list.text) as { items: Array<{ id: string }>; total: number; page: number; limit: number };
+      assert.equal(listBody.total, 1);
+      assert.equal(listBody.items.length, 1);
+      assert.equal(listBody.items[0]?.id, targetRow.id);
+      assert.equal(listBody.page, 1);
+      assert.equal(listBody.limit, 1);
+      assert.ok(!list.text.includes(deniedRow.id) && !list.text.includes(crossRow.id));
+
+      const pageBoundary = await request(`/${testCase.plural}?limit=1&page=2`);
+      assert.equal(pageBoundary.response.status, 200);
+      const pageBody = JSON.parse(pageBoundary.text) as { items: unknown[]; total: number; page: number };
+      assert.deepEqual(pageBody.items, []);
+      assert.equal(pageBody.total, 1);
+      assert.equal(pageBody.page, 2);
+      const invalidPage = await request(`/${testCase.plural}?limit=1&page=0`);
+      assert.equal(invalidPage.response.status, 200);
+      assert.equal((JSON.parse(invalidPage.text) as { page: number }).page, 1);
+
+      const search = await request(`/${testCase.plural}/search?q=Denied`);
+      assert.equal(search.response.status, 200);
+      const searchBody = JSON.parse(search.text) as { items: unknown[]; total: number };
+      assert.deepEqual(searchBody.items, []);
+      assert.equal(searchBody.total, 0);
+      const exported = await request(`/${testCase.plural}/export`);
+      assert.equal(exported.response.status, 200);
+      assert.ok(exported.text.includes(targetRow.name));
+      assert.ok(!exported.text.includes(deniedRow.name) && !exported.text.includes(crossRow.name));
+
+      assert.equal((await request(`/${testCase.plural}/${targetRow.id}`)).response.status, 200);
+      assert.equal((await request(`/${testCase.plural}/${deniedRow.id}`)).response.status, 403);
+      assert.equal((await request(`/${testCase.plural}/${crossRow.id}`)).response.status, 404);
+      assert.equal((await request(testCase.nested(target))).response.status, testCase.kind === "ASSET" ? 403 : 200);
+      assert.equal((await request(testCase.nested(denied))).response.status, 403);
+      assert.equal((await request(testCase.nested(crossOrganization))).response.status, 404);
+
+      assert.equal((await request(`/${testCase.plural}/${deniedRow.id}`, {
+        method: "PATCH", body: JSON.stringify({ name: "Rejected Update" }),
+      })).response.status, 403);
+      assert.equal((await request(`/${testCase.plural}/${deniedRow.id}`, { method: "DELETE" })).response.status, 403);
+      assert.equal((await request(`/${testCase.plural}`, {
+        method: "POST", body: JSON.stringify(testCase.createBody(target, actor.organizationId)),
+      })).response.status, 403);
+
+      // A binding must still authorize successful writes for its own resource
+      // kind. Use an isolated candidate so later matrix cases retain their
+      // complete ancestor chains.
+      let writableId: string;
+      if (testCase.kind === "FACILITY") {
+        const [candidate] = await db.insert(facilitiesTable).values({ organizationId: actor.organizationId, name: "Writable Facility" }).returning();
+        writableId = candidate!.id;
+      } else if (testCase.kind === "BUILDING") {
+        const [candidate] = await db.insert(buildingsTable).values({ organizationId: actor.organizationId, facilityId: target.facility.id, name: "Writable Building" }).returning();
+        writableId = candidate!.id;
+      } else if (testCase.kind === "SPACE") {
+        const [candidate] = await db.insert(spacesTable).values({ organizationId: actor.organizationId, facilityId: target.facility.id, buildingId: target.building.id, name: "Writable Space" }).returning();
+        writableId = candidate!.id;
+      } else {
+        const [candidate] = await db.insert(assetsTable).values({ organizationId: actor.organizationId, facilityId: target.facility.id, buildingId: target.building.id, spaceId: target.space.id, name: "Writable Asset" }).returning();
+        writableId = candidate!.id;
+      }
+      await db.update(userRoleBindingsTable).set({ scopeId: writableId }).where(eq(userRoleBindingsTable.id, actor.bindingId));
+      assert.equal((await request(`/${testCase.plural}/${writableId}`, {
+        method: "PATCH", body: JSON.stringify({ name: "Writable Updated" }),
+      })).response.status, 200);
+      assert.equal((await request(`/${testCase.plural}/${writableId}`, { method: "DELETE" })).response.status, 204);
+    } finally {
+      server.close();
+    }
+    await db.delete(organizationsTable).where(eq(organizationsTable.id, otherOrganization[0]!.id));
+  }
+});
+
+test("mutation authorization linearizes against concurrent revocation and policy deny", async () => {
+  const actor = await makeFixture("FACILITY_MANAGER", "ORGANIZATION");
+  const [facility] = await db.insert(facilitiesTable).values({
+    organizationId: actor.organizationId,
+    name: "Linearization Facility",
+  }).returning();
+  assert.ok(facility);
+  await db.update(userRoleBindingsTable).set({
+    scopeType: "FACILITY",
+    scopeId: facility.id,
+  }).where(eq(userRoleBindingsTable.id, actor.bindingId));
+  await db.insert(userContextsTable).values({
+    userId: actor.userId,
+    activeOrganizationId: actor.organizationId,
+  }).onConflictDoUpdate({
+    target: userContextsTable.userId,
+    set: { activeOrganizationId: actor.organizationId },
+  });
+  const verifiedContext = {
+    organizationId: actor.organizationId,
+    resourceOrganizationId: actor.organizationId,
+    facilityId: facility.id,
+    resourceScopeId: facility.id,
+    scopeVerified: true,
+  };
+  let releaseMutation!: () => void;
+  const mutationGate = new Promise<void>((resolve) => { releaseMutation = resolve; });
+  let authorizationComplete!: () => void;
+  const authorizationGate = new Promise<void>((resolve) => { authorizationComplete = resolve; });
+  const mutation = db.transaction(async (tx) => {
+    const decision = await authorize({
+      database: tx,
+      actorUserId: actor.userId,
+      organizationId: actor.organizationId,
+      permission: "FACILITY.UPDATE",
+      resourceType: "FACILITY",
+      resourceId: facility.id,
+      verifiedContext,
+      requestId: "linearization-revocation",
+    });
+    assert.equal(decision.allowed, true);
+    authorizationComplete();
+    await mutationGate;
+    await tx.update(facilitiesTable).set({ name: "Linearized Before Revocation" }).where(eq(facilitiesTable.id, facility.id));
+  });
+  await authorizationGate;
+  let revocationSettled = false;
+  const revocation = db.update(userRoleBindingsTable).set({ status: "SUSPENDED" })
+    .where(eq(userRoleBindingsTable.id, actor.bindingId))
+    .then(() => { revocationSettled = true; });
+  await delay(50);
+  assert.equal(revocationSettled, false, "revocation must wait on the mutation's locked authorization state");
+  releaseMutation();
+  await mutation;
+  await revocation;
+  const afterRevocation = await authorize({
+    actorUserId: actor.userId,
+    organizationId: actor.organizationId,
+    permission: "FACILITY.UPDATE",
+    resourceType: "FACILITY",
+    resourceId: facility.id,
+    verifiedContext,
+    requestId: "linearization-revocation-after",
+  });
+  assert.equal(afterRevocation.allowed, false);
+
+  await db.update(userRoleBindingsTable).set({ status: "ACTIVE" }).where(eq(userRoleBindingsTable.id, actor.bindingId));
+  const permission = await permissionId("FACILITY.UPDATE");
+  let releasePolicyMutation!: () => void;
+  const policyMutationGate = new Promise<void>((resolve) => { releasePolicyMutation = resolve; });
+  let policyAuthorizationComplete!: () => void;
+  const policyAuthorizationGate = new Promise<void>((resolve) => { policyAuthorizationComplete = resolve; });
+  const policyMutation = db.transaction(async (tx) => {
+    const decision = await authorize({
+      database: tx,
+      actorUserId: actor.userId,
+      organizationId: actor.organizationId,
+      permission: "FACILITY.UPDATE",
+      resourceType: "FACILITY",
+      resourceId: facility.id,
+      verifiedContext,
+      requestId: "linearization-policy",
+    });
+    assert.equal(decision.allowed, true);
+    policyAuthorizationComplete();
+    await policyMutationGate;
+    await tx.update(facilitiesTable).set({ name: "Linearized Before Policy Deny" }).where(eq(facilitiesTable.id, facility.id));
+  });
+  await policyAuthorizationGate;
+  let policySettled = false;
+  const policyDeny = db.update(rolePermissionsTable).set({ effect: "DENY" })
+    .where(and(eq(rolePermissionsTable.roleId, actor.roleId), eq(rolePermissionsTable.permissionId, permission)))
+    .then(() => { policySettled = true; });
+  await delay(50);
+  assert.equal(policySettled, false, "policy deny must wait on the mutation's locked authorization state");
+  releasePolicyMutation();
+  await policyMutation;
+  await policyDeny;
+  const afterPolicyDeny = await authorize({
+    actorUserId: actor.userId,
+    organizationId: actor.organizationId,
+    permission: "FACILITY.UPDATE",
+    resourceType: "FACILITY",
+    resourceId: facility.id,
+    verifiedContext,
+    requestId: "linearization-policy-after",
+  });
+  assert.equal(afterPolicyDeny.allowed, false);
+  await db.update(rolePermissionsTable).set({ effect: "ALLOW" })
+    .where(and(eq(rolePermissionsTable.roleId, actor.roleId), eq(rolePermissionsTable.permissionId, permission)));
 });

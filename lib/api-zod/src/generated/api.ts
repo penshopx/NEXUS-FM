@@ -382,3 +382,1333 @@ export const CheckAuthorizationResponse = zod.object({
 })
 
 
+/**
+ * @summary List facilities in the active organization
+ */
+export const listFacilitiesQueryPageDefault = 1;
+
+export const listFacilitiesQueryLimitDefault = 50;
+export const listFacilitiesQueryLimitMax = 100;
+
+
+
+export const ListFacilitiesQueryParams = zod.object({
+  "q": zod.coerce.string().optional(),
+  "page": zod.coerce.number().int().min(1).default(listFacilitiesQueryPageDefault),
+  "limit": zod.coerce.number().int().min(1).max(listFacilitiesQueryLimitMax).default(listFacilitiesQueryLimitDefault)
+})
+
+export const ListFacilitiesResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "name": zod.string(),
+  "code": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date().optional(),
+  "updatedAt": zod.coerce.date().optional()
+})),
+  "page": zod.number().int(),
+  "limit": zod.number().int(),
+  "total": zod.number().int()
+})
+
+
+/**
+ * @summary Register a facility in the active organization
+ */
+export const createFacilityBodyNameMax = 200;
+
+export const createFacilityBodyCodeMax = 100;
+
+export const createFacilityBodyDescriptionMax = 4000;
+
+
+
+export const CreateFacilityBody = zod.object({
+  "name": zod.string().min(1).max(createFacilityBodyNameMax),
+  "code": zod.string().max(createFacilityBodyCodeMax).nullish(),
+  "description": zod.string().max(createFacilityBodyDescriptionMax).nullish(),
+  "status": zod.enum(['ACTIVE', 'INACTIVE']).optional()
+})
+
+export const CreateFacilityResponse = zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "name": zod.string(),
+  "code": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date().optional(),
+  "updatedAt": zod.coerce.date().optional()
+})
+
+
+/**
+ * @summary Search facilities in the active organization
+ */
+export const SearchFacilitiesQueryParams = zod.object({
+  "q": zod.coerce.string()
+})
+
+export const SearchFacilitiesResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "name": zod.string(),
+  "code": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date().optional(),
+  "updatedAt": zod.coerce.date().optional()
+})),
+  "page": zod.number().int(),
+  "limit": zod.number().int(),
+  "total": zod.number().int()
+})
+
+
+/**
+ * @summary Export authorized facilities as CSV
+ */
+export const ExportFacilitiesResponse = zod.unknown()
+
+
+/**
+ * @summary Get a facility after ancestor and scope verification
+ */
+export const GetFacilityParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const GetFacilityResponse = zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "name": zod.string(),
+  "code": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date().optional(),
+  "updatedAt": zod.coerce.date().optional()
+})
+
+
+/**
+ * @summary Update a facility
+ */
+export const UpdateFacilityParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const updateFacilityBodyNameMax = 200;
+
+export const updateFacilityBodyCodeMax = 100;
+
+export const updateFacilityBodyDescriptionMax = 4000;
+
+
+
+export const UpdateFacilityBody = zod.object({
+  "name": zod.string().min(1).max(updateFacilityBodyNameMax),
+  "code": zod.string().max(updateFacilityBodyCodeMax).nullish(),
+  "description": zod.string().max(updateFacilityBodyDescriptionMax).nullish(),
+  "status": zod.enum(['ACTIVE', 'INACTIVE']).optional()
+})
+
+export const UpdateFacilityResponse = zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "name": zod.string(),
+  "code": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date().optional(),
+  "updatedAt": zod.coerce.date().optional()
+})
+
+
+/**
+ * @summary Replace mutable facility fields
+ */
+export const ReplaceFacilityParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const replaceFacilityBodyNameMax = 200;
+
+export const replaceFacilityBodyCodeMax = 100;
+
+export const replaceFacilityBodyDescriptionMax = 4000;
+
+
+
+export const ReplaceFacilityBody = zod.object({
+  "name": zod.string().min(1).max(replaceFacilityBodyNameMax),
+  "code": zod.string().max(replaceFacilityBodyCodeMax).nullish(),
+  "description": zod.string().max(replaceFacilityBodyDescriptionMax).nullish(),
+  "status": zod.enum(['ACTIVE', 'INACTIVE']).optional()
+})
+
+export const ReplaceFacilityResponse = zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "name": zod.string(),
+  "code": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date().optional(),
+  "updatedAt": zod.coerce.date().optional()
+})
+
+
+/**
+ * @summary Delete a facility and its descendants
+ */
+export const DeleteFacilityParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const DeleteFacilityResponse = zod.void()
+
+
+/**
+ * @summary Create a building nested under a facility
+ */
+export const CreateFacilityBuildingParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const createFacilityBuildingBodyNameMax = 200;
+
+export const createFacilityBuildingBodyCodeMax = 100;
+
+export const createFacilityBuildingBodyDescriptionMax = 4000;
+
+
+
+export const CreateFacilityBuildingBody = zod.object({
+  "name": zod.string().min(1).max(createFacilityBuildingBodyNameMax),
+  "code": zod.string().max(createFacilityBuildingBodyCodeMax).nullish(),
+  "description": zod.string().max(createFacilityBuildingBodyDescriptionMax).nullish(),
+  "status": zod.enum(['ACTIVE', 'INACTIVE']).optional()
+})
+
+export const CreateFacilityBuildingResponse = zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "name": zod.string(),
+  "code": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date().optional(),
+  "updatedAt": zod.coerce.date().optional()
+}).and(zod.object({
+  "facilityId": zod.string().uuid()
+}))
+
+
+/**
+ * @summary List buildings nested under a facility
+ */
+export const ListFacilityBuildingsParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const ListFacilityBuildingsResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "name": zod.string(),
+  "code": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date().optional(),
+  "updatedAt": zod.coerce.date().optional()
+})),
+  "page": zod.number().int(),
+  "limit": zod.number().int(),
+  "total": zod.number().int()
+})
+
+
+/**
+ * @summary Search buildings in the active organization
+ */
+export const SearchBuildingsQueryParams = zod.object({
+  "q": zod.coerce.string()
+})
+
+export const SearchBuildingsResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "name": zod.string(),
+  "code": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date().optional(),
+  "updatedAt": zod.coerce.date().optional()
+})),
+  "page": zod.number().int(),
+  "limit": zod.number().int(),
+  "total": zod.number().int()
+})
+
+
+/**
+ * @summary Export authorized buildings as CSV
+ */
+export const ExportBuildingsResponse = zod.unknown()
+
+
+/**
+ * @summary Get a building
+ */
+export const GetBuildingParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const GetBuildingResponse = zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "name": zod.string(),
+  "code": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date().optional(),
+  "updatedAt": zod.coerce.date().optional()
+}).and(zod.object({
+  "facilityId": zod.string().uuid()
+}))
+
+
+/**
+ * @summary Update a building
+ */
+export const UpdateBuildingParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const updateBuildingBodyNameMax = 200;
+
+export const updateBuildingBodyCodeMax = 100;
+
+export const updateBuildingBodyDescriptionMax = 4000;
+
+
+
+export const UpdateBuildingBody = zod.object({
+  "name": zod.string().min(1).max(updateBuildingBodyNameMax),
+  "code": zod.string().max(updateBuildingBodyCodeMax).nullish(),
+  "description": zod.string().max(updateBuildingBodyDescriptionMax).nullish(),
+  "status": zod.enum(['ACTIVE', 'INACTIVE']).optional()
+})
+
+export const UpdateBuildingResponse = zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "name": zod.string(),
+  "code": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date().optional(),
+  "updatedAt": zod.coerce.date().optional()
+}).and(zod.object({
+  "facilityId": zod.string().uuid()
+}))
+
+
+/**
+ * @summary Replace mutable building fields
+ */
+export const ReplaceBuildingParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const replaceBuildingBodyNameMax = 200;
+
+export const replaceBuildingBodyCodeMax = 100;
+
+export const replaceBuildingBodyDescriptionMax = 4000;
+
+
+
+export const ReplaceBuildingBody = zod.object({
+  "name": zod.string().min(1).max(replaceBuildingBodyNameMax),
+  "code": zod.string().max(replaceBuildingBodyCodeMax).nullish(),
+  "description": zod.string().max(replaceBuildingBodyDescriptionMax).nullish(),
+  "status": zod.enum(['ACTIVE', 'INACTIVE']).optional()
+})
+
+export const ReplaceBuildingResponse = zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "name": zod.string(),
+  "code": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date().optional(),
+  "updatedAt": zod.coerce.date().optional()
+}).and(zod.object({
+  "facilityId": zod.string().uuid()
+}))
+
+
+/**
+ * @summary Delete a building
+ */
+export const DeleteBuildingParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const DeleteBuildingResponse = zod.void()
+
+
+/**
+ * @summary List spaces nested under a building
+ */
+export const ListBuildingSpacesParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const ListBuildingSpacesResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "name": zod.string(),
+  "code": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date().optional(),
+  "updatedAt": zod.coerce.date().optional()
+})),
+  "page": zod.number().int(),
+  "limit": zod.number().int(),
+  "total": zod.number().int()
+})
+
+
+/**
+ * @summary Create a space nested under a building
+ */
+export const CreateBuildingSpaceParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const createBuildingSpaceBodyNameMax = 200;
+
+export const createBuildingSpaceBodyCodeMax = 100;
+
+export const createBuildingSpaceBodyDescriptionMax = 4000;
+
+
+
+export const CreateBuildingSpaceBody = zod.object({
+  "name": zod.string().min(1).max(createBuildingSpaceBodyNameMax),
+  "code": zod.string().max(createBuildingSpaceBodyCodeMax).nullish(),
+  "description": zod.string().max(createBuildingSpaceBodyDescriptionMax).nullish(),
+  "status": zod.enum(['ACTIVE', 'INACTIVE']).optional()
+})
+
+export const CreateBuildingSpaceResponse = zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "name": zod.string(),
+  "code": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date().optional(),
+  "updatedAt": zod.coerce.date().optional()
+}).and(zod.object({
+  "facilityId": zod.string().uuid(),
+  "buildingId": zod.string().uuid()
+}))
+
+
+/**
+ * @summary Search spaces in the active organization
+ */
+export const SearchSpacesQueryParams = zod.object({
+  "q": zod.coerce.string()
+})
+
+export const SearchSpacesResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "name": zod.string(),
+  "code": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date().optional(),
+  "updatedAt": zod.coerce.date().optional()
+})),
+  "page": zod.number().int(),
+  "limit": zod.number().int(),
+  "total": zod.number().int()
+})
+
+
+/**
+ * @summary Export authorized spaces as CSV
+ */
+export const ExportSpacesResponse = zod.unknown()
+
+
+/**
+ * @summary Get a space
+ */
+export const GetSpaceParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const GetSpaceResponse = zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "name": zod.string(),
+  "code": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date().optional(),
+  "updatedAt": zod.coerce.date().optional()
+}).and(zod.object({
+  "facilityId": zod.string().uuid(),
+  "buildingId": zod.string().uuid()
+}))
+
+
+/**
+ * @summary Update a space
+ */
+export const UpdateSpaceParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const updateSpaceBodyNameMax = 200;
+
+export const updateSpaceBodyCodeMax = 100;
+
+export const updateSpaceBodyDescriptionMax = 4000;
+
+
+
+export const UpdateSpaceBody = zod.object({
+  "name": zod.string().min(1).max(updateSpaceBodyNameMax),
+  "code": zod.string().max(updateSpaceBodyCodeMax).nullish(),
+  "description": zod.string().max(updateSpaceBodyDescriptionMax).nullish(),
+  "status": zod.enum(['ACTIVE', 'INACTIVE']).optional()
+})
+
+export const UpdateSpaceResponse = zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "name": zod.string(),
+  "code": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date().optional(),
+  "updatedAt": zod.coerce.date().optional()
+}).and(zod.object({
+  "facilityId": zod.string().uuid(),
+  "buildingId": zod.string().uuid()
+}))
+
+
+/**
+ * @summary Replace mutable space fields
+ */
+export const ReplaceSpaceParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const replaceSpaceBodyNameMax = 200;
+
+export const replaceSpaceBodyCodeMax = 100;
+
+export const replaceSpaceBodyDescriptionMax = 4000;
+
+
+
+export const ReplaceSpaceBody = zod.object({
+  "name": zod.string().min(1).max(replaceSpaceBodyNameMax),
+  "code": zod.string().max(replaceSpaceBodyCodeMax).nullish(),
+  "description": zod.string().max(replaceSpaceBodyDescriptionMax).nullish(),
+  "status": zod.enum(['ACTIVE', 'INACTIVE']).optional()
+})
+
+export const ReplaceSpaceResponse = zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "name": zod.string(),
+  "code": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date().optional(),
+  "updatedAt": zod.coerce.date().optional()
+}).and(zod.object({
+  "facilityId": zod.string().uuid(),
+  "buildingId": zod.string().uuid()
+}))
+
+
+/**
+ * @summary Delete a space
+ */
+export const DeleteSpaceParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const DeleteSpaceResponse = zod.void()
+
+
+/**
+ * @summary List systems nested under a space
+ */
+export const ListSpaceSystemsParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const ListSpaceSystemsResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "name": zod.string(),
+  "code": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date().optional(),
+  "updatedAt": zod.coerce.date().optional()
+})),
+  "page": zod.number().int(),
+  "limit": zod.number().int(),
+  "total": zod.number().int()
+})
+
+
+/**
+ * @summary Create a system nested under a space
+ */
+export const CreateSpaceSystemParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const createSpaceSystemBodyNameMax = 200;
+
+export const createSpaceSystemBodyCodeMax = 100;
+
+export const createSpaceSystemBodyDescriptionMax = 4000;
+
+
+
+export const CreateSpaceSystemBody = zod.object({
+  "name": zod.string().min(1).max(createSpaceSystemBodyNameMax),
+  "code": zod.string().max(createSpaceSystemBodyCodeMax).nullish(),
+  "description": zod.string().max(createSpaceSystemBodyDescriptionMax).nullish(),
+  "status": zod.enum(['ACTIVE', 'INACTIVE']).optional()
+})
+
+export const CreateSpaceSystemResponse = zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "name": zod.string(),
+  "code": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date().optional(),
+  "updatedAt": zod.coerce.date().optional()
+}).and(zod.object({
+  "facilityId": zod.string().uuid(),
+  "buildingId": zod.string().uuid(),
+  "spaceId": zod.string().uuid()
+}))
+
+
+/**
+ * @summary List assets nested under a space
+ */
+export const ListSpaceAssetsParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const ListSpaceAssetsResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "name": zod.string(),
+  "code": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date().optional(),
+  "updatedAt": zod.coerce.date().optional()
+})),
+  "page": zod.number().int(),
+  "limit": zod.number().int(),
+  "total": zod.number().int()
+})
+
+
+/**
+ * @summary Create an asset nested under a space
+ */
+export const CreateSpaceAssetParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const createSpaceAssetBodyOneNameMax = 200;
+
+export const createSpaceAssetBodyOneCodeMax = 100;
+
+export const createSpaceAssetBodyOneDescriptionMax = 4000;
+
+
+
+export const CreateSpaceAssetBody = zod.object({
+  "name": zod.string().min(1).max(createSpaceAssetBodyOneNameMax),
+  "code": zod.string().max(createSpaceAssetBodyOneCodeMax).nullish(),
+  "description": zod.string().max(createSpaceAssetBodyOneDescriptionMax).nullish(),
+  "status": zod.enum(['ACTIVE', 'INACTIVE']).optional()
+}).and(zod.object({
+  "spaceId": zod.string().uuid(),
+  "systemId": zod.string().uuid().nullish()
+}))
+
+export const CreateSpaceAssetResponse = zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "name": zod.string(),
+  "code": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date().optional(),
+  "updatedAt": zod.coerce.date().optional()
+}).and(zod.object({
+  "facilityId": zod.string().uuid(),
+  "buildingId": zod.string().uuid(),
+  "spaceId": zod.string().uuid(),
+  "systemId": zod.string().uuid().nullish()
+}))
+
+
+/**
+ * @summary Search systems in the active organization
+ */
+export const SearchSystemsQueryParams = zod.object({
+  "q": zod.coerce.string()
+})
+
+export const SearchSystemsResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "name": zod.string(),
+  "code": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date().optional(),
+  "updatedAt": zod.coerce.date().optional()
+})),
+  "page": zod.number().int(),
+  "limit": zod.number().int(),
+  "total": zod.number().int()
+})
+
+
+/**
+ * @summary Export authorized systems as CSV
+ */
+export const ExportSystemsResponse = zod.unknown()
+
+
+/**
+ * @summary Get a system
+ */
+export const GetSystemParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const GetSystemResponse = zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "name": zod.string(),
+  "code": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date().optional(),
+  "updatedAt": zod.coerce.date().optional()
+}).and(zod.object({
+  "facilityId": zod.string().uuid(),
+  "buildingId": zod.string().uuid(),
+  "spaceId": zod.string().uuid()
+}))
+
+
+/**
+ * @summary Update a system
+ */
+export const UpdateSystemParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const updateSystemBodyNameMax = 200;
+
+export const updateSystemBodyCodeMax = 100;
+
+export const updateSystemBodyDescriptionMax = 4000;
+
+
+
+export const UpdateSystemBody = zod.object({
+  "name": zod.string().min(1).max(updateSystemBodyNameMax),
+  "code": zod.string().max(updateSystemBodyCodeMax).nullish(),
+  "description": zod.string().max(updateSystemBodyDescriptionMax).nullish(),
+  "status": zod.enum(['ACTIVE', 'INACTIVE']).optional()
+})
+
+export const UpdateSystemResponse = zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "name": zod.string(),
+  "code": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date().optional(),
+  "updatedAt": zod.coerce.date().optional()
+}).and(zod.object({
+  "facilityId": zod.string().uuid(),
+  "buildingId": zod.string().uuid(),
+  "spaceId": zod.string().uuid()
+}))
+
+
+/**
+ * @summary Replace mutable system fields
+ */
+export const ReplaceSystemParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const replaceSystemBodyNameMax = 200;
+
+export const replaceSystemBodyCodeMax = 100;
+
+export const replaceSystemBodyDescriptionMax = 4000;
+
+
+
+export const ReplaceSystemBody = zod.object({
+  "name": zod.string().min(1).max(replaceSystemBodyNameMax),
+  "code": zod.string().max(replaceSystemBodyCodeMax).nullish(),
+  "description": zod.string().max(replaceSystemBodyDescriptionMax).nullish(),
+  "status": zod.enum(['ACTIVE', 'INACTIVE']).optional()
+})
+
+export const ReplaceSystemResponse = zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "name": zod.string(),
+  "code": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date().optional(),
+  "updatedAt": zod.coerce.date().optional()
+}).and(zod.object({
+  "facilityId": zod.string().uuid(),
+  "buildingId": zod.string().uuid(),
+  "spaceId": zod.string().uuid()
+}))
+
+
+/**
+ * @summary Delete a system
+ */
+export const DeleteSystemParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const DeleteSystemResponse = zod.void()
+
+
+/**
+ * @summary Search assets in the active organization
+ */
+export const SearchAssetsQueryParams = zod.object({
+  "q": zod.coerce.string()
+})
+
+export const SearchAssetsResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "name": zod.string(),
+  "code": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date().optional(),
+  "updatedAt": zod.coerce.date().optional()
+})),
+  "page": zod.number().int(),
+  "limit": zod.number().int(),
+  "total": zod.number().int()
+})
+
+
+/**
+ * @summary Export authorized assets as CSV
+ */
+export const ExportAssetsResponse = zod.unknown()
+
+
+/**
+ * @summary Get an asset
+ */
+export const GetAssetParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const GetAssetResponse = zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "name": zod.string(),
+  "code": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date().optional(),
+  "updatedAt": zod.coerce.date().optional()
+}).and(zod.object({
+  "facilityId": zod.string().uuid(),
+  "buildingId": zod.string().uuid(),
+  "spaceId": zod.string().uuid(),
+  "systemId": zod.string().uuid().nullish()
+}))
+
+
+/**
+ * @summary Update an asset
+ */
+export const UpdateAssetParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const updateAssetBodyNameMax = 200;
+
+export const updateAssetBodyCodeMax = 100;
+
+export const updateAssetBodyDescriptionMax = 4000;
+
+
+
+export const UpdateAssetBody = zod.object({
+  "name": zod.string().min(1).max(updateAssetBodyNameMax),
+  "code": zod.string().max(updateAssetBodyCodeMax).nullish(),
+  "description": zod.string().max(updateAssetBodyDescriptionMax).nullish(),
+  "status": zod.enum(['ACTIVE', 'INACTIVE']).optional()
+})
+
+export const UpdateAssetResponse = zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "name": zod.string(),
+  "code": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date().optional(),
+  "updatedAt": zod.coerce.date().optional()
+}).and(zod.object({
+  "facilityId": zod.string().uuid(),
+  "buildingId": zod.string().uuid(),
+  "spaceId": zod.string().uuid(),
+  "systemId": zod.string().uuid().nullish()
+}))
+
+
+/**
+ * @summary Replace mutable asset fields
+ */
+export const ReplaceAssetParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const replaceAssetBodyNameMax = 200;
+
+export const replaceAssetBodyCodeMax = 100;
+
+export const replaceAssetBodyDescriptionMax = 4000;
+
+
+
+export const ReplaceAssetBody = zod.object({
+  "name": zod.string().min(1).max(replaceAssetBodyNameMax),
+  "code": zod.string().max(replaceAssetBodyCodeMax).nullish(),
+  "description": zod.string().max(replaceAssetBodyDescriptionMax).nullish(),
+  "status": zod.enum(['ACTIVE', 'INACTIVE']).optional()
+})
+
+export const ReplaceAssetResponse = zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "name": zod.string(),
+  "code": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date().optional(),
+  "updatedAt": zod.coerce.date().optional()
+}).and(zod.object({
+  "facilityId": zod.string().uuid(),
+  "buildingId": zod.string().uuid(),
+  "spaceId": zod.string().uuid(),
+  "systemId": zod.string().uuid().nullish()
+}))
+
+
+/**
+ * @summary Delete an asset
+ */
+export const DeleteAssetParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const DeleteAssetResponse = zod.void()
+
+
+/**
+ * @summary List assets nested under a system
+ */
+export const ListSystemAssetsParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const ListSystemAssetsResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "name": zod.string(),
+  "code": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date().optional(),
+  "updatedAt": zod.coerce.date().optional()
+})),
+  "page": zod.number().int(),
+  "limit": zod.number().int(),
+  "total": zod.number().int()
+})
+
+
+/**
+ * @summary Create an asset nested under a system
+ */
+export const CreateSystemAssetParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const createSystemAssetBodyOneNameMax = 200;
+
+export const createSystemAssetBodyOneCodeMax = 100;
+
+export const createSystemAssetBodyOneDescriptionMax = 4000;
+
+
+
+export const CreateSystemAssetBody = zod.object({
+  "name": zod.string().min(1).max(createSystemAssetBodyOneNameMax),
+  "code": zod.string().max(createSystemAssetBodyOneCodeMax).nullish(),
+  "description": zod.string().max(createSystemAssetBodyOneDescriptionMax).nullish(),
+  "status": zod.enum(['ACTIVE', 'INACTIVE']).optional()
+}).and(zod.object({
+  "spaceId": zod.string().uuid(),
+  "systemId": zod.string().uuid().nullish()
+}))
+
+export const CreateSystemAssetResponse = zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "name": zod.string(),
+  "code": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date().optional(),
+  "updatedAt": zod.coerce.date().optional()
+}).and(zod.object({
+  "facilityId": zod.string().uuid(),
+  "buildingId": zod.string().uuid(),
+  "spaceId": zod.string().uuid(),
+  "systemId": zod.string().uuid().nullish()
+}))
+
+
+/**
+ * @summary List buildings in the active organization
+ */
+export const listBuildingsQueryPageDefault = 1;
+
+export const listBuildingsQueryLimitDefault = 50;
+export const listBuildingsQueryLimitMax = 100;
+
+
+
+export const ListBuildingsQueryParams = zod.object({
+  "q": zod.coerce.string().optional(),
+  "page": zod.coerce.number().int().min(1).default(listBuildingsQueryPageDefault),
+  "limit": zod.coerce.number().int().min(1).max(listBuildingsQueryLimitMax).default(listBuildingsQueryLimitDefault)
+})
+
+export const ListBuildingsResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "name": zod.string(),
+  "code": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date().optional(),
+  "updatedAt": zod.coerce.date().optional()
+})),
+  "page": zod.number().int(),
+  "limit": zod.number().int(),
+  "total": zod.number().int()
+})
+
+
+/**
+ * @summary Create a building under a persisted facility
+ */
+export const createBuildingBodyOneNameMax = 200;
+
+export const createBuildingBodyOneCodeMax = 100;
+
+export const createBuildingBodyOneDescriptionMax = 4000;
+
+
+
+export const CreateBuildingBody = zod.object({
+  "name": zod.string().min(1).max(createBuildingBodyOneNameMax),
+  "code": zod.string().max(createBuildingBodyOneCodeMax).nullish(),
+  "description": zod.string().max(createBuildingBodyOneDescriptionMax).nullish(),
+  "status": zod.enum(['ACTIVE', 'INACTIVE']).optional()
+}).and(zod.object({
+  "facilityId": zod.string().uuid()
+}))
+
+export const CreateBuildingResponse = zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "name": zod.string(),
+  "code": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date().optional(),
+  "updatedAt": zod.coerce.date().optional()
+}).and(zod.object({
+  "facilityId": zod.string().uuid()
+}))
+
+
+/**
+ * @summary List spaces in the active organization
+ */
+export const listSpacesQueryPageDefault = 1;
+
+export const listSpacesQueryLimitDefault = 50;
+export const listSpacesQueryLimitMax = 100;
+
+
+
+export const ListSpacesQueryParams = zod.object({
+  "q": zod.coerce.string().optional(),
+  "page": zod.coerce.number().int().min(1).default(listSpacesQueryPageDefault),
+  "limit": zod.coerce.number().int().min(1).max(listSpacesQueryLimitMax).default(listSpacesQueryLimitDefault)
+})
+
+export const ListSpacesResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "name": zod.string(),
+  "code": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date().optional(),
+  "updatedAt": zod.coerce.date().optional()
+})),
+  "page": zod.number().int(),
+  "limit": zod.number().int(),
+  "total": zod.number().int()
+})
+
+
+/**
+ * @summary Create a space under a persisted building
+ */
+export const createSpaceBodyOneNameMax = 200;
+
+export const createSpaceBodyOneCodeMax = 100;
+
+export const createSpaceBodyOneDescriptionMax = 4000;
+
+
+
+export const CreateSpaceBody = zod.object({
+  "name": zod.string().min(1).max(createSpaceBodyOneNameMax),
+  "code": zod.string().max(createSpaceBodyOneCodeMax).nullish(),
+  "description": zod.string().max(createSpaceBodyOneDescriptionMax).nullish(),
+  "status": zod.enum(['ACTIVE', 'INACTIVE']).optional()
+}).and(zod.object({
+  "buildingId": zod.string().uuid()
+}))
+
+export const CreateSpaceResponse = zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "name": zod.string(),
+  "code": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date().optional(),
+  "updatedAt": zod.coerce.date().optional()
+}).and(zod.object({
+  "facilityId": zod.string().uuid(),
+  "buildingId": zod.string().uuid()
+}))
+
+
+/**
+ * @summary List systems in the active organization
+ */
+export const listSystemsQueryPageDefault = 1;
+
+export const listSystemsQueryLimitDefault = 50;
+export const listSystemsQueryLimitMax = 100;
+
+
+
+export const ListSystemsQueryParams = zod.object({
+  "q": zod.coerce.string().optional(),
+  "page": zod.coerce.number().int().min(1).default(listSystemsQueryPageDefault),
+  "limit": zod.coerce.number().int().min(1).max(listSystemsQueryLimitMax).default(listSystemsQueryLimitDefault)
+})
+
+export const ListSystemsResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "name": zod.string(),
+  "code": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date().optional(),
+  "updatedAt": zod.coerce.date().optional()
+})),
+  "page": zod.number().int(),
+  "limit": zod.number().int(),
+  "total": zod.number().int()
+})
+
+
+/**
+ * @summary Create a system under a persisted space
+ */
+export const createSystemBodyOneNameMax = 200;
+
+export const createSystemBodyOneCodeMax = 100;
+
+export const createSystemBodyOneDescriptionMax = 4000;
+
+
+
+export const CreateSystemBody = zod.object({
+  "name": zod.string().min(1).max(createSystemBodyOneNameMax),
+  "code": zod.string().max(createSystemBodyOneCodeMax).nullish(),
+  "description": zod.string().max(createSystemBodyOneDescriptionMax).nullish(),
+  "status": zod.enum(['ACTIVE', 'INACTIVE']).optional()
+}).and(zod.object({
+  "spaceId": zod.string().uuid()
+}))
+
+export const CreateSystemResponse = zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "name": zod.string(),
+  "code": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date().optional(),
+  "updatedAt": zod.coerce.date().optional()
+}).and(zod.object({
+  "facilityId": zod.string().uuid(),
+  "buildingId": zod.string().uuid(),
+  "spaceId": zod.string().uuid()
+}))
+
+
+/**
+ * @summary List assets in the active organization
+ */
+export const listAssetsQueryPageDefault = 1;
+
+export const listAssetsQueryLimitDefault = 50;
+export const listAssetsQueryLimitMax = 100;
+
+
+
+export const ListAssetsQueryParams = zod.object({
+  "q": zod.coerce.string().optional(),
+  "page": zod.coerce.number().int().min(1).default(listAssetsQueryPageDefault),
+  "limit": zod.coerce.number().int().min(1).max(listAssetsQueryLimitMax).default(listAssetsQueryLimitDefault)
+})
+
+export const ListAssetsResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "name": zod.string(),
+  "code": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date().optional(),
+  "updatedAt": zod.coerce.date().optional()
+})),
+  "page": zod.number().int(),
+  "limit": zod.number().int(),
+  "total": zod.number().int()
+})
+
+
+/**
+ * @summary Create an asset under a persisted space
+ */
+export const createAssetBodyOneNameMax = 200;
+
+export const createAssetBodyOneCodeMax = 100;
+
+export const createAssetBodyOneDescriptionMax = 4000;
+
+
+
+export const CreateAssetBody = zod.object({
+  "name": zod.string().min(1).max(createAssetBodyOneNameMax),
+  "code": zod.string().max(createAssetBodyOneCodeMax).nullish(),
+  "description": zod.string().max(createAssetBodyOneDescriptionMax).nullish(),
+  "status": zod.enum(['ACTIVE', 'INACTIVE']).optional()
+}).and(zod.object({
+  "spaceId": zod.string().uuid(),
+  "systemId": zod.string().uuid().nullish()
+}))
+
+export const CreateAssetResponse = zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "name": zod.string(),
+  "code": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date().optional(),
+  "updatedAt": zod.coerce.date().optional()
+}).and(zod.object({
+  "facilityId": zod.string().uuid(),
+  "buildingId": zod.string().uuid(),
+  "spaceId": zod.string().uuid(),
+  "systemId": zod.string().uuid().nullish()
+}))
+
+

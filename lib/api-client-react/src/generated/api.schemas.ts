@@ -5,6 +5,96 @@
  * NEXUS-FM foundation API
  * OpenAPI spec version: 0.1.0
  */
+export type RegistryInputStatus = typeof RegistryInputStatus[keyof typeof RegistryInputStatus];
+
+
+export const RegistryInputStatus = {
+  ACTIVE: 'ACTIVE',
+  INACTIVE: 'INACTIVE',
+} as const;
+
+export interface RegistryInput {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  name: string;
+  /**
+     * @maxLength 100
+     * @nullable
+     */
+  code?: string | null;
+  /**
+     * @maxLength 4000
+     * @nullable
+     */
+  description?: string | null;
+  status?: RegistryInputStatus;
+}
+
+export type BuildingInput = RegistryInput & {
+  facilityId: string;
+};
+
+export type SpaceInput = RegistryInput & {
+  buildingId: string;
+};
+
+export type SystemInput = RegistryInput & {
+  spaceId: string;
+};
+
+export type AssetInput = RegistryInput & ({
+  spaceId: string;
+  /** @nullable */
+  systemId?: string | null;
+});
+
+export interface RegistryRecord {
+  id: string;
+  organizationId: string;
+  name: string;
+  /** @nullable */
+  code?: string | null;
+  /** @nullable */
+  description?: string | null;
+  status: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type Facility = RegistryRecord;
+
+export type Building = RegistryRecord & {
+  facilityId: string;
+};
+
+export type Space = RegistryRecord & {
+  facilityId: string;
+  buildingId: string;
+};
+
+export type System = RegistryRecord & {
+  facilityId: string;
+  buildingId: string;
+  spaceId: string;
+};
+
+export type Asset = RegistryRecord & ({
+  facilityId: string;
+  buildingId: string;
+  spaceId: string;
+  /** @nullable */
+  systemId?: string | null;
+});
+
+export interface RegistryPage {
+  items: RegistryRecord[];
+  page: number;
+  limit: number;
+  total: number;
+}
+
 export interface HealthStatus {
   status: string;
 }
@@ -326,8 +416,99 @@ export type PreconditionRequiredResponse = ErrorResponse;
  */
 export type IfMatchParameter = string;
 
+export type SearchParameter = string;
+
+export type PageParameter = number;
+
+export type LimitParameter = number;
+
 export type GetAuthorizationAuditLogsParams = {
 resource?: string;
 resourceId?: string;
+};
+
+export type ListFacilitiesParams = {
+q?: SearchParameter;
+/**
+ * @minimum 1
+ */
+page?: PageParameter;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: LimitParameter;
+};
+
+export type SearchFacilitiesParams = {
+q: string;
+};
+
+export type SearchBuildingsParams = {
+q: string;
+};
+
+export type SearchSpacesParams = {
+q: string;
+};
+
+export type SearchSystemsParams = {
+q: string;
+};
+
+export type SearchAssetsParams = {
+q: string;
+};
+
+export type ListBuildingsParams = {
+q?: SearchParameter;
+/**
+ * @minimum 1
+ */
+page?: PageParameter;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: LimitParameter;
+};
+
+export type ListSpacesParams = {
+q?: SearchParameter;
+/**
+ * @minimum 1
+ */
+page?: PageParameter;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: LimitParameter;
+};
+
+export type ListSystemsParams = {
+q?: SearchParameter;
+/**
+ * @minimum 1
+ */
+page?: PageParameter;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: LimitParameter;
+};
+
+export type ListAssetsParams = {
+q?: SearchParameter;
+/**
+ * @minimum 1
+ */
+page?: PageParameter;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: LimitParameter;
 };
 

@@ -57,7 +57,7 @@ const operational: Record<CanonicalRole, RoleRule[]> = {
     { resource: "VENDOR", actions: ["MANAGE"], scope: "PLATFORM" },
   ],
   FACILITY_MANAGER: [
-    ...rules(["FACILITY"], ["VIEW", "UPDATE", "MANAGE"], "FACILITY"),
+    ...rules(["FACILITY"], ["VIEW", "CREATE", "UPDATE", "MANAGE"], "FACILITY"),
     ...rules(["BUILDING", "SPACE", "SYSTEM", "ASSET"], ["VIEW", "CREATE", "UPDATE", "MANAGE"], "FACILITY"),
     ...rules(["INSPECTION"], ["VIEW", "CREATE", "UPDATE", "APPROVE"], "FACILITY"),
     ...rules(["FINDING", "ISSUE", "INCIDENT"], ["VIEW", "CREATE", "UPDATE", "ASSIGN", "APPROVE", "CLOSE"], "FACILITY"),
@@ -274,7 +274,7 @@ const matrix: MatrixRow[] = [
   ["AUDIT_LOG", "FACILITY_MANAGER", ["VIEW_AUDIT"], "ORGANIZATION"],
   ["AUDIT_LOG", "FACILITY_SUPERVISOR", ["VIEW_AUDIT"], "TEAM"],
   ["AUDIT_LOG", "WAREHOUSE_SUPERVISOR", ["VIEW_AUDIT"], "BUILDING"],
-  ["FACILITY", "FACILITY_MANAGER", ["VIEW", "UPDATE", "MANAGE"], "FACILITY"],
+  ["FACILITY", "FACILITY_MANAGER", ["VIEW", "CREATE", "UPDATE", "MANAGE"], "FACILITY"],
   ["FACILITY", "FACILITY_SUPERVISOR", ["VIEW", "UPDATE"], "FACILITY"],
   ["FACILITY", "INSPECTOR", ["VIEW"], "ASSIGNED"],
   ["FACILITY", "MAINTENANCE_TECHNICIAN", ["VIEW"], "ASSIGNED"],

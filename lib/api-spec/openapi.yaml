@@ -10,6 +10,7 @@ tags:
   - name: health
   - name: foundation
   - name: authorization
+  - name: registry
 paths:
   /healthz:
     get:
@@ -363,6 +364,477 @@ paths:
         "401": {$ref: "#/components/responses/Unauthorized"}
         "403": {$ref: "#/components/responses/Forbidden"}
         "404": {$ref: "#/components/responses/NotFound"}
+  /facilities:
+    get:
+      operationId: listFacilities
+      tags: [registry]
+      summary: List facilities in the active organization
+      parameters:
+        - {$ref: "#/components/parameters/Search"}
+        - {$ref: "#/components/parameters/Page"}
+        - {$ref: "#/components/parameters/Limit"}
+      responses:
+        "200": {description: Facilities, content: {application/json: {schema: {$ref: "#/components/schemas/RegistryPage"}}}}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+    post:
+      operationId: createFacility
+      tags: [registry]
+      summary: Register a facility in the active organization
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/RegistryInput"}}}}
+      responses:
+        "201": {description: Created facility, content: {application/json: {schema: {$ref: "#/components/schemas/Facility"}}}}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /facilities/search:
+    get:
+      operationId: searchFacilities
+      tags: [registry]
+      summary: Search facilities in the active organization
+      parameters: [{name: q, in: query, required: true, schema: {type: string}}]
+      responses:
+        "200": {description: Search results, content: {application/json: {schema: {$ref: "#/components/schemas/RegistryPage"}}}}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /facilities/export:
+    get:
+      operationId: exportFacilities
+      tags: [registry]
+      summary: Export authorized facilities as CSV
+      responses:
+        "200": {description: CSV export, content: {text/csv: {schema: {type: string}}}}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /facilities/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+    get:
+      operationId: getFacility
+      tags: [registry]
+      summary: Get a facility after ancestor and scope verification
+      responses:
+        "200": {description: Facility, content: {application/json: {schema: {$ref: "#/components/schemas/Facility"}}}}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+    patch:
+      operationId: updateFacility
+      tags: [registry]
+      summary: Update a facility
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/RegistryInput"}}}}
+      responses:
+        "200": {description: Updated facility, content: {application/json: {schema: {$ref: "#/components/schemas/Facility"}}}}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+    put:
+      operationId: replaceFacility
+      tags: [registry]
+      summary: Replace mutable facility fields
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/RegistryInput"}}}}
+      responses:
+        "200": {description: Updated facility, content: {application/json: {schema: {$ref: "#/components/schemas/Facility"}}}}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+    delete:
+      operationId: deleteFacility
+      tags: [registry]
+      summary: Delete a facility and its descendants
+      responses:
+        "204": {description: Deleted}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /facilities/{id}/buildings:
+    post:
+      operationId: createFacilityBuilding
+      tags: [registry]
+      summary: Create a building nested under a facility
+      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/RegistryInput"}}}}
+      responses:
+        "201": {description: Created building, content: {application/json: {schema: {$ref: "#/components/schemas/Building"}}}}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+    get:
+      operationId: listFacilityBuildings
+      tags: [registry]
+      summary: List buildings nested under a facility
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        "200": {description: Buildings, content: {application/json: {schema: {$ref: "#/components/schemas/RegistryPage"}}}}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /buildings/search:
+    get:
+      operationId: searchBuildings
+      tags: [registry]
+      summary: Search buildings in the active organization
+      parameters: [{name: q, in: query, required: true, schema: {type: string}}]
+      responses:
+        "200": {description: Search results, content: {application/json: {schema: {$ref: "#/components/schemas/RegistryPage"}}}}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /buildings/export:
+    get:
+      operationId: exportBuildings
+      tags: [registry]
+      summary: Export authorized buildings as CSV
+      responses:
+        "200": {description: CSV export, content: {text/csv: {schema: {type: string}}}}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /buildings/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+    get:
+      operationId: getBuilding
+      tags: [registry]
+      summary: Get a building
+      responses:
+        "200": {description: Building, content: {application/json: {schema: {$ref: "#/components/schemas/Building"}}}}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+    patch:
+      operationId: updateBuilding
+      tags: [registry]
+      summary: Update a building
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/RegistryInput"}}}}
+      responses:
+        "200": {description: Updated building, content: {application/json: {schema: {$ref: "#/components/schemas/Building"}}}}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+    put:
+      operationId: replaceBuilding
+      tags: [registry]
+      summary: Replace mutable building fields
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/RegistryInput"}}}}
+      responses:
+        "200": {description: Updated building, content: {application/json: {schema: {$ref: "#/components/schemas/Building"}}}}
+        "403": {$ref: "#/components/responses/Forbidden"}
+    delete:
+      operationId: deleteBuilding
+      tags: [registry]
+      summary: Delete a building
+      responses:
+        "204": {description: Deleted}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /buildings/{id}/spaces:
+    get:
+      operationId: listBuildingSpaces
+      tags: [registry]
+      summary: List spaces nested under a building
+      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      responses:
+        "200": {description: Spaces, content: {application/json: {schema: {$ref: "#/components/schemas/RegistryPage"}}}}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+    post:
+      operationId: createBuildingSpace
+      tags: [registry]
+      summary: Create a space nested under a building
+      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/RegistryInput"}}}}
+      responses:
+        "201": {description: Created space, content: {application/json: {schema: {$ref: "#/components/schemas/Space"}}}}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /spaces/search:
+    get:
+      operationId: searchSpaces
+      tags: [registry]
+      summary: Search spaces in the active organization
+      parameters: [{name: q, in: query, required: true, schema: {type: string}}]
+      responses:
+        "200": {description: Search results, content: {application/json: {schema: {$ref: "#/components/schemas/RegistryPage"}}}}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /spaces/export:
+    get:
+      operationId: exportSpaces
+      tags: [registry]
+      summary: Export authorized spaces as CSV
+      responses:
+        "200": {description: CSV export, content: {text/csv: {schema: {type: string}}}}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /spaces/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+    get:
+      operationId: getSpace
+      tags: [registry]
+      summary: Get a space
+      responses:
+        "200": {description: Space, content: {application/json: {schema: {$ref: "#/components/schemas/Space"}}}}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+    patch:
+      operationId: updateSpace
+      tags: [registry]
+      summary: Update a space
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/RegistryInput"}}}}
+      responses:
+        "200": {description: Updated space, content: {application/json: {schema: {$ref: "#/components/schemas/Space"}}}}
+        "403": {$ref: "#/components/responses/Forbidden"}
+    put:
+      operationId: replaceSpace
+      tags: [registry]
+      summary: Replace mutable space fields
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/RegistryInput"}}}}
+      responses:
+        "200": {description: Updated space, content: {application/json: {schema: {$ref: "#/components/schemas/Space"}}}}
+        "403": {$ref: "#/components/responses/Forbidden"}
+    delete:
+      operationId: deleteSpace
+      tags: [registry]
+      summary: Delete a space
+      responses:
+        "204": {description: Deleted}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /spaces/{id}/systems:
+    get:
+      operationId: listSpaceSystems
+      tags: [registry]
+      summary: List systems nested under a space
+      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      responses:
+        "200": {description: Systems, content: {application/json: {schema: {$ref: "#/components/schemas/RegistryPage"}}}}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+    post:
+      operationId: createSpaceSystem
+      tags: [registry]
+      summary: Create a system nested under a space
+      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/RegistryInput"}}}}
+      responses:
+        "201": {description: Created system, content: {application/json: {schema: {$ref: "#/components/schemas/System"}}}}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /spaces/{id}/assets:
+    get:
+      operationId: listSpaceAssets
+      tags: [registry]
+      summary: List assets nested under a space
+      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      responses:
+        "200": {description: Assets, content: {application/json: {schema: {$ref: "#/components/schemas/RegistryPage"}}}}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+    post:
+      operationId: createSpaceAsset
+      tags: [registry]
+      summary: Create an asset nested under a space
+      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/AssetInput"}}}}
+      responses:
+        "201": {description: Created asset, content: {application/json: {schema: {$ref: "#/components/schemas/Asset"}}}}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /systems/search:
+    get:
+      operationId: searchSystems
+      tags: [registry]
+      summary: Search systems in the active organization
+      parameters: [{name: q, in: query, required: true, schema: {type: string}}]
+      responses:
+        "200": {description: Search results, content: {application/json: {schema: {$ref: "#/components/schemas/RegistryPage"}}}}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /systems/export:
+    get:
+      operationId: exportSystems
+      tags: [registry]
+      summary: Export authorized systems as CSV
+      responses:
+        "200": {description: CSV export, content: {text/csv: {schema: {type: string}}}}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /systems/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+    get:
+      operationId: getSystem
+      tags: [registry]
+      summary: Get a system
+      responses:
+        "200": {description: System, content: {application/json: {schema: {$ref: "#/components/schemas/System"}}}}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+    patch:
+      operationId: updateSystem
+      tags: [registry]
+      summary: Update a system
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/RegistryInput"}}}}
+      responses:
+        "200": {description: Updated system, content: {application/json: {schema: {$ref: "#/components/schemas/System"}}}}
+        "403": {$ref: "#/components/responses/Forbidden"}
+    put:
+      operationId: replaceSystem
+      tags: [registry]
+      summary: Replace mutable system fields
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/RegistryInput"}}}}
+      responses:
+        "200": {description: Updated system, content: {application/json: {schema: {$ref: "#/components/schemas/System"}}}}
+        "403": {$ref: "#/components/responses/Forbidden"}
+    delete:
+      operationId: deleteSystem
+      tags: [registry]
+      summary: Delete a system
+      responses:
+        "204": {description: Deleted}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /assets/search:
+    get:
+      operationId: searchAssets
+      tags: [registry]
+      summary: Search assets in the active organization
+      parameters: [{name: q, in: query, required: true, schema: {type: string}}]
+      responses:
+        "200": {description: Search results, content: {application/json: {schema: {$ref: "#/components/schemas/RegistryPage"}}}}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /assets/export:
+    get:
+      operationId: exportAssets
+      tags: [registry]
+      summary: Export authorized assets as CSV
+      responses:
+        "200": {description: CSV export, content: {text/csv: {schema: {type: string}}}}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /assets/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+    get:
+      operationId: getAsset
+      tags: [registry]
+      summary: Get an asset
+      responses:
+        "200": {description: Asset, content: {application/json: {schema: {$ref: "#/components/schemas/Asset"}}}}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+    patch:
+      operationId: updateAsset
+      tags: [registry]
+      summary: Update an asset
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/RegistryInput"}}}}
+      responses:
+        "200": {description: Updated asset, content: {application/json: {schema: {$ref: "#/components/schemas/Asset"}}}}
+        "403": {$ref: "#/components/responses/Forbidden"}
+    put:
+      operationId: replaceAsset
+      tags: [registry]
+      summary: Replace mutable asset fields
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/RegistryInput"}}}}
+      responses:
+        "200": {description: Updated asset, content: {application/json: {schema: {$ref: "#/components/schemas/Asset"}}}}
+        "403": {$ref: "#/components/responses/Forbidden"}
+    delete:
+      operationId: deleteAsset
+      tags: [registry]
+      summary: Delete an asset
+      responses:
+        "204": {description: Deleted}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /systems/{id}/assets:
+    get:
+      operationId: listSystemAssets
+      tags: [registry]
+      summary: List assets nested under a system
+      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      responses:
+        "200": {description: Assets, content: {application/json: {schema: {$ref: "#/components/schemas/RegistryPage"}}}}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+    post:
+      operationId: createSystemAsset
+      tags: [registry]
+      summary: Create an asset nested under a system
+      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/AssetInput"}}}}
+      responses:
+        "201": {description: Created asset, content: {application/json: {schema: {$ref: "#/components/schemas/Asset"}}}}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /buildings:
+    get:
+      operationId: listBuildings
+      tags: [registry]
+      summary: List buildings in the active organization
+      parameters: [{$ref: "#/components/parameters/Search"}, {$ref: "#/components/parameters/Page"}, {$ref: "#/components/parameters/Limit"}]
+      responses:
+        "200": {description: Buildings, content: {application/json: {schema: {$ref: "#/components/schemas/RegistryPage"}}}}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+    post:
+      operationId: createBuilding
+      tags: [registry]
+      summary: Create a building under a persisted facility
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/BuildingInput"}}}}
+      responses:
+        "201": {description: Created building, content: {application/json: {schema: {$ref: "#/components/schemas/Building"}}}}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /spaces:
+    get:
+      operationId: listSpaces
+      tags: [registry]
+      summary: List spaces in the active organization
+      parameters: [{$ref: "#/components/parameters/Search"}, {$ref: "#/components/parameters/Page"}, {$ref: "#/components/parameters/Limit"}]
+      responses:
+        "200": {description: Spaces, content: {application/json: {schema: {$ref: "#/components/schemas/RegistryPage"}}}}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+    post:
+      operationId: createSpace
+      tags: [registry]
+      summary: Create a space under a persisted building
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/SpaceInput"}}}}
+      responses:
+        "201": {description: Created space, content: {application/json: {schema: {$ref: "#/components/schemas/Space"}}}}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /systems:
+    get:
+      operationId: listSystems
+      tags: [registry]
+      summary: List systems in the active organization
+      parameters: [{$ref: "#/components/parameters/Search"}, {$ref: "#/components/parameters/Page"}, {$ref: "#/components/parameters/Limit"}]
+      responses:
+        "200": {description: Systems, content: {application/json: {schema: {$ref: "#/components/schemas/RegistryPage"}}}}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+    post:
+      operationId: createSystem
+      tags: [registry]
+      summary: Create a system under a persisted space
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/SystemInput"}}}}
+      responses:
+        "201": {description: Created system, content: {application/json: {schema: {$ref: "#/components/schemas/System"}}}}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /assets:
+    get:
+      operationId: listAssets
+      tags: [registry]
+      summary: List assets in the active organization
+      parameters: [{$ref: "#/components/parameters/Search"}, {$ref: "#/components/parameters/Page"}, {$ref: "#/components/parameters/Limit"}]
+      responses:
+        "200": {description: Assets, content: {application/json: {schema: {$ref: "#/components/schemas/RegistryPage"}}}}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+    post:
+      operationId: createAsset
+      tags: [registry]
+      summary: Create an asset under a persisted space
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/AssetInput"}}}}
+      responses:
+        "201": {description: Created asset, content: {application/json: {schema: {$ref: "#/components/schemas/Asset"}}}}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "403": {$ref: "#/components/responses/Forbidden"}
 components:
   parameters:
     RoleId: {name: roleId, in: path, required: true, schema: {type: string, format: uuid}}
@@ -374,6 +846,9 @@ components:
       required: false
       description: Exact role policyVersion token returned as the ETag header. If omitted, the request body policyVersion is used.
       schema: {type: string}
+    Search: {name: q, in: query, required: false, schema: {type: string}}
+    Page: {name: page, in: query, required: false, schema: {type: integer, minimum: 1, default: 1}}
+    Limit: {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100, default: 50}}
   responses:
     Unauthorized:
       description: Authentication required
@@ -394,6 +869,99 @@ components:
       description: An exact policy version precondition is required
       content: {application/json: {schema: {$ref: "#/components/schemas/ErrorResponse"}}}
   schemas:
+    RegistryInput:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 200}
+        code: {type: [string, "null"], maxLength: 100}
+        description: {type: [string, "null"], maxLength: 4000}
+        status: {type: string, enum: [ACTIVE, INACTIVE]}
+    BuildingInput:
+      allOf:
+        - $ref: "#/components/schemas/RegistryInput"
+        - type: object
+          required: [facilityId]
+          properties: {facilityId: {type: string, format: uuid}}
+    SpaceInput:
+      allOf:
+        - $ref: "#/components/schemas/RegistryInput"
+        - type: object
+          required: [buildingId]
+          properties: {buildingId: {type: string, format: uuid}}
+    SystemInput:
+      allOf:
+        - $ref: "#/components/schemas/RegistryInput"
+        - type: object
+          required: [spaceId]
+          properties: {spaceId: {type: string, format: uuid}}
+    AssetInput:
+      allOf:
+        - $ref: "#/components/schemas/RegistryInput"
+        - type: object
+          required: [spaceId]
+          properties:
+            spaceId: {type: string, format: uuid}
+            systemId: {type: [string, "null"], format: uuid}
+    Facility:
+      allOf:
+        - $ref: "#/components/schemas/RegistryRecord"
+    Building:
+      allOf:
+        - $ref: "#/components/schemas/RegistryRecord"
+        - type: object
+          required: [facilityId]
+          properties: {facilityId: {type: string, format: uuid}}
+    Space:
+      allOf:
+        - $ref: "#/components/schemas/RegistryRecord"
+        - type: object
+          required: [facilityId, buildingId]
+          properties:
+            facilityId: {type: string, format: uuid}
+            buildingId: {type: string, format: uuid}
+    System:
+      allOf:
+        - $ref: "#/components/schemas/RegistryRecord"
+        - type: object
+          required: [facilityId, buildingId, spaceId]
+          properties:
+            facilityId: {type: string, format: uuid}
+            buildingId: {type: string, format: uuid}
+            spaceId: {type: string, format: uuid}
+    Asset:
+      allOf:
+        - $ref: "#/components/schemas/RegistryRecord"
+        - type: object
+          required: [facilityId, buildingId, spaceId]
+          properties:
+            facilityId: {type: string, format: uuid}
+            buildingId: {type: string, format: uuid}
+            spaceId: {type: string, format: uuid}
+            systemId: {type: [string, "null"], format: uuid}
+    RegistryRecord:
+      type: object
+      required: [id, organizationId, name, status]
+      properties:
+        id: {type: string, format: uuid}
+        organizationId: {type: string, format: uuid}
+        name: {type: string}
+        code: {type: [string, "null"]}
+        description: {type: [string, "null"]}
+        status: {type: string}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+    RegistryPage:
+      type: object
+      required: [items, page, limit, total]
+      properties:
+        items:
+          type: array
+          items: {$ref: "#/components/schemas/RegistryRecord"}
+        page: {type: integer}
+        limit: {type: integer}
+        total: {type: integer}
     HealthStatus:
       type: object
       properties:

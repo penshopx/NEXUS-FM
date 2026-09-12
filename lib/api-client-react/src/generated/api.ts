@@ -21,25 +21,46 @@ import type {
 
 import type {
   AppSession,
+  Asset,
+  AssetInput,
   AuthorizationAuditLog,
   AuthorizationCheck,
   AuthorizationDecision,
   BadRequestResponse,
+  Building,
+  BuildingInput,
   ErrorResponse,
+  Facility,
   ForbiddenResponse,
   FoundationSummary,
   GetAuthorizationAuditLogsParams,
   HealthStatus,
+  ListAssetsParams,
+  ListBuildingsParams,
+  ListFacilitiesParams,
+  ListSpacesParams,
+  ListSystemsParams,
   MyPermissions,
   NotFoundResponse,
   OrganizationAccess,
   OrganizationSelection,
   Permission,
   PreconditionRequiredResponse,
+  RegistryInput,
+  RegistryPage,
   Role,
   RolePermissionConflict,
   RolePermissionUpdate,
   RolePermissionsResponse,
+  SearchAssetsParams,
+  SearchBuildingsParams,
+  SearchFacilitiesParams,
+  SearchSpacesParams,
+  SearchSystemsParams,
+  Space,
+  SpaceInput,
+  System,
+  SystemInput,
   UnauthorizedResponse,
   UserRoleBinding,
   UserRoleBindingInput,
@@ -1449,5 +1470,4145 @@ export const useCheckAuthorization = <TError = ErrorType<UnauthorizedResponse | 
         TContext
       > => {
       return useMutation(getCheckAuthorizationMutationOptions(options));
+    }
+
+export const getListFacilitiesUrl = (params?: ListFacilitiesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/facilities?${stringifiedParams}` : `/api/facilities`
+}
+
+/**
+ * @summary List facilities in the active organization
+ */
+export const listFacilities = async (params?: ListFacilitiesParams, options?: Parameters<typeof customFetch>[1]): Promise<RegistryPage> => {
+
+  return customFetch<RegistryPage>(getListFacilitiesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListFacilitiesQueryKey = (params?: ListFacilitiesParams,) => {
+    return [
+    `/api/facilities`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListFacilitiesQueryOptions = <TData = Awaited<ReturnType<typeof listFacilities>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>(params?: ListFacilitiesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFacilities>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListFacilitiesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listFacilities>>> = ({ signal }) => listFacilities(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listFacilities>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListFacilitiesQueryResult = NonNullable<Awaited<ReturnType<typeof listFacilities>>>
+export type ListFacilitiesQueryError = ErrorType<UnauthorizedResponse | ForbiddenResponse>
+
+
+/**
+ * @summary List facilities in the active organization
+ */
+
+export function useListFacilities<TData = Awaited<ReturnType<typeof listFacilities>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>(
+ params?: ListFacilitiesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFacilities>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListFacilitiesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateFacilityUrl = () => {
+
+
+
+
+  return `/api/facilities`
+}
+
+/**
+ * @summary Register a facility in the active organization
+ */
+export const createFacility = async (registryInput: RegistryInput, options?: Parameters<typeof customFetch>[1]): Promise<Facility> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<Facility>(getCreateFacilityUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(registryInput)
+  }
+);}
+
+
+
+
+
+export const getCreateFacilityMutationKey = () => ['createFacility'] as const;
+
+export const getCreateFacilityMutationOptions = <TError = ErrorType<BadRequestResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createFacility>>, TError,CreateFacilityMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createFacility>>, TError,CreateFacilityMutationVariables, TContext> => {
+
+const mutationKey = getCreateFacilityMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createFacility>>, CreateFacilityMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createFacility(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateFacilityMutationResult = NonNullable<Awaited<ReturnType<typeof createFacility>>>
+    export type CreateFacilityMutationBody = BodyType<RegistryInput>
+    export type CreateFacilityMutationError = ErrorType<BadRequestResponse | ForbiddenResponse>
+    export type CreateFacilityMutationVariables = {data: BodyType<RegistryInput>}
+
+    /**
+ * @summary Register a facility in the active organization
+ */
+export const useCreateFacility = <TError = ErrorType<BadRequestResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createFacility>>, TError,CreateFacilityMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createFacility>>,
+        TError,
+        CreateFacilityMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateFacilityMutationOptions(options));
+    }
+
+export const getSearchFacilitiesUrl = (params: SearchFacilitiesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/facilities/search?${stringifiedParams}` : `/api/facilities/search`
+}
+
+/**
+ * @summary Search facilities in the active organization
+ */
+export const searchFacilities = async (params: SearchFacilitiesParams, options?: Parameters<typeof customFetch>[1]): Promise<RegistryPage> => {
+
+  return customFetch<RegistryPage>(getSearchFacilitiesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getSearchFacilitiesQueryKey = (params?: SearchFacilitiesParams,) => {
+    return [
+    `/api/facilities/search`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getSearchFacilitiesQueryOptions = <TData = Awaited<ReturnType<typeof searchFacilities>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>(params: SearchFacilitiesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof searchFacilities>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getSearchFacilitiesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof searchFacilities>>> = ({ signal }) => searchFacilities(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof searchFacilities>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type SearchFacilitiesQueryResult = NonNullable<Awaited<ReturnType<typeof searchFacilities>>>
+export type SearchFacilitiesQueryError = ErrorType<UnauthorizedResponse | ForbiddenResponse>
+
+
+/**
+ * @summary Search facilities in the active organization
+ */
+
+export function useSearchFacilities<TData = Awaited<ReturnType<typeof searchFacilities>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>(
+ params: SearchFacilitiesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof searchFacilities>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getSearchFacilitiesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getExportFacilitiesUrl = () => {
+
+
+
+
+  return `/api/facilities/export`
+}
+
+/**
+ * @summary Export authorized facilities as CSV
+ */
+export const exportFacilities = async ( options?: Parameters<typeof customFetch>[1]): Promise<string> => {
+
+  return customFetch<string>(getExportFacilitiesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getExportFacilitiesQueryKey = () => {
+    return [
+    `/api/facilities/export`
+    ] as const;
+    }
+
+
+export const getExportFacilitiesQueryOptions = <TData = Awaited<ReturnType<typeof exportFacilities>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportFacilities>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExportFacilitiesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof exportFacilities>>> = ({ signal }) => exportFacilities({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof exportFacilities>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ExportFacilitiesQueryResult = NonNullable<Awaited<ReturnType<typeof exportFacilities>>>
+export type ExportFacilitiesQueryError = ErrorType<UnauthorizedResponse | ForbiddenResponse>
+
+
+/**
+ * @summary Export authorized facilities as CSV
+ */
+
+export function useExportFacilities<TData = Awaited<ReturnType<typeof exportFacilities>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportFacilities>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getExportFacilitiesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetFacilityUrl = (id: string,) => {
+
+
+
+
+  return `/api/facilities/${id}`
+}
+
+/**
+ * @summary Get a facility after ancestor and scope verification
+ */
+export const getFacility = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<Facility> => {
+
+  return customFetch<Facility>(getGetFacilityUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetFacilityQueryKey = (id: string,) => {
+    return [
+    `/api/facilities/${id}`
+    ] as const;
+    }
+
+
+export const getGetFacilityQueryOptions = <TData = Awaited<ReturnType<typeof getFacility>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse | NotFoundResponse>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFacility>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetFacilityQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFacility>>> = ({ signal }) => getFacility(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFacility>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetFacilityQueryResult = NonNullable<Awaited<ReturnType<typeof getFacility>>>
+export type GetFacilityQueryError = ErrorType<UnauthorizedResponse | ForbiddenResponse | NotFoundResponse>
+
+
+/**
+ * @summary Get a facility after ancestor and scope verification
+ */
+
+export function useGetFacility<TData = Awaited<ReturnType<typeof getFacility>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse | NotFoundResponse>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFacility>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetFacilityQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateFacilityUrl = (id: string,) => {
+
+
+
+
+  return `/api/facilities/${id}`
+}
+
+/**
+ * @summary Update a facility
+ */
+export const updateFacility = async (id: string,
+    registryInput: RegistryInput, options?: Parameters<typeof customFetch>[1]): Promise<Facility> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<Facility>(getUpdateFacilityUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(registryInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateFacilityMutationKey = () => ['updateFacility'] as const;
+
+export const getUpdateFacilityMutationOptions = <TError = ErrorType<BadRequestResponse | ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateFacility>>, TError,UpdateFacilityMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateFacility>>, TError,UpdateFacilityMutationVariables, TContext> => {
+
+const mutationKey = getUpdateFacilityMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateFacility>>, UpdateFacilityMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateFacility(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateFacilityMutationResult = NonNullable<Awaited<ReturnType<typeof updateFacility>>>
+    export type UpdateFacilityMutationBody = BodyType<RegistryInput>
+    export type UpdateFacilityMutationError = ErrorType<BadRequestResponse | ForbiddenResponse | NotFoundResponse>
+    export type UpdateFacilityMutationVariables = {id: string;data: BodyType<RegistryInput>}
+
+    /**
+ * @summary Update a facility
+ */
+export const useUpdateFacility = <TError = ErrorType<BadRequestResponse | ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateFacility>>, TError,UpdateFacilityMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateFacility>>,
+        TError,
+        UpdateFacilityMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateFacilityMutationOptions(options));
+    }
+
+export const getReplaceFacilityUrl = (id: string,) => {
+
+
+
+
+  return `/api/facilities/${id}`
+}
+
+/**
+ * @summary Replace mutable facility fields
+ */
+export const replaceFacility = async (id: string,
+    registryInput: RegistryInput, options?: Parameters<typeof customFetch>[1]): Promise<Facility> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<Facility>(getReplaceFacilityUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(registryInput)
+  }
+);}
+
+
+
+
+
+export const getReplaceFacilityMutationKey = () => ['replaceFacility'] as const;
+
+export const getReplaceFacilityMutationOptions = <TError = ErrorType<ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof replaceFacility>>, TError,ReplaceFacilityMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof replaceFacility>>, TError,ReplaceFacilityMutationVariables, TContext> => {
+
+const mutationKey = getReplaceFacilityMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof replaceFacility>>, ReplaceFacilityMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  replaceFacility(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReplaceFacilityMutationResult = NonNullable<Awaited<ReturnType<typeof replaceFacility>>>
+    export type ReplaceFacilityMutationBody = BodyType<RegistryInput>
+    export type ReplaceFacilityMutationError = ErrorType<ForbiddenResponse | NotFoundResponse>
+    export type ReplaceFacilityMutationVariables = {id: string;data: BodyType<RegistryInput>}
+
+    /**
+ * @summary Replace mutable facility fields
+ */
+export const useReplaceFacility = <TError = ErrorType<ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof replaceFacility>>, TError,ReplaceFacilityMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof replaceFacility>>,
+        TError,
+        ReplaceFacilityMutationVariables,
+        TContext
+      > => {
+      return useMutation(getReplaceFacilityMutationOptions(options));
+    }
+
+export const getDeleteFacilityUrl = (id: string,) => {
+
+
+
+
+  return `/api/facilities/${id}`
+}
+
+/**
+ * @summary Delete a facility and its descendants
+ */
+export const deleteFacility = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteFacilityUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteFacilityMutationKey = () => ['deleteFacility'] as const;
+
+export const getDeleteFacilityMutationOptions = <TError = ErrorType<ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteFacility>>, TError,DeleteFacilityMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteFacility>>, TError,DeleteFacilityMutationVariables, TContext> => {
+
+const mutationKey = getDeleteFacilityMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteFacility>>, DeleteFacilityMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteFacility(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteFacilityMutationResult = NonNullable<Awaited<ReturnType<typeof deleteFacility>>>
+
+    export type DeleteFacilityMutationError = ErrorType<ForbiddenResponse | NotFoundResponse>
+    export type DeleteFacilityMutationVariables = {id: string}
+
+    /**
+ * @summary Delete a facility and its descendants
+ */
+export const useDeleteFacility = <TError = ErrorType<ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteFacility>>, TError,DeleteFacilityMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteFacility>>,
+        TError,
+        DeleteFacilityMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteFacilityMutationOptions(options));
+    }
+
+export const getCreateFacilityBuildingUrl = (id: string,) => {
+
+
+
+
+  return `/api/facilities/${id}/buildings`
+}
+
+/**
+ * @summary Create a building nested under a facility
+ */
+export const createFacilityBuilding = async (id: string,
+    registryInput: RegistryInput, options?: Parameters<typeof customFetch>[1]): Promise<Building> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<Building>(getCreateFacilityBuildingUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(registryInput)
+  }
+);}
+
+
+
+
+
+export const getCreateFacilityBuildingMutationKey = () => ['createFacilityBuilding'] as const;
+
+export const getCreateFacilityBuildingMutationOptions = <TError = ErrorType<BadRequestResponse | ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createFacilityBuilding>>, TError,CreateFacilityBuildingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createFacilityBuilding>>, TError,CreateFacilityBuildingMutationVariables, TContext> => {
+
+const mutationKey = getCreateFacilityBuildingMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createFacilityBuilding>>, CreateFacilityBuildingMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createFacilityBuilding(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateFacilityBuildingMutationResult = NonNullable<Awaited<ReturnType<typeof createFacilityBuilding>>>
+    export type CreateFacilityBuildingMutationBody = BodyType<RegistryInput>
+    export type CreateFacilityBuildingMutationError = ErrorType<BadRequestResponse | ForbiddenResponse | NotFoundResponse>
+    export type CreateFacilityBuildingMutationVariables = {id: string;data: BodyType<RegistryInput>}
+
+    /**
+ * @summary Create a building nested under a facility
+ */
+export const useCreateFacilityBuilding = <TError = ErrorType<BadRequestResponse | ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createFacilityBuilding>>, TError,CreateFacilityBuildingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createFacilityBuilding>>,
+        TError,
+        CreateFacilityBuildingMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateFacilityBuildingMutationOptions(options));
+    }
+
+export const getListFacilityBuildingsUrl = (id: string,) => {
+
+
+
+
+  return `/api/facilities/${id}/buildings`
+}
+
+/**
+ * @summary List buildings nested under a facility
+ */
+export const listFacilityBuildings = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<RegistryPage> => {
+
+  return customFetch<RegistryPage>(getListFacilityBuildingsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListFacilityBuildingsQueryKey = (id: string,) => {
+    return [
+    `/api/facilities/${id}/buildings`
+    ] as const;
+    }
+
+
+export const getListFacilityBuildingsQueryOptions = <TData = Awaited<ReturnType<typeof listFacilityBuildings>>, TError = ErrorType<ForbiddenResponse | NotFoundResponse>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFacilityBuildings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListFacilityBuildingsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listFacilityBuildings>>> = ({ signal }) => listFacilityBuildings(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listFacilityBuildings>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListFacilityBuildingsQueryResult = NonNullable<Awaited<ReturnType<typeof listFacilityBuildings>>>
+export type ListFacilityBuildingsQueryError = ErrorType<ForbiddenResponse | NotFoundResponse>
+
+
+/**
+ * @summary List buildings nested under a facility
+ */
+
+export function useListFacilityBuildings<TData = Awaited<ReturnType<typeof listFacilityBuildings>>, TError = ErrorType<ForbiddenResponse | NotFoundResponse>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFacilityBuildings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListFacilityBuildingsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSearchBuildingsUrl = (params: SearchBuildingsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/buildings/search?${stringifiedParams}` : `/api/buildings/search`
+}
+
+/**
+ * @summary Search buildings in the active organization
+ */
+export const searchBuildings = async (params: SearchBuildingsParams, options?: Parameters<typeof customFetch>[1]): Promise<RegistryPage> => {
+
+  return customFetch<RegistryPage>(getSearchBuildingsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getSearchBuildingsQueryKey = (params?: SearchBuildingsParams,) => {
+    return [
+    `/api/buildings/search`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getSearchBuildingsQueryOptions = <TData = Awaited<ReturnType<typeof searchBuildings>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>(params: SearchBuildingsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof searchBuildings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getSearchBuildingsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof searchBuildings>>> = ({ signal }) => searchBuildings(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof searchBuildings>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type SearchBuildingsQueryResult = NonNullable<Awaited<ReturnType<typeof searchBuildings>>>
+export type SearchBuildingsQueryError = ErrorType<UnauthorizedResponse | ForbiddenResponse>
+
+
+/**
+ * @summary Search buildings in the active organization
+ */
+
+export function useSearchBuildings<TData = Awaited<ReturnType<typeof searchBuildings>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>(
+ params: SearchBuildingsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof searchBuildings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getSearchBuildingsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getExportBuildingsUrl = () => {
+
+
+
+
+  return `/api/buildings/export`
+}
+
+/**
+ * @summary Export authorized buildings as CSV
+ */
+export const exportBuildings = async ( options?: Parameters<typeof customFetch>[1]): Promise<string> => {
+
+  return customFetch<string>(getExportBuildingsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getExportBuildingsQueryKey = () => {
+    return [
+    `/api/buildings/export`
+    ] as const;
+    }
+
+
+export const getExportBuildingsQueryOptions = <TData = Awaited<ReturnType<typeof exportBuildings>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportBuildings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExportBuildingsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof exportBuildings>>> = ({ signal }) => exportBuildings({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof exportBuildings>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ExportBuildingsQueryResult = NonNullable<Awaited<ReturnType<typeof exportBuildings>>>
+export type ExportBuildingsQueryError = ErrorType<UnauthorizedResponse | ForbiddenResponse>
+
+
+/**
+ * @summary Export authorized buildings as CSV
+ */
+
+export function useExportBuildings<TData = Awaited<ReturnType<typeof exportBuildings>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportBuildings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getExportBuildingsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetBuildingUrl = (id: string,) => {
+
+
+
+
+  return `/api/buildings/${id}`
+}
+
+/**
+ * @summary Get a building
+ */
+export const getBuilding = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<Building> => {
+
+  return customFetch<Building>(getGetBuildingUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetBuildingQueryKey = (id: string,) => {
+    return [
+    `/api/buildings/${id}`
+    ] as const;
+    }
+
+
+export const getGetBuildingQueryOptions = <TData = Awaited<ReturnType<typeof getBuilding>>, TError = ErrorType<ForbiddenResponse | NotFoundResponse>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBuilding>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetBuildingQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBuilding>>> = ({ signal }) => getBuilding(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getBuilding>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetBuildingQueryResult = NonNullable<Awaited<ReturnType<typeof getBuilding>>>
+export type GetBuildingQueryError = ErrorType<ForbiddenResponse | NotFoundResponse>
+
+
+/**
+ * @summary Get a building
+ */
+
+export function useGetBuilding<TData = Awaited<ReturnType<typeof getBuilding>>, TError = ErrorType<ForbiddenResponse | NotFoundResponse>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBuilding>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetBuildingQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateBuildingUrl = (id: string,) => {
+
+
+
+
+  return `/api/buildings/${id}`
+}
+
+/**
+ * @summary Update a building
+ */
+export const updateBuilding = async (id: string,
+    registryInput: RegistryInput, options?: Parameters<typeof customFetch>[1]): Promise<Building> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<Building>(getUpdateBuildingUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(registryInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateBuildingMutationKey = () => ['updateBuilding'] as const;
+
+export const getUpdateBuildingMutationOptions = <TError = ErrorType<BadRequestResponse | ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateBuilding>>, TError,UpdateBuildingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateBuilding>>, TError,UpdateBuildingMutationVariables, TContext> => {
+
+const mutationKey = getUpdateBuildingMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateBuilding>>, UpdateBuildingMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateBuilding(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateBuildingMutationResult = NonNullable<Awaited<ReturnType<typeof updateBuilding>>>
+    export type UpdateBuildingMutationBody = BodyType<RegistryInput>
+    export type UpdateBuildingMutationError = ErrorType<BadRequestResponse | ForbiddenResponse | NotFoundResponse>
+    export type UpdateBuildingMutationVariables = {id: string;data: BodyType<RegistryInput>}
+
+    /**
+ * @summary Update a building
+ */
+export const useUpdateBuilding = <TError = ErrorType<BadRequestResponse | ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateBuilding>>, TError,UpdateBuildingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateBuilding>>,
+        TError,
+        UpdateBuildingMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateBuildingMutationOptions(options));
+    }
+
+export const getReplaceBuildingUrl = (id: string,) => {
+
+
+
+
+  return `/api/buildings/${id}`
+}
+
+/**
+ * @summary Replace mutable building fields
+ */
+export const replaceBuilding = async (id: string,
+    registryInput: RegistryInput, options?: Parameters<typeof customFetch>[1]): Promise<Building> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<Building>(getReplaceBuildingUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(registryInput)
+  }
+);}
+
+
+
+
+
+export const getReplaceBuildingMutationKey = () => ['replaceBuilding'] as const;
+
+export const getReplaceBuildingMutationOptions = <TError = ErrorType<ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof replaceBuilding>>, TError,ReplaceBuildingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof replaceBuilding>>, TError,ReplaceBuildingMutationVariables, TContext> => {
+
+const mutationKey = getReplaceBuildingMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof replaceBuilding>>, ReplaceBuildingMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  replaceBuilding(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReplaceBuildingMutationResult = NonNullable<Awaited<ReturnType<typeof replaceBuilding>>>
+    export type ReplaceBuildingMutationBody = BodyType<RegistryInput>
+    export type ReplaceBuildingMutationError = ErrorType<ForbiddenResponse>
+    export type ReplaceBuildingMutationVariables = {id: string;data: BodyType<RegistryInput>}
+
+    /**
+ * @summary Replace mutable building fields
+ */
+export const useReplaceBuilding = <TError = ErrorType<ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof replaceBuilding>>, TError,ReplaceBuildingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof replaceBuilding>>,
+        TError,
+        ReplaceBuildingMutationVariables,
+        TContext
+      > => {
+      return useMutation(getReplaceBuildingMutationOptions(options));
+    }
+
+export const getDeleteBuildingUrl = (id: string,) => {
+
+
+
+
+  return `/api/buildings/${id}`
+}
+
+/**
+ * @summary Delete a building
+ */
+export const deleteBuilding = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteBuildingUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteBuildingMutationKey = () => ['deleteBuilding'] as const;
+
+export const getDeleteBuildingMutationOptions = <TError = ErrorType<ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteBuilding>>, TError,DeleteBuildingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteBuilding>>, TError,DeleteBuildingMutationVariables, TContext> => {
+
+const mutationKey = getDeleteBuildingMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteBuilding>>, DeleteBuildingMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteBuilding(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteBuildingMutationResult = NonNullable<Awaited<ReturnType<typeof deleteBuilding>>>
+
+    export type DeleteBuildingMutationError = ErrorType<ForbiddenResponse | NotFoundResponse>
+    export type DeleteBuildingMutationVariables = {id: string}
+
+    /**
+ * @summary Delete a building
+ */
+export const useDeleteBuilding = <TError = ErrorType<ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteBuilding>>, TError,DeleteBuildingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteBuilding>>,
+        TError,
+        DeleteBuildingMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteBuildingMutationOptions(options));
+    }
+
+export const getListBuildingSpacesUrl = (id: string,) => {
+
+
+
+
+  return `/api/buildings/${id}/spaces`
+}
+
+/**
+ * @summary List spaces nested under a building
+ */
+export const listBuildingSpaces = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<RegistryPage> => {
+
+  return customFetch<RegistryPage>(getListBuildingSpacesUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListBuildingSpacesQueryKey = (id: string,) => {
+    return [
+    `/api/buildings/${id}/spaces`
+    ] as const;
+    }
+
+
+export const getListBuildingSpacesQueryOptions = <TData = Awaited<ReturnType<typeof listBuildingSpaces>>, TError = ErrorType<ForbiddenResponse | NotFoundResponse>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBuildingSpaces>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListBuildingSpacesQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listBuildingSpaces>>> = ({ signal }) => listBuildingSpaces(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listBuildingSpaces>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListBuildingSpacesQueryResult = NonNullable<Awaited<ReturnType<typeof listBuildingSpaces>>>
+export type ListBuildingSpacesQueryError = ErrorType<ForbiddenResponse | NotFoundResponse>
+
+
+/**
+ * @summary List spaces nested under a building
+ */
+
+export function useListBuildingSpaces<TData = Awaited<ReturnType<typeof listBuildingSpaces>>, TError = ErrorType<ForbiddenResponse | NotFoundResponse>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBuildingSpaces>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListBuildingSpacesQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateBuildingSpaceUrl = (id: string,) => {
+
+
+
+
+  return `/api/buildings/${id}/spaces`
+}
+
+/**
+ * @summary Create a space nested under a building
+ */
+export const createBuildingSpace = async (id: string,
+    registryInput: RegistryInput, options?: Parameters<typeof customFetch>[1]): Promise<Space> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<Space>(getCreateBuildingSpaceUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(registryInput)
+  }
+);}
+
+
+
+
+
+export const getCreateBuildingSpaceMutationKey = () => ['createBuildingSpace'] as const;
+
+export const getCreateBuildingSpaceMutationOptions = <TError = ErrorType<ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createBuildingSpace>>, TError,CreateBuildingSpaceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createBuildingSpace>>, TError,CreateBuildingSpaceMutationVariables, TContext> => {
+
+const mutationKey = getCreateBuildingSpaceMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createBuildingSpace>>, CreateBuildingSpaceMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createBuildingSpace(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateBuildingSpaceMutationResult = NonNullable<Awaited<ReturnType<typeof createBuildingSpace>>>
+    export type CreateBuildingSpaceMutationBody = BodyType<RegistryInput>
+    export type CreateBuildingSpaceMutationError = ErrorType<ForbiddenResponse | NotFoundResponse>
+    export type CreateBuildingSpaceMutationVariables = {id: string;data: BodyType<RegistryInput>}
+
+    /**
+ * @summary Create a space nested under a building
+ */
+export const useCreateBuildingSpace = <TError = ErrorType<ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createBuildingSpace>>, TError,CreateBuildingSpaceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createBuildingSpace>>,
+        TError,
+        CreateBuildingSpaceMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateBuildingSpaceMutationOptions(options));
+    }
+
+export const getSearchSpacesUrl = (params: SearchSpacesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/spaces/search?${stringifiedParams}` : `/api/spaces/search`
+}
+
+/**
+ * @summary Search spaces in the active organization
+ */
+export const searchSpaces = async (params: SearchSpacesParams, options?: Parameters<typeof customFetch>[1]): Promise<RegistryPage> => {
+
+  return customFetch<RegistryPage>(getSearchSpacesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getSearchSpacesQueryKey = (params?: SearchSpacesParams,) => {
+    return [
+    `/api/spaces/search`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getSearchSpacesQueryOptions = <TData = Awaited<ReturnType<typeof searchSpaces>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>(params: SearchSpacesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof searchSpaces>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getSearchSpacesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof searchSpaces>>> = ({ signal }) => searchSpaces(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof searchSpaces>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type SearchSpacesQueryResult = NonNullable<Awaited<ReturnType<typeof searchSpaces>>>
+export type SearchSpacesQueryError = ErrorType<UnauthorizedResponse | ForbiddenResponse>
+
+
+/**
+ * @summary Search spaces in the active organization
+ */
+
+export function useSearchSpaces<TData = Awaited<ReturnType<typeof searchSpaces>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>(
+ params: SearchSpacesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof searchSpaces>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getSearchSpacesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getExportSpacesUrl = () => {
+
+
+
+
+  return `/api/spaces/export`
+}
+
+/**
+ * @summary Export authorized spaces as CSV
+ */
+export const exportSpaces = async ( options?: Parameters<typeof customFetch>[1]): Promise<string> => {
+
+  return customFetch<string>(getExportSpacesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getExportSpacesQueryKey = () => {
+    return [
+    `/api/spaces/export`
+    ] as const;
+    }
+
+
+export const getExportSpacesQueryOptions = <TData = Awaited<ReturnType<typeof exportSpaces>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportSpaces>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExportSpacesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof exportSpaces>>> = ({ signal }) => exportSpaces({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof exportSpaces>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ExportSpacesQueryResult = NonNullable<Awaited<ReturnType<typeof exportSpaces>>>
+export type ExportSpacesQueryError = ErrorType<UnauthorizedResponse | ForbiddenResponse>
+
+
+/**
+ * @summary Export authorized spaces as CSV
+ */
+
+export function useExportSpaces<TData = Awaited<ReturnType<typeof exportSpaces>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportSpaces>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getExportSpacesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetSpaceUrl = (id: string,) => {
+
+
+
+
+  return `/api/spaces/${id}`
+}
+
+/**
+ * @summary Get a space
+ */
+export const getSpace = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<Space> => {
+
+  return customFetch<Space>(getGetSpaceUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSpaceQueryKey = (id: string,) => {
+    return [
+    `/api/spaces/${id}`
+    ] as const;
+    }
+
+
+export const getGetSpaceQueryOptions = <TData = Awaited<ReturnType<typeof getSpace>>, TError = ErrorType<ForbiddenResponse | NotFoundResponse>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSpace>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSpaceQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSpace>>> = ({ signal }) => getSpace(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSpace>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSpaceQueryResult = NonNullable<Awaited<ReturnType<typeof getSpace>>>
+export type GetSpaceQueryError = ErrorType<ForbiddenResponse | NotFoundResponse>
+
+
+/**
+ * @summary Get a space
+ */
+
+export function useGetSpace<TData = Awaited<ReturnType<typeof getSpace>>, TError = ErrorType<ForbiddenResponse | NotFoundResponse>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSpace>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSpaceQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateSpaceUrl = (id: string,) => {
+
+
+
+
+  return `/api/spaces/${id}`
+}
+
+/**
+ * @summary Update a space
+ */
+export const updateSpace = async (id: string,
+    registryInput: RegistryInput, options?: Parameters<typeof customFetch>[1]): Promise<Space> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<Space>(getUpdateSpaceUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(registryInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateSpaceMutationKey = () => ['updateSpace'] as const;
+
+export const getUpdateSpaceMutationOptions = <TError = ErrorType<ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSpace>>, TError,UpdateSpaceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateSpace>>, TError,UpdateSpaceMutationVariables, TContext> => {
+
+const mutationKey = getUpdateSpaceMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateSpace>>, UpdateSpaceMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateSpace(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateSpaceMutationResult = NonNullable<Awaited<ReturnType<typeof updateSpace>>>
+    export type UpdateSpaceMutationBody = BodyType<RegistryInput>
+    export type UpdateSpaceMutationError = ErrorType<ForbiddenResponse>
+    export type UpdateSpaceMutationVariables = {id: string;data: BodyType<RegistryInput>}
+
+    /**
+ * @summary Update a space
+ */
+export const useUpdateSpace = <TError = ErrorType<ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSpace>>, TError,UpdateSpaceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateSpace>>,
+        TError,
+        UpdateSpaceMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateSpaceMutationOptions(options));
+    }
+
+export const getReplaceSpaceUrl = (id: string,) => {
+
+
+
+
+  return `/api/spaces/${id}`
+}
+
+/**
+ * @summary Replace mutable space fields
+ */
+export const replaceSpace = async (id: string,
+    registryInput: RegistryInput, options?: Parameters<typeof customFetch>[1]): Promise<Space> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<Space>(getReplaceSpaceUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(registryInput)
+  }
+);}
+
+
+
+
+
+export const getReplaceSpaceMutationKey = () => ['replaceSpace'] as const;
+
+export const getReplaceSpaceMutationOptions = <TError = ErrorType<ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof replaceSpace>>, TError,ReplaceSpaceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof replaceSpace>>, TError,ReplaceSpaceMutationVariables, TContext> => {
+
+const mutationKey = getReplaceSpaceMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof replaceSpace>>, ReplaceSpaceMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  replaceSpace(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReplaceSpaceMutationResult = NonNullable<Awaited<ReturnType<typeof replaceSpace>>>
+    export type ReplaceSpaceMutationBody = BodyType<RegistryInput>
+    export type ReplaceSpaceMutationError = ErrorType<ForbiddenResponse>
+    export type ReplaceSpaceMutationVariables = {id: string;data: BodyType<RegistryInput>}
+
+    /**
+ * @summary Replace mutable space fields
+ */
+export const useReplaceSpace = <TError = ErrorType<ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof replaceSpace>>, TError,ReplaceSpaceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof replaceSpace>>,
+        TError,
+        ReplaceSpaceMutationVariables,
+        TContext
+      > => {
+      return useMutation(getReplaceSpaceMutationOptions(options));
+    }
+
+export const getDeleteSpaceUrl = (id: string,) => {
+
+
+
+
+  return `/api/spaces/${id}`
+}
+
+/**
+ * @summary Delete a space
+ */
+export const deleteSpace = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteSpaceUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteSpaceMutationKey = () => ['deleteSpace'] as const;
+
+export const getDeleteSpaceMutationOptions = <TError = ErrorType<ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteSpace>>, TError,DeleteSpaceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteSpace>>, TError,DeleteSpaceMutationVariables, TContext> => {
+
+const mutationKey = getDeleteSpaceMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteSpace>>, DeleteSpaceMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteSpace(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteSpaceMutationResult = NonNullable<Awaited<ReturnType<typeof deleteSpace>>>
+
+    export type DeleteSpaceMutationError = ErrorType<ForbiddenResponse | NotFoundResponse>
+    export type DeleteSpaceMutationVariables = {id: string}
+
+    /**
+ * @summary Delete a space
+ */
+export const useDeleteSpace = <TError = ErrorType<ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteSpace>>, TError,DeleteSpaceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteSpace>>,
+        TError,
+        DeleteSpaceMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteSpaceMutationOptions(options));
+    }
+
+export const getListSpaceSystemsUrl = (id: string,) => {
+
+
+
+
+  return `/api/spaces/${id}/systems`
+}
+
+/**
+ * @summary List systems nested under a space
+ */
+export const listSpaceSystems = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<RegistryPage> => {
+
+  return customFetch<RegistryPage>(getListSpaceSystemsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListSpaceSystemsQueryKey = (id: string,) => {
+    return [
+    `/api/spaces/${id}/systems`
+    ] as const;
+    }
+
+
+export const getListSpaceSystemsQueryOptions = <TData = Awaited<ReturnType<typeof listSpaceSystems>>, TError = ErrorType<ForbiddenResponse | NotFoundResponse>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSpaceSystems>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListSpaceSystemsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSpaceSystems>>> = ({ signal }) => listSpaceSystems(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSpaceSystems>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListSpaceSystemsQueryResult = NonNullable<Awaited<ReturnType<typeof listSpaceSystems>>>
+export type ListSpaceSystemsQueryError = ErrorType<ForbiddenResponse | NotFoundResponse>
+
+
+/**
+ * @summary List systems nested under a space
+ */
+
+export function useListSpaceSystems<TData = Awaited<ReturnType<typeof listSpaceSystems>>, TError = ErrorType<ForbiddenResponse | NotFoundResponse>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSpaceSystems>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListSpaceSystemsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateSpaceSystemUrl = (id: string,) => {
+
+
+
+
+  return `/api/spaces/${id}/systems`
+}
+
+/**
+ * @summary Create a system nested under a space
+ */
+export const createSpaceSystem = async (id: string,
+    registryInput: RegistryInput, options?: Parameters<typeof customFetch>[1]): Promise<System> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<System>(getCreateSpaceSystemUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(registryInput)
+  }
+);}
+
+
+
+
+
+export const getCreateSpaceSystemMutationKey = () => ['createSpaceSystem'] as const;
+
+export const getCreateSpaceSystemMutationOptions = <TError = ErrorType<ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSpaceSystem>>, TError,CreateSpaceSystemMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createSpaceSystem>>, TError,CreateSpaceSystemMutationVariables, TContext> => {
+
+const mutationKey = getCreateSpaceSystemMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createSpaceSystem>>, CreateSpaceSystemMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createSpaceSystem(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateSpaceSystemMutationResult = NonNullable<Awaited<ReturnType<typeof createSpaceSystem>>>
+    export type CreateSpaceSystemMutationBody = BodyType<RegistryInput>
+    export type CreateSpaceSystemMutationError = ErrorType<ForbiddenResponse | NotFoundResponse>
+    export type CreateSpaceSystemMutationVariables = {id: string;data: BodyType<RegistryInput>}
+
+    /**
+ * @summary Create a system nested under a space
+ */
+export const useCreateSpaceSystem = <TError = ErrorType<ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSpaceSystem>>, TError,CreateSpaceSystemMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createSpaceSystem>>,
+        TError,
+        CreateSpaceSystemMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateSpaceSystemMutationOptions(options));
+    }
+
+export const getListSpaceAssetsUrl = (id: string,) => {
+
+
+
+
+  return `/api/spaces/${id}/assets`
+}
+
+/**
+ * @summary List assets nested under a space
+ */
+export const listSpaceAssets = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<RegistryPage> => {
+
+  return customFetch<RegistryPage>(getListSpaceAssetsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListSpaceAssetsQueryKey = (id: string,) => {
+    return [
+    `/api/spaces/${id}/assets`
+    ] as const;
+    }
+
+
+export const getListSpaceAssetsQueryOptions = <TData = Awaited<ReturnType<typeof listSpaceAssets>>, TError = ErrorType<ForbiddenResponse | NotFoundResponse>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSpaceAssets>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListSpaceAssetsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSpaceAssets>>> = ({ signal }) => listSpaceAssets(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSpaceAssets>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListSpaceAssetsQueryResult = NonNullable<Awaited<ReturnType<typeof listSpaceAssets>>>
+export type ListSpaceAssetsQueryError = ErrorType<ForbiddenResponse | NotFoundResponse>
+
+
+/**
+ * @summary List assets nested under a space
+ */
+
+export function useListSpaceAssets<TData = Awaited<ReturnType<typeof listSpaceAssets>>, TError = ErrorType<ForbiddenResponse | NotFoundResponse>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSpaceAssets>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListSpaceAssetsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateSpaceAssetUrl = (id: string,) => {
+
+
+
+
+  return `/api/spaces/${id}/assets`
+}
+
+/**
+ * @summary Create an asset nested under a space
+ */
+export const createSpaceAsset = async (id: string,
+    assetInput: AssetInput, options?: Parameters<typeof customFetch>[1]): Promise<Asset> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<Asset>(getCreateSpaceAssetUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(assetInput)
+  }
+);}
+
+
+
+
+
+export const getCreateSpaceAssetMutationKey = () => ['createSpaceAsset'] as const;
+
+export const getCreateSpaceAssetMutationOptions = <TError = ErrorType<ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSpaceAsset>>, TError,CreateSpaceAssetMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createSpaceAsset>>, TError,CreateSpaceAssetMutationVariables, TContext> => {
+
+const mutationKey = getCreateSpaceAssetMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createSpaceAsset>>, CreateSpaceAssetMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createSpaceAsset(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateSpaceAssetMutationResult = NonNullable<Awaited<ReturnType<typeof createSpaceAsset>>>
+    export type CreateSpaceAssetMutationBody = BodyType<AssetInput>
+    export type CreateSpaceAssetMutationError = ErrorType<ForbiddenResponse | NotFoundResponse>
+    export type CreateSpaceAssetMutationVariables = {id: string;data: BodyType<AssetInput>}
+
+    /**
+ * @summary Create an asset nested under a space
+ */
+export const useCreateSpaceAsset = <TError = ErrorType<ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSpaceAsset>>, TError,CreateSpaceAssetMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createSpaceAsset>>,
+        TError,
+        CreateSpaceAssetMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateSpaceAssetMutationOptions(options));
+    }
+
+export const getSearchSystemsUrl = (params: SearchSystemsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/systems/search?${stringifiedParams}` : `/api/systems/search`
+}
+
+/**
+ * @summary Search systems in the active organization
+ */
+export const searchSystems = async (params: SearchSystemsParams, options?: Parameters<typeof customFetch>[1]): Promise<RegistryPage> => {
+
+  return customFetch<RegistryPage>(getSearchSystemsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getSearchSystemsQueryKey = (params?: SearchSystemsParams,) => {
+    return [
+    `/api/systems/search`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getSearchSystemsQueryOptions = <TData = Awaited<ReturnType<typeof searchSystems>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>(params: SearchSystemsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof searchSystems>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getSearchSystemsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof searchSystems>>> = ({ signal }) => searchSystems(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof searchSystems>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type SearchSystemsQueryResult = NonNullable<Awaited<ReturnType<typeof searchSystems>>>
+export type SearchSystemsQueryError = ErrorType<UnauthorizedResponse | ForbiddenResponse>
+
+
+/**
+ * @summary Search systems in the active organization
+ */
+
+export function useSearchSystems<TData = Awaited<ReturnType<typeof searchSystems>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>(
+ params: SearchSystemsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof searchSystems>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getSearchSystemsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getExportSystemsUrl = () => {
+
+
+
+
+  return `/api/systems/export`
+}
+
+/**
+ * @summary Export authorized systems as CSV
+ */
+export const exportSystems = async ( options?: Parameters<typeof customFetch>[1]): Promise<string> => {
+
+  return customFetch<string>(getExportSystemsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getExportSystemsQueryKey = () => {
+    return [
+    `/api/systems/export`
+    ] as const;
+    }
+
+
+export const getExportSystemsQueryOptions = <TData = Awaited<ReturnType<typeof exportSystems>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportSystems>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExportSystemsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof exportSystems>>> = ({ signal }) => exportSystems({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof exportSystems>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ExportSystemsQueryResult = NonNullable<Awaited<ReturnType<typeof exportSystems>>>
+export type ExportSystemsQueryError = ErrorType<UnauthorizedResponse | ForbiddenResponse>
+
+
+/**
+ * @summary Export authorized systems as CSV
+ */
+
+export function useExportSystems<TData = Awaited<ReturnType<typeof exportSystems>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportSystems>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getExportSystemsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetSystemUrl = (id: string,) => {
+
+
+
+
+  return `/api/systems/${id}`
+}
+
+/**
+ * @summary Get a system
+ */
+export const getSystem = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<System> => {
+
+  return customFetch<System>(getGetSystemUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSystemQueryKey = (id: string,) => {
+    return [
+    `/api/systems/${id}`
+    ] as const;
+    }
+
+
+export const getGetSystemQueryOptions = <TData = Awaited<ReturnType<typeof getSystem>>, TError = ErrorType<ForbiddenResponse | NotFoundResponse>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSystem>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSystemQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSystem>>> = ({ signal }) => getSystem(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSystem>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSystemQueryResult = NonNullable<Awaited<ReturnType<typeof getSystem>>>
+export type GetSystemQueryError = ErrorType<ForbiddenResponse | NotFoundResponse>
+
+
+/**
+ * @summary Get a system
+ */
+
+export function useGetSystem<TData = Awaited<ReturnType<typeof getSystem>>, TError = ErrorType<ForbiddenResponse | NotFoundResponse>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSystem>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSystemQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateSystemUrl = (id: string,) => {
+
+
+
+
+  return `/api/systems/${id}`
+}
+
+/**
+ * @summary Update a system
+ */
+export const updateSystem = async (id: string,
+    registryInput: RegistryInput, options?: Parameters<typeof customFetch>[1]): Promise<System> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<System>(getUpdateSystemUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(registryInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateSystemMutationKey = () => ['updateSystem'] as const;
+
+export const getUpdateSystemMutationOptions = <TError = ErrorType<ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSystem>>, TError,UpdateSystemMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateSystem>>, TError,UpdateSystemMutationVariables, TContext> => {
+
+const mutationKey = getUpdateSystemMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateSystem>>, UpdateSystemMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateSystem(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateSystemMutationResult = NonNullable<Awaited<ReturnType<typeof updateSystem>>>
+    export type UpdateSystemMutationBody = BodyType<RegistryInput>
+    export type UpdateSystemMutationError = ErrorType<ForbiddenResponse>
+    export type UpdateSystemMutationVariables = {id: string;data: BodyType<RegistryInput>}
+
+    /**
+ * @summary Update a system
+ */
+export const useUpdateSystem = <TError = ErrorType<ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSystem>>, TError,UpdateSystemMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateSystem>>,
+        TError,
+        UpdateSystemMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateSystemMutationOptions(options));
+    }
+
+export const getReplaceSystemUrl = (id: string,) => {
+
+
+
+
+  return `/api/systems/${id}`
+}
+
+/**
+ * @summary Replace mutable system fields
+ */
+export const replaceSystem = async (id: string,
+    registryInput: RegistryInput, options?: Parameters<typeof customFetch>[1]): Promise<System> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<System>(getReplaceSystemUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(registryInput)
+  }
+);}
+
+
+
+
+
+export const getReplaceSystemMutationKey = () => ['replaceSystem'] as const;
+
+export const getReplaceSystemMutationOptions = <TError = ErrorType<ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof replaceSystem>>, TError,ReplaceSystemMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof replaceSystem>>, TError,ReplaceSystemMutationVariables, TContext> => {
+
+const mutationKey = getReplaceSystemMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof replaceSystem>>, ReplaceSystemMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  replaceSystem(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReplaceSystemMutationResult = NonNullable<Awaited<ReturnType<typeof replaceSystem>>>
+    export type ReplaceSystemMutationBody = BodyType<RegistryInput>
+    export type ReplaceSystemMutationError = ErrorType<ForbiddenResponse>
+    export type ReplaceSystemMutationVariables = {id: string;data: BodyType<RegistryInput>}
+
+    /**
+ * @summary Replace mutable system fields
+ */
+export const useReplaceSystem = <TError = ErrorType<ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof replaceSystem>>, TError,ReplaceSystemMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof replaceSystem>>,
+        TError,
+        ReplaceSystemMutationVariables,
+        TContext
+      > => {
+      return useMutation(getReplaceSystemMutationOptions(options));
+    }
+
+export const getDeleteSystemUrl = (id: string,) => {
+
+
+
+
+  return `/api/systems/${id}`
+}
+
+/**
+ * @summary Delete a system
+ */
+export const deleteSystem = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteSystemUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteSystemMutationKey = () => ['deleteSystem'] as const;
+
+export const getDeleteSystemMutationOptions = <TError = ErrorType<ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteSystem>>, TError,DeleteSystemMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteSystem>>, TError,DeleteSystemMutationVariables, TContext> => {
+
+const mutationKey = getDeleteSystemMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteSystem>>, DeleteSystemMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteSystem(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteSystemMutationResult = NonNullable<Awaited<ReturnType<typeof deleteSystem>>>
+
+    export type DeleteSystemMutationError = ErrorType<ForbiddenResponse | NotFoundResponse>
+    export type DeleteSystemMutationVariables = {id: string}
+
+    /**
+ * @summary Delete a system
+ */
+export const useDeleteSystem = <TError = ErrorType<ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteSystem>>, TError,DeleteSystemMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteSystem>>,
+        TError,
+        DeleteSystemMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteSystemMutationOptions(options));
+    }
+
+export const getSearchAssetsUrl = (params: SearchAssetsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/assets/search?${stringifiedParams}` : `/api/assets/search`
+}
+
+/**
+ * @summary Search assets in the active organization
+ */
+export const searchAssets = async (params: SearchAssetsParams, options?: Parameters<typeof customFetch>[1]): Promise<RegistryPage> => {
+
+  return customFetch<RegistryPage>(getSearchAssetsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getSearchAssetsQueryKey = (params?: SearchAssetsParams,) => {
+    return [
+    `/api/assets/search`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getSearchAssetsQueryOptions = <TData = Awaited<ReturnType<typeof searchAssets>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>(params: SearchAssetsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof searchAssets>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getSearchAssetsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof searchAssets>>> = ({ signal }) => searchAssets(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof searchAssets>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type SearchAssetsQueryResult = NonNullable<Awaited<ReturnType<typeof searchAssets>>>
+export type SearchAssetsQueryError = ErrorType<UnauthorizedResponse | ForbiddenResponse>
+
+
+/**
+ * @summary Search assets in the active organization
+ */
+
+export function useSearchAssets<TData = Awaited<ReturnType<typeof searchAssets>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>(
+ params: SearchAssetsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof searchAssets>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getSearchAssetsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getExportAssetsUrl = () => {
+
+
+
+
+  return `/api/assets/export`
+}
+
+/**
+ * @summary Export authorized assets as CSV
+ */
+export const exportAssets = async ( options?: Parameters<typeof customFetch>[1]): Promise<string> => {
+
+  return customFetch<string>(getExportAssetsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getExportAssetsQueryKey = () => {
+    return [
+    `/api/assets/export`
+    ] as const;
+    }
+
+
+export const getExportAssetsQueryOptions = <TData = Awaited<ReturnType<typeof exportAssets>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportAssets>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExportAssetsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof exportAssets>>> = ({ signal }) => exportAssets({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof exportAssets>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ExportAssetsQueryResult = NonNullable<Awaited<ReturnType<typeof exportAssets>>>
+export type ExportAssetsQueryError = ErrorType<UnauthorizedResponse | ForbiddenResponse>
+
+
+/**
+ * @summary Export authorized assets as CSV
+ */
+
+export function useExportAssets<TData = Awaited<ReturnType<typeof exportAssets>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportAssets>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getExportAssetsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetAssetUrl = (id: string,) => {
+
+
+
+
+  return `/api/assets/${id}`
+}
+
+/**
+ * @summary Get an asset
+ */
+export const getAsset = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<Asset> => {
+
+  return customFetch<Asset>(getGetAssetUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAssetQueryKey = (id: string,) => {
+    return [
+    `/api/assets/${id}`
+    ] as const;
+    }
+
+
+export const getGetAssetQueryOptions = <TData = Awaited<ReturnType<typeof getAsset>>, TError = ErrorType<ForbiddenResponse | NotFoundResponse>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAsset>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAssetQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAsset>>> = ({ signal }) => getAsset(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAsset>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAssetQueryResult = NonNullable<Awaited<ReturnType<typeof getAsset>>>
+export type GetAssetQueryError = ErrorType<ForbiddenResponse | NotFoundResponse>
+
+
+/**
+ * @summary Get an asset
+ */
+
+export function useGetAsset<TData = Awaited<ReturnType<typeof getAsset>>, TError = ErrorType<ForbiddenResponse | NotFoundResponse>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAsset>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAssetQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateAssetUrl = (id: string,) => {
+
+
+
+
+  return `/api/assets/${id}`
+}
+
+/**
+ * @summary Update an asset
+ */
+export const updateAsset = async (id: string,
+    registryInput: RegistryInput, options?: Parameters<typeof customFetch>[1]): Promise<Asset> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<Asset>(getUpdateAssetUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(registryInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateAssetMutationKey = () => ['updateAsset'] as const;
+
+export const getUpdateAssetMutationOptions = <TError = ErrorType<ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAsset>>, TError,UpdateAssetMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateAsset>>, TError,UpdateAssetMutationVariables, TContext> => {
+
+const mutationKey = getUpdateAssetMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAsset>>, UpdateAssetMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateAsset(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateAssetMutationResult = NonNullable<Awaited<ReturnType<typeof updateAsset>>>
+    export type UpdateAssetMutationBody = BodyType<RegistryInput>
+    export type UpdateAssetMutationError = ErrorType<ForbiddenResponse>
+    export type UpdateAssetMutationVariables = {id: string;data: BodyType<RegistryInput>}
+
+    /**
+ * @summary Update an asset
+ */
+export const useUpdateAsset = <TError = ErrorType<ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAsset>>, TError,UpdateAssetMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateAsset>>,
+        TError,
+        UpdateAssetMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateAssetMutationOptions(options));
+    }
+
+export const getReplaceAssetUrl = (id: string,) => {
+
+
+
+
+  return `/api/assets/${id}`
+}
+
+/**
+ * @summary Replace mutable asset fields
+ */
+export const replaceAsset = async (id: string,
+    registryInput: RegistryInput, options?: Parameters<typeof customFetch>[1]): Promise<Asset> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<Asset>(getReplaceAssetUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(registryInput)
+  }
+);}
+
+
+
+
+
+export const getReplaceAssetMutationKey = () => ['replaceAsset'] as const;
+
+export const getReplaceAssetMutationOptions = <TError = ErrorType<ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof replaceAsset>>, TError,ReplaceAssetMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof replaceAsset>>, TError,ReplaceAssetMutationVariables, TContext> => {
+
+const mutationKey = getReplaceAssetMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof replaceAsset>>, ReplaceAssetMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  replaceAsset(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReplaceAssetMutationResult = NonNullable<Awaited<ReturnType<typeof replaceAsset>>>
+    export type ReplaceAssetMutationBody = BodyType<RegistryInput>
+    export type ReplaceAssetMutationError = ErrorType<ForbiddenResponse>
+    export type ReplaceAssetMutationVariables = {id: string;data: BodyType<RegistryInput>}
+
+    /**
+ * @summary Replace mutable asset fields
+ */
+export const useReplaceAsset = <TError = ErrorType<ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof replaceAsset>>, TError,ReplaceAssetMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof replaceAsset>>,
+        TError,
+        ReplaceAssetMutationVariables,
+        TContext
+      > => {
+      return useMutation(getReplaceAssetMutationOptions(options));
+    }
+
+export const getDeleteAssetUrl = (id: string,) => {
+
+
+
+
+  return `/api/assets/${id}`
+}
+
+/**
+ * @summary Delete an asset
+ */
+export const deleteAsset = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteAssetUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteAssetMutationKey = () => ['deleteAsset'] as const;
+
+export const getDeleteAssetMutationOptions = <TError = ErrorType<ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAsset>>, TError,DeleteAssetMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteAsset>>, TError,DeleteAssetMutationVariables, TContext> => {
+
+const mutationKey = getDeleteAssetMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAsset>>, DeleteAssetMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteAsset(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteAssetMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAsset>>>
+
+    export type DeleteAssetMutationError = ErrorType<ForbiddenResponse | NotFoundResponse>
+    export type DeleteAssetMutationVariables = {id: string}
+
+    /**
+ * @summary Delete an asset
+ */
+export const useDeleteAsset = <TError = ErrorType<ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAsset>>, TError,DeleteAssetMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteAsset>>,
+        TError,
+        DeleteAssetMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteAssetMutationOptions(options));
+    }
+
+export const getListSystemAssetsUrl = (id: string,) => {
+
+
+
+
+  return `/api/systems/${id}/assets`
+}
+
+/**
+ * @summary List assets nested under a system
+ */
+export const listSystemAssets = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<RegistryPage> => {
+
+  return customFetch<RegistryPage>(getListSystemAssetsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListSystemAssetsQueryKey = (id: string,) => {
+    return [
+    `/api/systems/${id}/assets`
+    ] as const;
+    }
+
+
+export const getListSystemAssetsQueryOptions = <TData = Awaited<ReturnType<typeof listSystemAssets>>, TError = ErrorType<ForbiddenResponse | NotFoundResponse>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSystemAssets>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListSystemAssetsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSystemAssets>>> = ({ signal }) => listSystemAssets(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSystemAssets>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListSystemAssetsQueryResult = NonNullable<Awaited<ReturnType<typeof listSystemAssets>>>
+export type ListSystemAssetsQueryError = ErrorType<ForbiddenResponse | NotFoundResponse>
+
+
+/**
+ * @summary List assets nested under a system
+ */
+
+export function useListSystemAssets<TData = Awaited<ReturnType<typeof listSystemAssets>>, TError = ErrorType<ForbiddenResponse | NotFoundResponse>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSystemAssets>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListSystemAssetsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateSystemAssetUrl = (id: string,) => {
+
+
+
+
+  return `/api/systems/${id}/assets`
+}
+
+/**
+ * @summary Create an asset nested under a system
+ */
+export const createSystemAsset = async (id: string,
+    assetInput: AssetInput, options?: Parameters<typeof customFetch>[1]): Promise<Asset> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<Asset>(getCreateSystemAssetUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(assetInput)
+  }
+);}
+
+
+
+
+
+export const getCreateSystemAssetMutationKey = () => ['createSystemAsset'] as const;
+
+export const getCreateSystemAssetMutationOptions = <TError = ErrorType<ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSystemAsset>>, TError,CreateSystemAssetMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createSystemAsset>>, TError,CreateSystemAssetMutationVariables, TContext> => {
+
+const mutationKey = getCreateSystemAssetMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createSystemAsset>>, CreateSystemAssetMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createSystemAsset(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateSystemAssetMutationResult = NonNullable<Awaited<ReturnType<typeof createSystemAsset>>>
+    export type CreateSystemAssetMutationBody = BodyType<AssetInput>
+    export type CreateSystemAssetMutationError = ErrorType<ForbiddenResponse | NotFoundResponse>
+    export type CreateSystemAssetMutationVariables = {id: string;data: BodyType<AssetInput>}
+
+    /**
+ * @summary Create an asset nested under a system
+ */
+export const useCreateSystemAsset = <TError = ErrorType<ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSystemAsset>>, TError,CreateSystemAssetMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createSystemAsset>>,
+        TError,
+        CreateSystemAssetMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateSystemAssetMutationOptions(options));
+    }
+
+export const getListBuildingsUrl = (params?: ListBuildingsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/buildings?${stringifiedParams}` : `/api/buildings`
+}
+
+/**
+ * @summary List buildings in the active organization
+ */
+export const listBuildings = async (params?: ListBuildingsParams, options?: Parameters<typeof customFetch>[1]): Promise<RegistryPage> => {
+
+  return customFetch<RegistryPage>(getListBuildingsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListBuildingsQueryKey = (params?: ListBuildingsParams,) => {
+    return [
+    `/api/buildings`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListBuildingsQueryOptions = <TData = Awaited<ReturnType<typeof listBuildings>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>(params?: ListBuildingsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBuildings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListBuildingsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listBuildings>>> = ({ signal }) => listBuildings(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listBuildings>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListBuildingsQueryResult = NonNullable<Awaited<ReturnType<typeof listBuildings>>>
+export type ListBuildingsQueryError = ErrorType<UnauthorizedResponse | ForbiddenResponse>
+
+
+/**
+ * @summary List buildings in the active organization
+ */
+
+export function useListBuildings<TData = Awaited<ReturnType<typeof listBuildings>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>(
+ params?: ListBuildingsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBuildings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListBuildingsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateBuildingUrl = () => {
+
+
+
+
+  return `/api/buildings`
+}
+
+/**
+ * @summary Create a building under a persisted facility
+ */
+export const createBuilding = async (buildingInput: BuildingInput, options?: Parameters<typeof customFetch>[1]): Promise<Building> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<Building>(getCreateBuildingUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(buildingInput)
+  }
+);}
+
+
+
+
+
+export const getCreateBuildingMutationKey = () => ['createBuilding'] as const;
+
+export const getCreateBuildingMutationOptions = <TError = ErrorType<BadRequestResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createBuilding>>, TError,CreateBuildingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createBuilding>>, TError,CreateBuildingMutationVariables, TContext> => {
+
+const mutationKey = getCreateBuildingMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createBuilding>>, CreateBuildingMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createBuilding(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateBuildingMutationResult = NonNullable<Awaited<ReturnType<typeof createBuilding>>>
+    export type CreateBuildingMutationBody = BodyType<BuildingInput>
+    export type CreateBuildingMutationError = ErrorType<BadRequestResponse | ForbiddenResponse>
+    export type CreateBuildingMutationVariables = {data: BodyType<BuildingInput>}
+
+    /**
+ * @summary Create a building under a persisted facility
+ */
+export const useCreateBuilding = <TError = ErrorType<BadRequestResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createBuilding>>, TError,CreateBuildingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createBuilding>>,
+        TError,
+        CreateBuildingMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateBuildingMutationOptions(options));
+    }
+
+export const getListSpacesUrl = (params?: ListSpacesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/spaces?${stringifiedParams}` : `/api/spaces`
+}
+
+/**
+ * @summary List spaces in the active organization
+ */
+export const listSpaces = async (params?: ListSpacesParams, options?: Parameters<typeof customFetch>[1]): Promise<RegistryPage> => {
+
+  return customFetch<RegistryPage>(getListSpacesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListSpacesQueryKey = (params?: ListSpacesParams,) => {
+    return [
+    `/api/spaces`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListSpacesQueryOptions = <TData = Awaited<ReturnType<typeof listSpaces>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>(params?: ListSpacesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSpaces>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListSpacesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSpaces>>> = ({ signal }) => listSpaces(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSpaces>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListSpacesQueryResult = NonNullable<Awaited<ReturnType<typeof listSpaces>>>
+export type ListSpacesQueryError = ErrorType<UnauthorizedResponse | ForbiddenResponse>
+
+
+/**
+ * @summary List spaces in the active organization
+ */
+
+export function useListSpaces<TData = Awaited<ReturnType<typeof listSpaces>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>(
+ params?: ListSpacesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSpaces>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListSpacesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateSpaceUrl = () => {
+
+
+
+
+  return `/api/spaces`
+}
+
+/**
+ * @summary Create a space under a persisted building
+ */
+export const createSpace = async (spaceInput: SpaceInput, options?: Parameters<typeof customFetch>[1]): Promise<Space> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<Space>(getCreateSpaceUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(spaceInput)
+  }
+);}
+
+
+
+
+
+export const getCreateSpaceMutationKey = () => ['createSpace'] as const;
+
+export const getCreateSpaceMutationOptions = <TError = ErrorType<BadRequestResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSpace>>, TError,CreateSpaceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createSpace>>, TError,CreateSpaceMutationVariables, TContext> => {
+
+const mutationKey = getCreateSpaceMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createSpace>>, CreateSpaceMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createSpace(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateSpaceMutationResult = NonNullable<Awaited<ReturnType<typeof createSpace>>>
+    export type CreateSpaceMutationBody = BodyType<SpaceInput>
+    export type CreateSpaceMutationError = ErrorType<BadRequestResponse | ForbiddenResponse>
+    export type CreateSpaceMutationVariables = {data: BodyType<SpaceInput>}
+
+    /**
+ * @summary Create a space under a persisted building
+ */
+export const useCreateSpace = <TError = ErrorType<BadRequestResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSpace>>, TError,CreateSpaceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createSpace>>,
+        TError,
+        CreateSpaceMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateSpaceMutationOptions(options));
+    }
+
+export const getListSystemsUrl = (params?: ListSystemsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/systems?${stringifiedParams}` : `/api/systems`
+}
+
+/**
+ * @summary List systems in the active organization
+ */
+export const listSystems = async (params?: ListSystemsParams, options?: Parameters<typeof customFetch>[1]): Promise<RegistryPage> => {
+
+  return customFetch<RegistryPage>(getListSystemsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListSystemsQueryKey = (params?: ListSystemsParams,) => {
+    return [
+    `/api/systems`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListSystemsQueryOptions = <TData = Awaited<ReturnType<typeof listSystems>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>(params?: ListSystemsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSystems>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListSystemsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSystems>>> = ({ signal }) => listSystems(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSystems>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListSystemsQueryResult = NonNullable<Awaited<ReturnType<typeof listSystems>>>
+export type ListSystemsQueryError = ErrorType<UnauthorizedResponse | ForbiddenResponse>
+
+
+/**
+ * @summary List systems in the active organization
+ */
+
+export function useListSystems<TData = Awaited<ReturnType<typeof listSystems>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>(
+ params?: ListSystemsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSystems>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListSystemsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateSystemUrl = () => {
+
+
+
+
+  return `/api/systems`
+}
+
+/**
+ * @summary Create a system under a persisted space
+ */
+export const createSystem = async (systemInput: SystemInput, options?: Parameters<typeof customFetch>[1]): Promise<System> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<System>(getCreateSystemUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(systemInput)
+  }
+);}
+
+
+
+
+
+export const getCreateSystemMutationKey = () => ['createSystem'] as const;
+
+export const getCreateSystemMutationOptions = <TError = ErrorType<BadRequestResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSystem>>, TError,CreateSystemMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createSystem>>, TError,CreateSystemMutationVariables, TContext> => {
+
+const mutationKey = getCreateSystemMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createSystem>>, CreateSystemMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createSystem(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateSystemMutationResult = NonNullable<Awaited<ReturnType<typeof createSystem>>>
+    export type CreateSystemMutationBody = BodyType<SystemInput>
+    export type CreateSystemMutationError = ErrorType<BadRequestResponse | ForbiddenResponse>
+    export type CreateSystemMutationVariables = {data: BodyType<SystemInput>}
+
+    /**
+ * @summary Create a system under a persisted space
+ */
+export const useCreateSystem = <TError = ErrorType<BadRequestResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSystem>>, TError,CreateSystemMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createSystem>>,
+        TError,
+        CreateSystemMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateSystemMutationOptions(options));
+    }
+
+export const getListAssetsUrl = (params?: ListAssetsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/assets?${stringifiedParams}` : `/api/assets`
+}
+
+/**
+ * @summary List assets in the active organization
+ */
+export const listAssets = async (params?: ListAssetsParams, options?: Parameters<typeof customFetch>[1]): Promise<RegistryPage> => {
+
+  return customFetch<RegistryPage>(getListAssetsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAssetsQueryKey = (params?: ListAssetsParams,) => {
+    return [
+    `/api/assets`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListAssetsQueryOptions = <TData = Awaited<ReturnType<typeof listAssets>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>(params?: ListAssetsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAssets>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAssetsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAssets>>> = ({ signal }) => listAssets(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAssets>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAssetsQueryResult = NonNullable<Awaited<ReturnType<typeof listAssets>>>
+export type ListAssetsQueryError = ErrorType<UnauthorizedResponse | ForbiddenResponse>
+
+
+/**
+ * @summary List assets in the active organization
+ */
+
+export function useListAssets<TData = Awaited<ReturnType<typeof listAssets>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>(
+ params?: ListAssetsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAssets>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAssetsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateAssetUrl = () => {
+
+
+
+
+  return `/api/assets`
+}
+
+/**
+ * @summary Create an asset under a persisted space
+ */
+export const createAsset = async (assetInput: AssetInput, options?: Parameters<typeof customFetch>[1]): Promise<Asset> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<Asset>(getCreateAssetUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(assetInput)
+  }
+);}
+
+
+
+
+
+export const getCreateAssetMutationKey = () => ['createAsset'] as const;
+
+export const getCreateAssetMutationOptions = <TError = ErrorType<BadRequestResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAsset>>, TError,CreateAssetMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createAsset>>, TError,CreateAssetMutationVariables, TContext> => {
+
+const mutationKey = getCreateAssetMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAsset>>, CreateAssetMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createAsset(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateAssetMutationResult = NonNullable<Awaited<ReturnType<typeof createAsset>>>
+    export type CreateAssetMutationBody = BodyType<AssetInput>
+    export type CreateAssetMutationError = ErrorType<BadRequestResponse | ForbiddenResponse>
+    export type CreateAssetMutationVariables = {data: BodyType<AssetInput>}
+
+    /**
+ * @summary Create an asset under a persisted space
+ */
+export const useCreateAsset = <TError = ErrorType<BadRequestResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAsset>>, TError,CreateAssetMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createAsset>>,
+        TError,
+        CreateAssetMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateAssetMutationOptions(options));
     }
 
