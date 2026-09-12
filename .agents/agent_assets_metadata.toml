@@ -80,3 +80,115 @@ uri = "file://artifacts/nexus-fm-animated-film/public/audio/bg_music.mp3"
 type = "audio"
 title = "NEXUS-FM background music"
 description = "Generated music: Driving cinematic electronic instrumental background music scoring an enterprise facility-management technology explainer. Precise modular synth pulse, restrained low percussion, war…"
+
+[[outputs]]
+id = "bnB0hJkZXl1CUanNNnD-G"
+uri = "file://artifacts/nexus-fm-animated-film/public/audio/vo_intro.mp3"
+type = "audio"
+title = "intro narration"
+description = "Text-to-speech audio: NEXUS-FM. Sistem operasi digital berbasis bukti untuk fasilitas modern."
+
+[[outputs]]
+id = "Y-2LF2Fid4UORc2rpn5qW"
+uri = "file://artifacts/nexus-fm-animated-film/public/audio/vo_principle2.mp3"
+type = "audio"
+title = "principle2 narration"
+description = "Text-to-speech audio: Pekerjaan selesai belum berarti terverifikasi atau ditutup. Bukti tetap wajib."
+
+[[outputs]]
+id = "E6OpvVlWR_-ikG_bSlvOF"
+uri = "file://artifacts/nexus-fm-animated-film/public/audio/vo_principle4.mp3"
+type = "audio"
+title = "principle4 narration"
+description = "Text-to-speech audio: Aturan bisnis tetap berada di lapisan domain dan layanan, bukan di tampilan."
+
+[[outputs]]
+id = "D4kzsM-HkiyXfdpLCBKK3"
+uri = "file://artifacts/nexus-fm-animated-film/public/audio/vo_principle5.mp3"
+type = "audio"
+title = "principle5 narration"
+description = "Text-to-speech audio: Kecerdasan buatan hanya merekomendasikan. Manusia memutuskan, dan setiap perubahan tercatat."
+
+[[outputs]]
+id = "InfpuoW9Lf7Ad3rabMACT"
+uri = "file://artifacts/nexus-fm-animated-film/public/audio/vo_principle1.mp3"
+type = "audio"
+title = "principle1 narration"
+description = "Text-to-speech audio: Dimulai dari fasilitas, lalu menghubungkan setiap aset dalam satu konteks operasional."
+
+[[outputs]]
+id = "_C8IweIs06NBxQVZ7nwwY"
+uri = "file://artifacts/nexus-fm-animated-film/public/audio/vo_outro.mp3"
+type = "audio"
+title = "outro narration"
+description = "Text-to-speech audio: NEXUS-FM. Dari aktivitas, menjadi bukti. Dari bukti, menjadi keputusan."
+
+[[outputs]]
+id = "3wzULI7XIvMUwsvFtBfJd"
+uri = "file://artifacts/nexus-fm-animated-film/public/audio/vo_foundation.mp3"
+type = "audio"
+title = "foundation narration"
+description = "Text-to-speech audio: Fondasi autentikasi dan otorisasi telah terverifikasi, stabil, dan terkunci. Tujuh peran kanonis, izin resource action, ditolak secara default, dan selalu ditegakkan server."
+
+[[outputs]]
+id = "s5Djm5NcknVl_hwx2phNB"
+uri = "file://artifacts/nexus-fm-animated-film/public/audio/vo_principle3.mp3"
+type = "audio"
+title = "principle3 narration"
+description = "Text-to-speech audio: Skor rata-rata yang tinggi tidak boleh menyembunyikan satu masalah kritis."
+
+[[outputs]]
+id = "Ap8yBfPSJv22NcqSCqSkv"
+uri = "file://artifacts/nexus-fm-animated-film/public/audio/vo_principle2_2.mp3"
+type = "audio"
+title = "principle2 narration"
+description = "Text-to-speech audio: Selesai belum terverifikasi. Bukti tetap wajib."
+
+[[outputs]]
+id = "IZy_doHdgBj4IfLyvEdO0"
+uri = "file://artifacts/nexus-fm-animated-film/public/audio/vo_intro_2.mp3"
+type = "audio"
+title = "intro narration"
+description = "Text-to-speech audio: NEXUS-FM. Operasi fasilitas, berbasis bukti."
+
+[[outputs]]
+id = "GDbJe1uR_Kpk71w5z9SkF"
+uri = "file://artifacts/nexus-fm-animated-film/public/audio/vo_principle3_2.mp3"
+type = "audio"
+title = "principle3 narration"
+description = "Text-to-speech audio: Satu masalah kritis mengalahkan skor rata-rata."
+
+[[outputs]]
+id = "BefvPF8GMDcuRXux8rcPZ"
+uri = "file://artifacts/nexus-fm-animated-film/public/audio/vo_principle4_2.mp3"
+type = "audio"
+title = "principle4 narration"
+description = "Text-to-speech audio: Aturan bisnis tetap di domain dan layanan."
+
+[[outputs]]
+id = "TnWV1axpA3e6c0Shv3u_b"
+uri = "file://artifacts/nexus-fm-animated-film/public/audio/vo_outro_2.mp3"
+type = "audio"
+title = "outro narration"
+description = "Text-to-speech audio: Dari aktivitas, menjadi bukti. Dari bukti, menjadi keputusan."
+
+[[outputs]]
+id = "6qMU4_7Z6kC6n8a1CT8O2"
+uri = "file://artifacts/nexus-fm-animated-film/public/audio/vo_principle5_2.mp3"
+type = "audio"
+title = "principle5 narration"
+description = "Text-to-speech audio: AI merekomendasikan. Manusia memutuskan. Perubahan selalu tercatat."
+
+[[outputs]]
+id = "TP7WdFVsGfb55gGRRmrsX"
+uri = "file://artifacts/nexus-fm-animated-film/public/audio/vo_principle1_2.mp3"
+type = "audio"
+title = "principle1 narration"
+description = "Text-to-speech audio: Fasilitas menjadi pusat. Setiap aset terhubung."
+
+[[outputs]]
+id = "PrEC4Ys0YU5yFWoumFw_S"
+uri = "file://artifacts/nexus-fm-animated-film/public/audio/vo_foundation_2.mp3"
+type = "audio"
+title = "foundation narration"
+description = "Text-to-speech audio: Autentikasi dan otorisasi: terverifikasi, stabil, terkunci, dan ditegakkan server."
