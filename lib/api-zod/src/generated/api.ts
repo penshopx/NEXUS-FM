@@ -118,182 +118,230 @@ export const GetFoundationSummaryResponse = zod.object({
 
 
 /**
- * @summary Get effective permissions and scopes for the active organization
+ * @summary List canonical permissions
  */
-export const GetMyAuthorizationResponse = zod.object({
-  "organizationId": zod.string().uuid(),
-  "roles": zod.array(zod.enum(['PLATFORM_ADMIN', 'FACILITY_MANAGER', 'FACILITY_SUPERVISOR', 'INSPECTOR', 'MAINTENANCE_TECHNICIAN', 'WAREHOUSE_SUPERVISOR', 'VENDOR'])),
-  "permissions": zod.array(zod.string()),
-  "scopes": zod.array(zod.object({
-  "role": zod.enum(['PLATFORM_ADMIN', 'FACILITY_MANAGER', 'FACILITY_SUPERVISOR', 'INSPECTOR', 'MAINTENANCE_TECHNICIAN', 'WAREHOUSE_SUPERVISOR', 'VENDOR']),
-  "scopeType": zod.enum(['PLATFORM', 'ORGANIZATION', 'PORTFOLIO', 'FACILITY', 'BUILDING', 'SPACE', 'ASSET', 'ASSIGNED', 'TEAM', 'VENDOR_ASSIGNMENT', 'OWNED_REQUEST']),
-  "scopeId": zod.string().uuid().nullish()
-}))
-})
+export const listPermissionsResponseCodeRegExp = new RegExp('^[A-Z_]+\\.[A-Z_]+$');
 
 
-/**
- * @summary Check one canonical permission for the authenticated actor
- */
-export const checkAuthorizationBodyPermissionRegExp = new RegExp('^[A-Z_]+\\.[A-Z_]+$');
-
-
-export const CheckAuthorizationBody = zod.object({
-  "permission": zod.string().regex(checkAuthorizationBodyPermissionRegExp),
-  "resourceId": zod.string().uuid().optional()
-})
-
-export const CheckAuthorizationResponse = zod.object({
-  "allowed": zod.boolean(),
-  "reasonCode": zod.enum(['AUTH_REQUIRED', 'USER_INACTIVE', 'ORGANIZATION_MISMATCH', 'ROLE_NOT_ASSIGNED', 'BINDING_INACTIVE', 'PERMISSION_NOT_GRANTED', 'RESOURCE_NOT_FOUND', 'SCOPE_DENIED', 'ASSIGNMENT_REQUIRED', 'OWNERSHIP_REQUIRED', 'VENDOR_SCOPE_DENIED', 'EXPLICIT_DENY', 'POLICY_DENIED', 'PERMISSION_GRANTED']),
-  "permission": zod.string(),
-  "scopeType": zod.union([zod.enum(['PLATFORM', 'ORGANIZATION', 'PORTFOLIO', 'FACILITY', 'BUILDING', 'SPACE', 'ASSET', 'ASSIGNED', 'TEAM', 'VENDOR_ASSIGNMENT', 'OWNED_REQUEST']),zod.null()]).optional()
-})
-
-
-/**
- * @summary List the canonical permission catalog
- */
-export const ListPermissionCatalogResponseItem = zod.object({
+export const ListPermissionsResponseItem = zod.object({
   "id": zod.string().uuid(),
-  "code": zod.string(),
+  "code": zod.string().regex(listPermissionsResponseCodeRegExp),
   "resource": zod.string(),
   "action": zod.string(),
-  "description": zod.string(),
+  "description": zod.string().optional(),
   "status": zod.enum(['ACTIVE', 'DEPRECATED'])
 })
-export const ListPermissionCatalogResponse = zod.array(ListPermissionCatalogResponseItem)
+export const ListPermissionsResponse = zod.array(ListPermissionsResponseItem)
 
 
 /**
- * @summary List canonical role capability assignments
+ * @summary List canonical roles
  */
-export const ListRoleCapabilitiesResponseItem = zod.object({
-  "role": zod.enum(['PLATFORM_ADMIN', 'FACILITY_MANAGER', 'FACILITY_SUPERVISOR', 'INSPECTOR', 'MAINTENANCE_TECHNICIAN', 'WAREHOUSE_SUPERVISOR', 'VENDOR']),
-  "permission": zod.string(),
+export const ListRolesResponseItem = zod.object({
+  "id": zod.string().uuid(),
+  "code": zod.enum(['PLATFORM_ADMIN', 'FACILITY_MANAGER', 'FACILITY_SUPERVISOR', 'INSPECTOR', 'MAINTENANCE_TECHNICIAN', 'WAREHOUSE_SUPERVISOR', 'VENDOR']),
+  "description": zod.string().optional(),
+  "status": zod.enum(['ACTIVE', 'DEPRECATED']),
+  "updatedAt": zod.coerce.date(),
+  "policyVersion": zod.string().uuid()
+})
+export const ListRolesResponse = zod.array(ListRolesResponseItem)
+
+
+/**
+ * @summary Read role permissions
+ */
+export const GetRolePermissionsParams = zod.object({
+  "roleId": zod.coerce.string().uuid()
+})
+
+export const GetRolePermissionsResponseItem = zod.object({
+  "id": zod.string().uuid().optional(),
+  "permissionId": zod.string().uuid(),
+  "code": zod.string().optional(),
   "defaultScopeType": zod.enum(['PLATFORM', 'ORGANIZATION', 'PORTFOLIO', 'FACILITY', 'BUILDING', 'SPACE', 'ASSET', 'ASSIGNED', 'TEAM', 'VENDOR_ASSIGNMENT', 'OWNED_REQUEST']),
   "effect": zod.enum(['ALLOW', 'DENY'])
 })
-export const ListRoleCapabilitiesResponse = zod.array(ListRoleCapabilitiesResponseItem)
+export const GetRolePermissionsResponse = zod.array(GetRolePermissionsResponseItem)
 
 
 /**
- * @summary List scoped role bindings for a user
+ * The If-Match header is the role policy version. Stale versions are rejected to prevent lost concurrent updates; omitted canonical capabilities are persisted as explicit DENY entries.
+ * @summary Replace role permissions
  */
-export const ListUserRoleBindingsParams = zod.object({
+export const UpdateRolePermissionsParams = zod.object({
+  "roleId": zod.coerce.string().uuid()
+})
+
+export const UpdateRolePermissionsHeader = zod.object({
+  "If-Match": zod.string().describe('Exact role policyVersion token returned as the ETag header.')
+})
+
+export const UpdateRolePermissionsBody = zod.object({
+  "permissions": zod.array(zod.object({
+  "id": zod.string().uuid().optional(),
+  "permissionId": zod.string().uuid(),
+  "code": zod.string().optional(),
+  "defaultScopeType": zod.enum(['PLATFORM', 'ORGANIZATION', 'PORTFOLIO', 'FACILITY', 'BUILDING', 'SPACE', 'ASSET', 'ASSIGNED', 'TEAM', 'VENDOR_ASSIGNMENT', 'OWNED_REQUEST']),
+  "effect": zod.enum(['ALLOW', 'DENY'])
+}))
+})
+
+export const UpdateRolePermissionsResponseItem = zod.object({
+  "id": zod.string().uuid().optional(),
+  "permissionId": zod.string().uuid(),
+  "code": zod.string().optional(),
+  "defaultScopeType": zod.enum(['PLATFORM', 'ORGANIZATION', 'PORTFOLIO', 'FACILITY', 'BUILDING', 'SPACE', 'ASSET', 'ASSIGNED', 'TEAM', 'VENDOR_ASSIGNMENT', 'OWNED_REQUEST']),
+  "effect": zod.enum(['ALLOW', 'DENY'])
+})
+export const UpdateRolePermissionsResponse = zod.array(UpdateRolePermissionsResponseItem)
+
+
+/**
+ * @summary Read a user's scoped role bindings
+ */
+export const GetUserRoleBindingsParams = zod.object({
   "userId": zod.coerce.string().uuid()
 })
 
-export const ListUserRoleBindingsResponseItem = zod.object({
+export const GetUserRoleBindingsResponseItem = zod.object({
   "id": zod.string().uuid(),
   "userId": zod.string().uuid(),
   "organizationId": zod.string().uuid(),
-  "role": zod.enum(['PLATFORM_ADMIN', 'FACILITY_MANAGER', 'FACILITY_SUPERVISOR', 'INSPECTOR', 'MAINTENANCE_TECHNICIAN', 'WAREHOUSE_SUPERVISOR', 'VENDOR']),
+  "roleId": zod.string().uuid(),
+  "version": zod.string().uuid(),
   "scopeType": zod.enum(['PLATFORM', 'ORGANIZATION', 'PORTFOLIO', 'FACILITY', 'BUILDING', 'SPACE', 'ASSET', 'ASSIGNED', 'TEAM', 'VENDOR_ASSIGNMENT', 'OWNED_REQUEST']),
   "scopeId": zod.string().uuid().nullish(),
-  "status": zod.enum(['ACTIVE', 'SUSPENDED', 'EXPIRED', 'REVOKED']),
+  "status": zod.enum(['ACTIVE', 'SUSPENDED', 'EXPIRED']),
   "startsAt": zod.coerce.date().nullish(),
-  "endsAt": zod.coerce.date().nullish(),
-  "grantedBy": zod.string().uuid().nullish(),
-  "createdAt": zod.coerce.date(),
-  "updatedAt": zod.coerce.date()
+  "endsAt": zod.coerce.date().nullish()
 })
-export const ListUserRoleBindingsResponse = zod.array(ListUserRoleBindingsResponseItem)
+export const GetUserRoleBindingsResponse = zod.array(GetUserRoleBindingsResponseItem)
 
 
 /**
- * @summary Grant a scoped canonical role
+ * @summary Create a scoped role binding
  */
+export const CreateUserRoleBindingParams = zod.object({
+  "userId": zod.coerce.string().uuid()
+})
 
-
-
-export const CreateRoleBindingBody = zod.object({
-  "userId": zod.string().uuid(),
+export const CreateUserRoleBindingBody = zod.object({
   "organizationId": zod.string().uuid(),
-  "role": zod.enum(['PLATFORM_ADMIN', 'FACILITY_MANAGER', 'FACILITY_SUPERVISOR', 'INSPECTOR', 'MAINTENANCE_TECHNICIAN', 'WAREHOUSE_SUPERVISOR', 'VENDOR']),
+  "roleId": zod.string().uuid(),
   "scopeType": zod.enum(['PLATFORM', 'ORGANIZATION', 'PORTFOLIO', 'FACILITY', 'BUILDING', 'SPACE', 'ASSET', 'ASSIGNED', 'TEAM', 'VENDOR_ASSIGNMENT', 'OWNED_REQUEST']),
   "scopeId": zod.string().uuid().nullish(),
   "startsAt": zod.coerce.date().nullish(),
-  "endsAt": zod.coerce.date().nullish(),
-  "reason": zod.string().min(1)
+  "endsAt": zod.coerce.date().nullish()
 })
 
-export const CreateRoleBindingResponse = zod.object({
+export const CreateUserRoleBindingResponse = zod.object({
   "id": zod.string().uuid(),
   "userId": zod.string().uuid(),
   "organizationId": zod.string().uuid(),
-  "role": zod.enum(['PLATFORM_ADMIN', 'FACILITY_MANAGER', 'FACILITY_SUPERVISOR', 'INSPECTOR', 'MAINTENANCE_TECHNICIAN', 'WAREHOUSE_SUPERVISOR', 'VENDOR']),
+  "roleId": zod.string().uuid(),
+  "version": zod.string().uuid(),
   "scopeType": zod.enum(['PLATFORM', 'ORGANIZATION', 'PORTFOLIO', 'FACILITY', 'BUILDING', 'SPACE', 'ASSET', 'ASSIGNED', 'TEAM', 'VENDOR_ASSIGNMENT', 'OWNED_REQUEST']),
   "scopeId": zod.string().uuid().nullish(),
-  "status": zod.enum(['ACTIVE', 'SUSPENDED', 'EXPIRED', 'REVOKED']),
+  "status": zod.enum(['ACTIVE', 'SUSPENDED', 'EXPIRED']),
   "startsAt": zod.coerce.date().nullish(),
-  "endsAt": zod.coerce.date().nullish(),
-  "grantedBy": zod.string().uuid().nullish(),
-  "createdAt": zod.coerce.date(),
-  "updatedAt": zod.coerce.date()
+  "endsAt": zod.coerce.date().nullish()
 })
 
 
 /**
- * @summary Update scoped role binding lifecycle
+ * @summary Update or revoke a scoped role binding
  */
-export const UpdateRoleBindingParams = zod.object({
+export const UpdateUserRoleBindingParams = zod.object({
+  "userId": zod.coerce.string().uuid(),
   "bindingId": zod.coerce.string().uuid()
 })
 
-
-
-
-export const UpdateRoleBindingBody = zod.object({
-  "status": zod.enum(['ACTIVE', 'SUSPENDED', 'EXPIRED', 'REVOKED']),
-  "startsAt": zod.coerce.date().nullish(),
-  "endsAt": zod.coerce.date().nullish(),
-  "reason": zod.string().min(1)
+export const UpdateUserRoleBindingBody = zod.object({
+  "status": zod.enum(['ACTIVE', 'SUSPENDED', 'EXPIRED']).optional(),
+  "scopeType": zod.enum(['PLATFORM', 'ORGANIZATION', 'PORTFOLIO', 'FACILITY', 'BUILDING', 'SPACE', 'ASSET', 'ASSIGNED', 'TEAM', 'VENDOR_ASSIGNMENT', 'OWNED_REQUEST']).optional(),
+  "scopeId": zod.string().uuid().nullish(),
+  "endsAt": zod.coerce.date().nullish()
 })
 
-export const UpdateRoleBindingResponse = zod.object({
+export const UpdateUserRoleBindingResponse = zod.object({
   "id": zod.string().uuid(),
   "userId": zod.string().uuid(),
   "organizationId": zod.string().uuid(),
-  "role": zod.enum(['PLATFORM_ADMIN', 'FACILITY_MANAGER', 'FACILITY_SUPERVISOR', 'INSPECTOR', 'MAINTENANCE_TECHNICIAN', 'WAREHOUSE_SUPERVISOR', 'VENDOR']),
+  "roleId": zod.string().uuid(),
+  "version": zod.string().uuid(),
   "scopeType": zod.enum(['PLATFORM', 'ORGANIZATION', 'PORTFOLIO', 'FACILITY', 'BUILDING', 'SPACE', 'ASSET', 'ASSIGNED', 'TEAM', 'VENDOR_ASSIGNMENT', 'OWNED_REQUEST']),
   "scopeId": zod.string().uuid().nullish(),
-  "status": zod.enum(['ACTIVE', 'SUSPENDED', 'EXPIRED', 'REVOKED']),
+  "status": zod.enum(['ACTIVE', 'SUSPENDED', 'EXPIRED']),
   "startsAt": zod.coerce.date().nullish(),
-  "endsAt": zod.coerce.date().nullish(),
-  "grantedBy": zod.string().uuid().nullish(),
-  "createdAt": zod.coerce.date(),
-  "updatedAt": zod.coerce.date()
+  "endsAt": zod.coerce.date().nullish()
 })
 
 
 /**
  * @summary Revoke a scoped role binding
  */
-export const RevokeRoleBindingParams = zod.object({
+export const RevokeUserRoleBindingParams = zod.object({
+  "userId": zod.coerce.string().uuid(),
   "bindingId": zod.coerce.string().uuid()
 })
 
-
-
-
-export const RevokeRoleBindingBody = zod.object({
-  "reason": zod.string().min(1)
-})
-
-export const RevokeRoleBindingResponse = zod.object({
+export const RevokeUserRoleBindingResponse = zod.object({
   "id": zod.string().uuid(),
   "userId": zod.string().uuid(),
   "organizationId": zod.string().uuid(),
-  "role": zod.enum(['PLATFORM_ADMIN', 'FACILITY_MANAGER', 'FACILITY_SUPERVISOR', 'INSPECTOR', 'MAINTENANCE_TECHNICIAN', 'WAREHOUSE_SUPERVISOR', 'VENDOR']),
+  "roleId": zod.string().uuid(),
+  "version": zod.string().uuid(),
   "scopeType": zod.enum(['PLATFORM', 'ORGANIZATION', 'PORTFOLIO', 'FACILITY', 'BUILDING', 'SPACE', 'ASSET', 'ASSIGNED', 'TEAM', 'VENDOR_ASSIGNMENT', 'OWNED_REQUEST']),
   "scopeId": zod.string().uuid().nullish(),
-  "status": zod.enum(['ACTIVE', 'SUSPENDED', 'EXPIRED', 'REVOKED']),
+  "status": zod.enum(['ACTIVE', 'SUSPENDED', 'EXPIRED']),
   "startsAt": zod.coerce.date().nullish(),
-  "endsAt": zod.coerce.date().nullish(),
-  "grantedBy": zod.string().uuid().nullish(),
-  "createdAt": zod.coerce.date(),
-  "updatedAt": zod.coerce.date()
+  "endsAt": zod.coerce.date().nullish()
+})
+
+
+/**
+ * @summary Introspect current permissions
+ */
+export const GetMyPermissionsResponse = zod.object({
+
+}).passthrough()
+
+
+/**
+ * @summary Introspect current role bindings
+ */
+export const GetMyScopeResponseItem = zod.object({
+  "id": zod.string().uuid(),
+  "userId": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "roleId": zod.string().uuid(),
+  "version": zod.string().uuid(),
+  "scopeType": zod.enum(['PLATFORM', 'ORGANIZATION', 'PORTFOLIO', 'FACILITY', 'BUILDING', 'SPACE', 'ASSET', 'ASSIGNED', 'TEAM', 'VENDOR_ASSIGNMENT', 'OWNED_REQUEST']),
+  "scopeId": zod.string().uuid().nullish(),
+  "status": zod.enum(['ACTIVE', 'SUSPENDED', 'EXPIRED']),
+  "startsAt": zod.coerce.date().nullish(),
+  "endsAt": zod.coerce.date().nullish()
+})
+export const GetMyScopeResponse = zod.array(GetMyScopeResponseItem)
+
+
+/**
+ * This endpoint is disabled in production and actionContext is diagnostic only; it cannot prove production object relationships or replace service-side resource resolution.
+ * @summary Development-only diagnostic permission check
+ */
+export const CheckAuthorizationBody = zod.object({
+  "permission": zod.string(),
+  "resourceType": zod.string(),
+  "resourceId": zod.string().optional(),
+  "context": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+export const CheckAuthorizationResponse = zod.object({
+  "allowed": zod.boolean(),
+  "reasonCode": zod.string(),
+  "permission": zod.string(),
+  "scopeType": zod.string().optional()
 })
 
 

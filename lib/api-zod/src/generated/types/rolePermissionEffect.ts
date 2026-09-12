@@ -6,10 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type PermissionEffect = typeof PermissionEffect[keyof typeof PermissionEffect];
+export type RolePermissionEffect = typeof RolePermissionEffect[keyof typeof RolePermissionEffect];
 
 
-export const PermissionEffect = {
+export const RolePermissionEffect = {
   ALLOW: 'ALLOW',
   DENY: 'DENY',
 } as const;

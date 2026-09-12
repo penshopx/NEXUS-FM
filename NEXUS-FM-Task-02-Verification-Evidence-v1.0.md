@@ -1,234 +1,192 @@
-# NEXUS-FM Task #02 Verification Evidence v1.0
+# NEXUS-FM Task #02 — Verification Evidence
 
-## Final decision
+## Status
 
-**Task #02 — Authorization & Permission Matrix**
+```text
+Task #02 = IMPLEMENTED
+Task #02 = VERIFIED
+```
 
-- `E2E VERIFIED`
-- `STABLE`
-- `LOCKED`
+This document is intentionally limited to the current authorization
+implementation. Future operational modules remain outside its scope.
 
-Decision date: 12 September 2026
+## Current implementation
 
-This decision applies only to the authorization foundation described below. It does not claim that Facility, Asset, Inspection, Work Order, Project, Cost, Compliance, Vendor, or other operational modules exist.
+- Canonical seven-role registry and resource/action permission catalog.
+- Additive role permissions, scoped user role bindings, and authorization
+  audit records.
+- Binding statuses are exactly `ACTIVE`, `SUSPENDED`, and `EXPIRED`.
+- Permission replacement persists omitted canonical matrix capabilities as
+  explicit `DENY` rows. Seed is idempotent and does not restore those denials.
+- Explicit `DENY` takes precedence over every allow.
+- Role policy replacement uses a UUID `policyVersion` and an exact `If-Match`
+  (or body `policyVersion`) precondition. Missing preconditions return `428`;
+  stale concurrent replacements return `409`.
+- Binding mutations use a UUID binding `version` CAS token and return `409`
+  when concurrent updates race.
+- POST and PATCH share complete binding-state validation. A merged PATCH state
+  rejects missing object/assignment scope IDs, invalid dates, reversed date
+  ranges, already-ended `ACTIVE` bindings, and non-terminal `EXPIRED`
+  bindings before mutation or configuration audit. Expired-binding
+  reactivation remains a `409`.
+- Organization bindings do not satisfy facility/building/space/asset,
+  assignment, team, or vendor-assignment defaults. Operational scope requires
+  a compatible explicit binding and trusted verified server context.
+- The evaluator independently rejects malformed legacy bindings. Hierarchical,
+  assignment, team, owned-request, and vendor-assignment checks require the
+  persisted binding scope ID to match trusted server-resolved context.
+- Vendor-assignment access requires both a verified actor/vendor relationship
+  and an exact assignment ID match; neither condition substitutes for the
+  other.
+- `/me/permissions` and `/me/scope` are restricted to the active organization.
+- Permission introspection applies the same default-scope/binding-scope
+  intersection as authorization, suppresses narrower operational defaults
+  under an organization-only binding, and suppresses explicit denies.
+- Production `/authorization/check` is disabled with `404`.
+- Router production behavior defaults to the existing Clerk-backed
+  `currentUser`; tests use only the dependency-injectable router factory.
+- No operational domain modules or object resolvers were fabricated.
 
-## Locked scope
+## Migration chain
 
-Task #02 adds:
+The committed chain is:
 
-- canonical `RESOURCE.ACTION` permission catalog;
-- immutable seven-role vocabulary from Task #01;
-- role-to-permission capability matrix;
-- scoped user role bindings;
-- binding lifecycle controls;
-- central server-side authorization evaluator;
-- deny-by-default behavior and stable reason codes;
-- explicit-deny precedence;
-- organization isolation and active-organization enforcement;
-- Platform Admin separation from operational roles;
-- protected authorization introspection and role-binding administration APIs;
-- authorization-sensitive audit records;
-- idempotent permission and role-capability seed;
-- additive database migration chain and controlled Task #01 baseline adoption.
+1. `0000_gray_zemo.sql` — Task #01 foundation baseline.
+2. `0001_needy_red_wolf.sql` — original additive authorization tables.
+3. `0002_spooky_satana.sql` — null-safe binding uniqueness.
+4. `0003_adopt_current_authorization.sql` — forward adoption/convergence:
+   active foundation columns, authorization role registry and role foreign
+   keys, current enum names and columns, policy/binding CAS versions,
+   canonical audit columns, and the current role-permission/binding
+   constraints.
 
-## Scope safety
+The forward migration preserves old authorization rows where possible. Legacy
+terminal binding rows are mapped to current `EXPIRED`; the current schema has
+only `ACTIVE`, `SUSPENDED`, and `EXPIRED`. The migration does not add startup
+DDL or a production migration runner.
 
-The evaluator never treats a caller-provided UUID as proof of access.
+The baseline adopter remains a separate controlled operation. It validates a
+Task #01-shaped public schema, refuses incompatible relations, types,
+columns, constraints, indexes, pre-existing authorization objects, or
+non-empty migration history, and records only the foundation migration hash.
 
-- Foundation resource IDs are resolved server-side.
-- Organization-scoped user/session access requires a membership in the active organization.
-- Organization IDs must match the active organization unless a valid platform scope applies.
-- Permission IDs must exist before platform permission administration can allow access.
-- Audit event IDs must resolve within the active organization unless a valid platform scope applies.
-- Operational object scopes remain fail-closed because their domain entities and relationship resolvers do not yet exist.
-
-Future operational modules must provide server resolvers that prove object existence, organization ownership, ancestry or assignment, and relevant domain state before object-scoped permissions can become effective.
-
-## Platform Admin separation
-
-`PLATFORM_ADMIN` can manage authorization and platform foundation capabilities but is not an operational superuser.
-
-Verified examples:
-
-- `ROLE.MANAGE` allowed for a valid Platform Admin platform binding;
-- permission and role catalog administration allowed;
-- `WORK_ORDER.EXECUTE` denied;
-- `WORK_ORDER.VERIFY` denied;
-- self-assignment rejected;
-- cross-organization binding mutation rejected.
-
-## Binding lifecycle
-
-- Supported statuses: `ACTIVE`, `SUSPENDED`, `EXPIRED`, and `REVOKED`.
-- Suspended and expired bindings do not grant permissions.
-- Revocation requires a nonempty reason.
-- `REVOKED` is terminal; it cannot be patched back to `ACTIVE`.
-- Update and revoke operations lock the binding row before lifecycle checks and mutation.
-- Concurrent update/revoke testing ended with the binding in `REVOKED`.
-- Mutation audit events contain actor, target, before state, after state, reason, and timestamp without credentials or session material.
-
-## Database and migration evidence
-
-Migration chain:
-
-1. Task #01 foundation baseline;
-2. additive Task #02 authorization schema;
-3. `NULLS NOT DISTINCT` scoped-binding uniqueness hardening.
-
-Clean-install verification:
-
-- isolated empty PostgreSQL database created;
-- all three migrations applied successfully;
-- authorization catalog seeded twice;
-- no duplicate permission codes;
-- no duplicate role, permission, and scope assignments.
-
-Existing Task #01 upgrade verification:
-
-- isolated pre-journal Task #01-shaped database created;
-- existing user, organization, membership, active context, and audit event inserted;
-- baseline adoption validated and recorded;
-- additive Task #02 migrations applied;
-- all Task #01 data and audit history preserved;
-- exactly one compatible organization-scoped foundation binding backfilled.
-
-Baseline adoption refuses to certify incompatible schemas. Negative tests passed for:
-
-- altered/missing column;
-- missing unique constraint;
-- same-named view instead of a table;
-- pre-existing authorization enum type;
-- nonempty migration history.
-
-The adopter compares relation kinds, canonical role labels, columns, data types, nullability, defaults, primary/unique/foreign-key constraints, and indexes before recording the foundation migration hash.
-
-## Automated service and database tests
+## Isolated migration verification
 
 Command:
 
 ```text
-pnpm --filter @workspace/api-server run test:authorization
+pnpm --filter @workspace/db run test:migrations
 ```
 
 Result:
 
 ```text
-13 tests passed
+MIGRATION_AUTHORIZATION_CHECK_PASS:empty
+MIGRATION_AUTHORIZATION_CHECK_PASS:task01-adopted
+```
+
+The script creates two disposable PostgreSQL databases from `DATABASE_URL`
+and drops both in `finally` blocks. It never resets or truncates the live
+database.
+
+- **Empty target:** applies all four migrations; verifies current columns,
+  role foreign keys, enum/status shape, policy and binding CAS columns,
+  `UNIQUE NULLS NOT DISTINCT`, canonical role seed, representative
+  authorization join, explicit deny persistence, and duplicate binding
+  rejection.
+- **Task #01-shaped target:** applies only the foundation baseline, runs
+  `adopt-foundation-baseline.mjs`, applies authorization migrations, and runs
+  the same current-schema and authorization checks.
+
+The existing adoption refusal suite remains available:
+
+```text
+pnpm --filter @workspace/db run test:migrate-adoption
+```
+
+## Authorization and route verification
+
+Command:
+
+```text
+pnpm --filter @workspace/api-server run test
+```
+
+Result:
+
+```text
+15 tests passed
 0 failed
 ```
 
-Covered:
+The suite uses real PostgreSQL fixtures. Its route test mounts
+`createAuthorizationRouter` on Express, starts a real HTTP server, and uses
+Node `fetch`. Coverage includes:
 
-- allowed foundation permission;
-- unknown permission denial;
-- cross-organization context denial;
-- cross-organization direct-resource-ID denial;
-- fail-closed unresolved object scopes;
-- technician cannot verify or close executed work;
-- suspended binding denial;
-- explicit-deny precedence;
-- direct service-layer administrative bypass rejection;
-- Platform Admin operational separation;
-- terminal revocation and complete audit reason;
-- concurrent update/revoke behavior;
-- concurrent first-access bootstrap idempotency.
+- canonical catalog and all seven roles;
+- unknown/resource-mismatch, organization, lifecycle, explicit-deny,
+  technician, vendor, platform, and diagnostic-context checks;
+- durable omitted-capability denial after a forced catalog seed;
+- permissions/roles/role-permissions reads and replacement;
+- missing `428` and stale/concurrent `409` policy CAS behavior;
+- binding list/create/duplicate/PATCH/DELETE, self-mutation denial,
+  cross-organization denial, and concurrent binding CAS;
+- service and HTTP PATCH rejection regression coverage for all
+  `FACILITY`/`BUILDING`/`SPACE`/`ASSET`/`ASSIGNED`/`TEAM`/
+  `VENDOR_ASSIGNMENT`/`OWNED_REQUEST` null scopes, invalid date/lifecycle
+  states, unchanged binding rows, and unchanged binding-configuration audit;
+- active-organization `/me/permissions` and `/me/scope` isolation;
+- organization-only Facility Manager introspection excludes facility/work
+  capabilities, a compatible facility binding exposes them at facility scope,
+  and an explicit deny removes them again;
+- directly persisted legacy null-scope bindings grant no evaluator or
+  introspection authority;
+- vendor actor proof with an assignment ID outside the binding returns
+  `SCOPE_MISMATCH`;
+- production authorization-probe `404`;
+- audit sanitization and concurrent foundation bootstrap.
 
-## API and adversarial E2E evidence
+## Build and generation checks
 
-Verified with generated Clerk test identities and direct API calls:
-
-- authenticated `GET /api/authorization/me` returns the active organization, role, effective permissions, and scopes;
-- unauthenticated authorization endpoints return `401`;
-- `SESSION.VIEW` allows for a valid Facility Manager organization binding;
-- unknown and ungranted permissions deny;
-- Facility Manager cannot access permission catalog, role catalog, or role-binding administration;
-- Platform Admin can access foundation authorization administration;
-- Platform Admin receives no Work Order execution or verification bypass;
-- same-organization `USER.VIEW` direct ID allows;
-- cross-organization `USER.VIEW` direct ID denies with `SCOPE_DENIED`;
-- role-binding create, suspend, revoke, and audit flows work;
-- DELETE without a reason returns `400`;
-- DELETE with a reason revokes;
-- PATCH from `REVOKED` to `ACTIVE` returns `400`;
-- unsupported operational object-scoped binding creation rejects;
-- denied authorization checks append safe authorization audit records;
-- no permission, role-capability, or foundation-binding duplicates were observed.
-
-## Task #01 regression
-
-Verified after Task #02:
-
-- first authenticated access remains transactional and idempotent;
-- concurrent first requests no longer race into duplicate user creation;
-- dashboard and profile remain protected;
-- organization context persists after reload;
-- sign-out removes authenticated access;
-- `/api/session`, `/api/organizations`, `/api/foundation/summary`, and `/api/authorization/me` return successful authenticated responses;
-- unauthenticated foundation and authorization APIs remain protected;
-- no Task #01 data or audit history was lost during the tested upgrade path.
-
-## Build and runtime evidence
-
-Passed:
+Completed successfully:
 
 ```text
 pnpm --filter @workspace/api-spec run codegen
-pnpm run typecheck:libs
-pnpm --filter @workspace/api-server run typecheck
+pnpm run typecheck
+pnpm --filter @workspace/api-server run test
 pnpm --filter @workspace/api-server run build
-pnpm --filter @workspace/nexus-fm run build
+PORT=3000 BASE_PATH=/ pnpm --filter @workspace/nexus-fm run build
 ```
 
-Runtime verification after workflow restart:
+The web build reports only existing source-map and chunk-size warnings.
+`drizzle-kit check` reports `Everything's fine`.
 
-- API workflow running;
-- NEXUS-FM web workflow running;
-- no authorization-request `5xx`;
-- no application runtime error in the final targeted retest.
+The API test command now bundles `pg` while resolving external packages from
+disposable `/tmp` test directories. It does not create or modify a workspace
+`node_modules` symlink.
 
-Known non-blocking build notices:
+The non-interactive `drizzle-kit push` command still stops at Drizzle's
+destructive truncate confirmation for the existing binding uniqueness
+reconciliation. It was not forced. The live schema was not reset; direct
+PostgreSQL inspection confirms the current null-safe constraint and CAS
+columns. Clean and adopted database verification instead uses the committed
+forward migration chain through `drizzle-kit migrate`.
 
-- Vite source-map reporting notices in existing UI components;
-- Vite bundle-size advisory;
-- Clerk development-key warning in development.
+## Task #01 regression and final review
 
-These notices did not cause build, runtime, authentication, or authorization failures.
+The prior service-level foundation bootstrap/session regression and the
+previous Clerk integration evidence passed login/logout, protected-shell
+navigation, session persistence, authenticated APIs, and anonymous denial.
+After the rebased migration work, both workflows were restarted cleanly;
+`/api/healthz` returned `200`, while anonymous `/api/session` and
+`/api/me/permissions` returned `401`.
 
-## Independent review
+Future Facility, Asset, Inspection, Work Order, Project, Finance, Compliance,
+and nested/list/search/export endpoint checks are not applicable because
+those modules do not exist.
 
-An architectural security review initially found authorization and migration-integrity blockers. Each blocker was fixed and re-reviewed.
+Final architecture/security review found no blocker or high-severity issue.
+It confirmed that both migration paths converge to the runtime schema and
+approved transition through `EVIDENCE REVIEW → VERIFIED`.
 
-Final review result:
-
-```text
-PASS — no critical/high blocker remains.
-```
-
-The review confirmed:
-
-- deny-by-default and explicit-deny precedence;
-- server-resolved foundation resource IDs;
-- fail-closed unresolved operational objects;
-- organization isolation;
-- Platform Admin separation;
-- independent service-layer admin authorization;
-- terminal revocation under row locking;
-- safe audit evidence;
-- null-safe scoped-binding uniqueness;
-- clean and legacy migration paths;
-- strict baseline-adoption refusal boundaries.
-
-## Lock statement
-
-Task #02 is locked as the canonical authorization foundation for later NEXUS-FM modules.
-
-Later tasks may add resource resolvers and domain-specific policy checks. They must not:
-
-- rename or remove the seven canonical roles;
-- bypass the central server evaluator;
-- treat UI visibility as authorization;
-- treat an unverified resource ID as proof of access;
-- grant Platform Admin automatic operational access;
-- reactivate a revoked binding;
-- omit audit evidence for sensitive role-binding changes;
-- weaken deny-by-default behavior.
+`STABLE` and `LOCKED` remain separate subsequent governance transitions.

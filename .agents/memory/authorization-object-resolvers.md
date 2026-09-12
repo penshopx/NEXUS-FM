@@ -1,10 +1,24 @@
 ---
 name: Authorization object resolvers
-description: Locked rule for activating reserved object-scoped permissions in future operational modules.
+description: Durable policy for enabling object-scoped authorization safely.
 ---
 
-Reserved operational permissions must remain fail-closed until the owning domain provides a server-side resolver. A matching caller-provided resource ID or binding scope ID is not proof of access.
+Object-scoped permissions remain fail-closed until the owning domain supplies
+a trusted server-side relationship resolver.
 
-**Why:** Task #02 locks the authorization structure before operational entities exist. Allowing UUID equality alone would permit access without proving object existence, organization ownership, hierarchy, assignment, vendor relationship, ownership, or domain state.
+An object ID, scope ID, client claim, URL parameter, or binding value is only
+an identifier. It is not proof that the object exists, belongs to the active
+organization, has the required ancestry, is assigned to the actor, belongs
+to the vendor or team, is owned by the actor, or is in a permitted domain
+state.
 
-**How to apply:** When an operational module is introduced, connect its resource type to the central evaluator through a server resolver that verifies existence, organization isolation, required ancestry or assignment relationship, and any state-dependent rule. Keep unresolved types denied.
+When a domain is added, its resolver must verify object existence,
+organization isolation, applicable hierarchy, assignment/vendor/ownership
+relationships, and state-dependent rules before passing verified context to
+the central evaluator. Resolver failures and unresolved resource types must
+remain denied.
+
+Client-provided diagnostic context may help explain a development decision,
+but it must never be used as trusted relationship proof. Sensitive decisions
+must record only allowlisted authorization facts and must not persist
+credentials, tokens, passwords, cookies, or arbitrary request payloads.

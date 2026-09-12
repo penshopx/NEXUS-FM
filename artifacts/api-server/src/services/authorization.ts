@@ -1,480 +1,446 @@
-import { and, eq, inArray, isNull, or } from "drizzle-orm";
+import { and, eq, gt, isNull, lte, or } from "drizzle-orm";
 import {
   authorizationAuditLogsTable,
-  auditEventsTable,
+  bindingStatusValues,
   db,
   membershipsTable,
   organizationsTable,
   permissionsTable,
   rolePermissionsTable,
-  userContextsTable,
+  rolesTable,
   userRoleBindingsTable,
   usersTable,
+  scopeTypeValues,
 } from "@workspace/db";
-import { permissionCatalog, rolePermissionCatalog, type ScopeType } from "./authorization-catalog";
+import { canonicalPermissions } from "./authorization-catalog";
 
-export type AuthorizationReason =
-  | "AUTH_REQUIRED" | "USER_INACTIVE" | "ORGANIZATION_MISMATCH"
-  | "ROLE_NOT_ASSIGNED" | "BINDING_INACTIVE" | "PERMISSION_NOT_GRANTED"
-  | "RESOURCE_NOT_FOUND" | "SCOPE_DENIED" | "ASSIGNMENT_REQUIRED"
-  | "OWNERSHIP_REQUIRED" | "VENDOR_SCOPE_DENIED" | "EXPLICIT_DENY"
-  | "POLICY_DENIED" | "PERMISSION_GRANTED";
+export const AUTHORIZATION_REASON_CODES = [
+  "ALLOWED", "UNAUTHENTICATED", "USER_INACTIVE", "ORGANIZATION_MISMATCH",
+  "ROLE_MISSING", "PERMISSION_MISSING", "SCOPE_MISMATCH", "BINDING_INACTIVE",
+  "DOMAIN_RULE_DENIED", "RESOURCE_NOT_FOUND", "EXPLICIT_DENY",
+] as const;
+export type AuthorizationReasonCode = typeof AUTHORIZATION_REASON_CODES[number];
 
-type Decision = {
-  allowed: boolean;
-  reasonCode: AuthorizationReason;
+export type AuthorizationRequest = {
+  actorUserId?: string | null;
+  organizationId?: string | null;
   permission: string;
-  scopeType: ScopeType | null;
+  resourceType: string;
+  resourceId?: string;
+  actionContext?: Record<string, unknown>;
+  /** Only populated by trusted server-side resource resolvers. */
+  verifiedContext?: Record<string, unknown>;
+  requestId?: string;
 };
 
-export async function seedAuthorizationCatalog() {
-  for (const permission of permissionCatalog) {
-    await db.insert(permissionsTable).values(permission).onConflictDoUpdate({
-      target: permissionsTable.code,
-      set: {
-        resource: permission.resource,
-        action: permission.action,
-        description: permission.description,
-        status: "ACTIVE",
-      },
-    });
-  }
-  const stored = await db.select().from(permissionsTable);
-  const permissionIds = new Map(stored.map((permission) => [permission.code, permission.id]));
-  for (const rule of rolePermissionCatalog) {
-    const permissionId = permissionIds.get(rule.code);
-    if (!permissionId) throw new Error(`Permission seed missing ${rule.code}`);
-    await db.insert(rolePermissionsTable).values({
-      role: rule.role,
-      permissionId,
-      defaultScopeType: rule.scope,
-      effect: rule.effect,
-    }).onConflictDoUpdate({
-      target: [
-        rolePermissionsTable.role,
-        rolePermissionsTable.permissionId,
-        rolePermissionsTable.defaultScopeType,
-      ],
-      set: { effect: rule.effect },
-    });
-  }
-  await backfillFoundationBindings();
-}
-
-export async function backfillFoundationBindings() {
-  const memberships = await db.select().from(membershipsTable);
-  for (const membership of memberships) {
-    const desiredScope = membership.role === "PLATFORM_ADMIN" ? "PLATFORM" : "ORGANIZATION";
-    const [existing] = await db.select({ id: userRoleBindingsTable.id })
-      .from(userRoleBindingsTable)
-      .where(and(
-        eq(userRoleBindingsTable.userId, membership.userId),
-        eq(userRoleBindingsTable.organizationId, membership.organizationId),
-        eq(userRoleBindingsTable.role, membership.role),
-        eq(userRoleBindingsTable.scopeType, desiredScope),
-        isNull(userRoleBindingsTable.scopeId),
-      ));
-    if (!existing) {
-      await db.insert(userRoleBindingsTable).values({
-        userId: membership.userId,
-        organizationId: membership.organizationId,
-        role: membership.role,
-        scopeType: desiredScope,
-      });
-    }
-  }
-}
-
-export async function authorize(input: {
-  actorUserId: string;
-  organizationId: string;
+export type AuthorizationDecision = {
+  allowed: boolean;
+  reasonCode: AuthorizationReasonCode;
   permission: string;
-  resourceId?: string;
-  audit?: boolean;
-}): Promise<Decision> {
-  const deny = (reasonCode: AuthorizationReason): Decision => ({
-    allowed: false,
-    reasonCode,
-    permission: input.permission,
-    scopeType: null,
-  });
-  const [catalogPermission] = await db.select().from(permissionsTable)
-    .where(and(eq(permissionsTable.code, input.permission), eq(permissionsTable.status, "ACTIVE")));
-  if (!catalogPermission) return deny("PERMISSION_NOT_GRANTED");
+  scopeType?: string;
+};
 
-  const [membership] = await db.select().from(membershipsTable).where(and(
-    eq(membershipsTable.userId, input.actorUserId),
-    eq(membershipsTable.organizationId, input.organizationId),
-  ));
-  if (!membership) return deny("ORGANIZATION_MISMATCH");
-
-  const [context] = await db.select().from(userContextsTable)
-    .where(eq(userContextsTable.userId, input.actorUserId));
-  if (context?.activeOrganizationId !== input.organizationId) return deny("ORGANIZATION_MISMATCH");
-
-  const now = new Date();
-  const bindings = await db.select().from(userRoleBindingsTable).where(and(
-    eq(userRoleBindingsTable.userId, input.actorUserId),
-    eq(userRoleBindingsTable.organizationId, input.organizationId),
-  ));
-  if (bindings.length === 0) return deny("ROLE_NOT_ASSIGNED");
-  const activeBindings = bindings.filter((binding) =>
-    binding.status === "ACTIVE" &&
-    (!binding.startsAt || binding.startsAt <= now) &&
-    (!binding.endsAt || binding.endsAt > now),
-  );
-  if (activeBindings.length === 0) return deny("BINDING_INACTIVE");
-
-  const roleRules = await db.select({
-    role: rolePermissionsTable.role,
-    scope: rolePermissionsTable.defaultScopeType,
-    effect: rolePermissionsTable.effect,
-  }).from(rolePermissionsTable).where(and(
-    eq(rolePermissionsTable.permissionId, catalogPermission.id),
-    inArray(rolePermissionsTable.role, activeBindings.map((binding) => binding.role)),
-  ));
-  if (roleRules.length === 0) return deny("PERMISSION_NOT_GRANTED");
-  if (roleRules.some((rule) => rule.effect === "DENY")) return deny("EXPLICIT_DENY");
-
-  for (const binding of activeBindings) {
-    const matchingRule = roleRules.find((rule) =>
-      rule.role === binding.role &&
-      rule.effect === "ALLOW" &&
-      rule.scope === binding.scopeType,
-    );
-    if (!matchingRule) continue;
-    if (
-      input.resourceId &&
-      !await verifyResource(
-        catalogPermission.resource,
-        input.resourceId,
-        binding.scopeType,
-        input.organizationId,
-      )
-    ) {
-      continue;
-    }
-    const broadScope = binding.scopeType === "ORGANIZATION" || binding.scopeType === "PLATFORM";
-    if (broadScope && !binding.scopeId) {
-      return {
-        allowed: true,
-        reasonCode: "PERMISSION_GRANTED",
-        permission: input.permission,
-        scopeType: binding.scopeType,
-      };
-    }
-    if (
-      input.resourceId &&
-      binding.scopeId === input.resourceId &&
-      await verifyScopedResource(binding.scopeType, binding.scopeId, input.organizationId)
-    ) {
-      return {
-        allowed: true,
-        reasonCode: "PERMISSION_GRANTED",
-        permission: input.permission,
-        scopeType: binding.scopeType,
-      };
-    }
-  }
-  return deny(input.resourceId ? "SCOPE_DENIED" : "ASSIGNMENT_REQUIRED");
-}
-
-async function verifyResource(
-  resource: string,
-  resourceId: string,
-  scopeType: ScopeType,
-  organizationId: string,
-) {
-  if (resource === "ORGANIZATION") {
-    if (scopeType === "ORGANIZATION") return resourceId === organizationId;
-    const [organization] = await db.select({ id: organizationsTable.id })
-      .from(organizationsTable)
-      .where(eq(organizationsTable.id, resourceId));
-    return Boolean(organization);
-  }
-  if (resource === "USER" || resource === "SESSION") {
-    if (scopeType === "PLATFORM") {
-      const [user] = await db.select({ id: usersTable.id })
-        .from(usersTable)
-        .where(eq(usersTable.id, resourceId));
-      return Boolean(user);
-    }
-    const [membership] = await db.select({ userId: membershipsTable.userId })
-      .from(membershipsTable)
-      .where(and(
-        eq(membershipsTable.userId, resourceId),
-        eq(membershipsTable.organizationId, organizationId),
-      ));
-    return Boolean(membership);
-  }
-  if (resource === "PERMISSION" && scopeType === "PLATFORM") {
-    const [permission] = await db.select({ id: permissionsTable.id })
-      .from(permissionsTable)
-      .where(eq(permissionsTable.id, resourceId));
-    return Boolean(permission);
-  }
-  if (resource === "AUDIT_LOG") {
-    const [event] = await db.select({ id: auditEventsTable.id })
-      .from(auditEventsTable)
-      .where(and(
-        eq(auditEventsTable.id, resourceId),
-        scopeType === "PLATFORM"
-          ? eq(auditEventsTable.id, resourceId)
-          : eq(auditEventsTable.organizationId, organizationId),
-      ));
-    return Boolean(event);
-  }
-  return false;
-}
-
-async function verifyScopedResource(
-  scopeType: ScopeType,
-  _scopeId: string,
-  _organizationId: string,
-) {
-  // Operational domain resolvers are intentionally unavailable in Task #02.
-  // A matching UUID is never sufficient evidence of existence, ancestry, assignment,
-  // ownership, team access, or vendor relationship.
-  switch (scopeType) {
-    case "PLATFORM":
-    case "ORGANIZATION":
-      return true;
-    default:
-      return false;
+export class AuthorizationError extends Error {
+  constructor(public readonly reasonCode: AuthorizationReasonCode) {
+    super(`Authorization denied: ${reasonCode}`);
+    this.name = "AuthorizationError";
   }
 }
 
-export async function auditDecision(input: {
-  actorUserId: string;
-  organizationId: string;
-  permission: string;
-  resourceId?: string;
-  decision: Decision;
+export function requireAuthenticatedUser(actorUserId?: string | null) {
+  if (!actorUserId) throw new AuthorizationError("UNAUTHENTICATED");
+  return actorUserId;
+}
+
+export function getAuthorizationContext(input: {
+  actorUserId?: string | null;
+  organizationId?: string | null;
 }) {
-  const [resource = "UNKNOWN"] = input.permission.split(".");
-  await db.insert(authorizationAuditLogsTable).values({
-    actorUserId: input.actorUserId,
-    organizationId: input.organizationId,
-    permission: input.permission,
-    resource,
-    resourceId: input.resourceId,
-    decision: input.decision.allowed ? "ALLOW" : "DENY",
-    reasonCode: input.decision.reasonCode,
-    scopeEvaluated: input.decision.scopeType,
-  });
-}
-
-export async function getAuthorizationProfile(userId: string, organizationId: string) {
-  const bindings = await db.select().from(userRoleBindingsTable).where(and(
-    eq(userRoleBindingsTable.userId, userId),
-    eq(userRoleBindingsTable.organizationId, organizationId),
-    eq(userRoleBindingsTable.status, "ACTIVE"),
-    or(isNull(userRoleBindingsTable.startsAt), eq(userRoleBindingsTable.startsAt, userRoleBindingsTable.startsAt)),
-  ));
-  const active = bindings.filter((binding) =>
-    (!binding.startsAt || binding.startsAt <= new Date()) &&
-    (!binding.endsAt || binding.endsAt > new Date()),
-  );
-  const roles = [...new Set(active.map((binding) => binding.role))];
-  if (roles.length === 0) return { organizationId, roles: [], permissions: [], scopes: [] };
-  const rules = await db.select({
-    role: rolePermissionsTable.role,
-    code: permissionsTable.code,
-    scope: rolePermissionsTable.defaultScopeType,
-    effect: rolePermissionsTable.effect,
-  }).from(rolePermissionsTable)
-    .innerJoin(permissionsTable, eq(rolePermissionsTable.permissionId, permissionsTable.id))
-    .where(inArray(rolePermissionsTable.role, roles));
-  const effective = rules.filter((rule) =>
-    rule.effect === "ALLOW" &&
-    active.some((binding) => binding.role === rule.role && binding.scopeType === rule.scope) &&
-    !rules.some((candidate) => candidate.code === rule.code && candidate.effect === "DENY"),
-  );
   return {
-    organizationId,
-    roles,
-    permissions: [...new Set(effective.map((rule) => rule.code))].sort(),
-    scopes: active.map((binding) => ({
-      role: binding.role,
-      scopeType: binding.scopeType,
-      scopeId: binding.scopeId,
-    })),
+    actorUserId: input.actorUserId ?? null,
+    organizationId: input.organizationId ?? null,
   };
 }
 
-export async function listPermissionCatalog() {
-  return db.select({
-    id: permissionsTable.id,
-    code: permissionsTable.code,
-    resource: permissionsTable.resource,
-    action: permissionsTable.action,
-    description: permissionsTable.description,
-    status: permissionsTable.status,
-  }).from(permissionsTable);
+export function assertOrganizationScope(resourceOrganizationId: string | undefined, organizationId: string) {
+  if (resourceOrganizationId && resourceOrganizationId !== organizationId) {
+    throw new AuthorizationError("ORGANIZATION_MISMATCH");
+  }
 }
 
-export async function listRoleCapabilities() {
-  return db.select({
-    role: rolePermissionsTable.role,
-    permission: permissionsTable.code,
-    defaultScopeType: rolePermissionsTable.defaultScopeType,
-    effect: rolePermissionsTable.effect,
+export function requireScope(decision: AuthorizationDecision) {
+  if (!decision.allowed) throw new AuthorizationError(decision.reasonCode);
+  return decision.scopeType;
+}
+
+export function isSelfRoleEscalation(actorUserId: string, targetUserId: string) {
+  return actorUserId === targetUserId;
+}
+
+const objectBindingScopes = new Set([
+  "FACILITY", "BUILDING", "SPACE", "ASSET", "ASSIGNED", "TEAM",
+  "VENDOR_ASSIGNMENT", "OWNED_REQUEST",
+]);
+const hierarchicalScopes = ["FACILITY", "BUILDING", "SPACE", "ASSET"];
+
+export type RoleBindingState = {
+  scopeType: string;
+  scopeId: string | null;
+  status: string;
+  startsAt: Date | null;
+  endsAt: Date | null;
+};
+
+export type RoleBindingStateValidation =
+  | { valid: true; state: RoleBindingState }
+  | { valid: false; error: string };
+
+/**
+ * Validates the complete state, rather than only the fields present in a
+ * request. Both create and update routes use this after applying defaults or
+ * merging a patch, so invalid state cannot be persisted or audited.
+ */
+export function validateRoleBindingState(input: {
+  scopeType: unknown;
+  scopeId: unknown;
+  status: unknown;
+  startsAt: unknown;
+  endsAt: unknown;
+  now?: Date;
+}): RoleBindingStateValidation {
+  const now = input.now ?? new Date();
+  if (typeof input.scopeType !== "string" || !scopeTypeValues.includes(input.scopeType as never)) {
+    return { valid: false, error: "scopeType must be a valid authorization scope" };
+  }
+  if (typeof input.status !== "string" || !bindingStatusValues.includes(input.status as never)) {
+    return { valid: false, error: "status must be ACTIVE, SUSPENDED, or EXPIRED" };
+  }
+  let scopeId: string | null = null;
+  if (input.scopeId !== null && input.scopeId !== undefined) {
+    if (typeof input.scopeId !== "string" || !input.scopeId.trim()) {
+      return { valid: false, error: "scopeId must be a non-empty string" };
+    }
+    scopeId = input.scopeId;
+  }
+  if (objectBindingScopes.has(input.scopeType) && !scopeId) {
+    return { valid: false, error: `${input.scopeType} scope requires scopeId` };
+  }
+  const parseDate = (value: unknown, field: string): Date | null | string => {
+    if (value === null || value === undefined || value === "") return null;
+    if (typeof value !== "string" && !(value instanceof Date)) return `${field} must be an ISO date`;
+    const parsed = value instanceof Date ? new Date(value.getTime()) : new Date(value);
+    return Number.isNaN(parsed.getTime()) ? `${field} must be a valid date` : parsed;
+  };
+  const startsAt = parseDate(input.startsAt, "startsAt");
+  const endsAt = parseDate(input.endsAt, "endsAt");
+  if (typeof startsAt === "string") return { valid: false, error: startsAt };
+  if (typeof endsAt === "string") return { valid: false, error: endsAt };
+  if (startsAt && endsAt && startsAt >= endsAt) {
+    return { valid: false, error: "startsAt must be earlier than endsAt" };
+  }
+  if (input.status === "ACTIVE" && endsAt && endsAt <= now) {
+    return { valid: false, error: "ACTIVE bindings cannot already be ended" };
+  }
+  if (input.status === "EXPIRED" && (!endsAt || endsAt > now)) {
+    return { valid: false, error: "EXPIRED bindings require an end time in the past" };
+  }
+  return { valid: true, state: { scopeType: input.scopeType, scopeId, status: input.status, startsAt, endsAt } };
+}
+
+export function isBindingScopeCompatible(defaultScope: string, bindingScope: string) {
+  if (bindingScope === "PLATFORM") return defaultScope === "PLATFORM";
+  if (defaultScope === "PLATFORM") return false;
+  if (defaultScope === "ORGANIZATION") return true;
+  const defaultIndex = hierarchicalScopes.indexOf(defaultScope);
+  const bindingIndex = hierarchicalScopes.indexOf(bindingScope);
+  if (defaultIndex >= 0) return bindingIndex >= defaultIndex;
+  return defaultScope === bindingScope;
+}
+
+function redactAuditState(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(redactAuditState);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value)
+      .filter(([key]) => !/(password|token|secret|cookie|credential)/i.test(key))
+      .map(([key, child]) => [key, redactAuditState(child)]));
+  }
+  return value;
+}
+
+export async function recordAuthorizationConfigurationAudit(input: {
+  actorUserId: string;
+  organizationId?: string | null;
+  action: string;
+  resource: string;
+  resourceId?: string | null;
+  beforeState?: unknown;
+  afterState?: unknown;
+  reasonCode: string;
+  requestId?: string;
+}) {
+  await db.insert(authorizationAuditLogsTable).values({
+    actorUserId: input.actorUserId,
+    organizationId: input.organizationId ?? null,
+    action: input.action,
+    resource: input.resource,
+    resourceId: input.resourceId ?? null,
+    decision: "ALLOW",
+    reasonCode: input.reasonCode,
+    beforeState: input.beforeState === undefined ? null : JSON.stringify(redactAuditState(input.beforeState)),
+    afterState: input.afterState === undefined ? null : JSON.stringify(redactAuditState(input.afterState)),
+    requestId: input.requestId ?? null,
+  });
+}
+
+function stringValue(context: Record<string, unknown>, ...keys: string[]) {
+  for (const key of keys) {
+    if (typeof context[key] === "string") return context[key];
+  }
+  return undefined;
+}
+
+async function auditDecision(request: AuthorizationRequest, decision: AuthorizationDecision) {
+  // Only authorization-safe fields are persisted. Request bodies, credentials,
+  // tokens and arbitrary client context are intentionally never recorded.
+  if (!request.actorUserId) return;
+  await db.insert(authorizationAuditLogsTable).values({
+    actorUserId: request.actorUserId,
+    organizationId: request.organizationId ?? null,
+    action: request.permission.split(".")[1] ?? "UNKNOWN",
+    resource: request.resourceType,
+    resourceId: request.resourceId ?? null,
+    decision: decision.allowed ? "ALLOW" : "DENY",
+    reasonCode: decision.reasonCode,
+    scopeEvaluated: decision.scopeType ?? null,
+    requestId: request.requestId ?? null,
+  });
+}
+
+function denied(request: AuthorizationRequest, reasonCode: AuthorizationReasonCode): AuthorizationDecision {
+  return { allowed: false, reasonCode, permission: request.permission };
+}
+
+export async function authorize(request: AuthorizationRequest): Promise<AuthorizationDecision> {
+  const permission = request.permission;
+  // Client supplied actionContext is intentionally diagnostic only. It never
+  // proves an object relationship or assignment; services must supply a
+  // server-resolved verifiedContext.
+  const context = request.verifiedContext ?? {};
+  const denyAndAudit = async (reasonCode: AuthorizationReasonCode) => {
+    const decision = denied(request, reasonCode);
+    await auditDecision(request, decision);
+    return decision;
+  };
+  if (!request.actorUserId) return denyAndAudit("UNAUTHENTICATED");
+  const [permissionResource, permissionAction] = permission.split(".");
+  if (permissionResource !== request.resourceType || !permissionAction) {
+    return denyAndAudit("PERMISSION_MISSING");
+  }
+  if (!canonicalPermissions.includes(permission as never)) {
+    return denyAndAudit("PERMISSION_MISSING");
+  }
+  const [user] = await db.select({ id: usersTable.id }).from(usersTable).where(and(eq(usersTable.id, request.actorUserId), eq(usersTable.isActive, true)));
+  if (!user) return denyAndAudit("USER_INACTIVE");
+  if (!request.organizationId) return denyAndAudit("ORGANIZATION_MISMATCH");
+  const [organization] = await db.select({ id: organizationsTable.id }).from(organizationsTable).where(and(eq(organizationsTable.id, request.organizationId), eq(organizationsTable.isActive, true)));
+  if (!organization) return denyAndAudit("ORGANIZATION_MISMATCH");
+  const [membership] = await db.select({ userId: membershipsTable.userId })
+    .from(membershipsTable)
+    .where(and(eq(membershipsTable.userId, request.actorUserId), eq(membershipsTable.organizationId, request.organizationId), eq(membershipsTable.isActive, true)));
+  if (!membership) return denyAndAudit("ORGANIZATION_MISMATCH");
+
+  const now = new Date();
+  const bindings = await db.select({
+    binding: userRoleBindingsTable,
+    role: rolesTable,
+  }).from(userRoleBindingsTable)
+    .innerJoin(rolesTable, eq(userRoleBindingsTable.roleId, rolesTable.id))
+    .where(and(
+      eq(userRoleBindingsTable.userId, request.actorUserId),
+      eq(userRoleBindingsTable.organizationId, request.organizationId),
+      eq(rolesTable.status, "ACTIVE"),
+      eq(userRoleBindingsTable.status, "ACTIVE"),
+      or(isNull(userRoleBindingsTable.startsAt), lte(userRoleBindingsTable.startsAt, now)),
+      or(isNull(userRoleBindingsTable.endsAt), gt(userRoleBindingsTable.endsAt, now)),
+    ));
+  if (!bindings.length) {
+    return denyAndAudit("BINDING_INACTIVE");
+  }
+
+  const grants = await db.select({
+    permission: permissionsTable,
+    rolePermission: rolePermissionsTable,
+    binding: userRoleBindingsTable,
   }).from(rolePermissionsTable)
-    .innerJoin(permissionsTable, eq(rolePermissionsTable.permissionId, permissionsTable.id));
-}
-
-export async function listBindings(userId: string, organizationId: string) {
-  return db.select().from(userRoleBindingsTable).where(and(
-    eq(userRoleBindingsTable.userId, userId),
-    eq(userRoleBindingsTable.organizationId, organizationId),
-  ));
-}
-
-export async function createBinding(input: {
-  actorUserId: string;
-  userId: string;
-  organizationId: string;
-  role: typeof userRoleBindingsTable.$inferInsert.role;
-  scopeType: typeof userRoleBindingsTable.$inferInsert.scopeType;
-  scopeId?: string | null;
-  startsAt?: Date | null;
-  endsAt?: Date | null;
-  reason: string;
-}) {
-  await assertRoleAdministrator(input.actorUserId, input.organizationId);
-  if (input.actorUserId === input.userId) {
-    throw new Error("SELF_ASSIGNMENT_DENIED");
-  }
-  const [targetMembership] = await db.select().from(membershipsTable).where(and(
-    eq(membershipsTable.userId, input.userId),
-    eq(membershipsTable.organizationId, input.organizationId),
-  ));
-  if (!targetMembership) throw new Error("ORGANIZATION_MISMATCH");
-  if (input.scopeType !== "ORGANIZATION" && input.scopeType !== "PLATFORM") {
-    throw new Error("SCOPE_RESOURCE_NOT_AVAILABLE");
-  }
-  if (input.scopeId) throw new Error("SCOPE_ID_NOT_ALLOWED");
-  if (input.endsAt && input.startsAt && input.endsAt <= input.startsAt) {
-    throw new Error("INVALID_BINDING_WINDOW");
-  }
-  return db.transaction(async (tx) => {
-    const [binding] = await tx.insert(userRoleBindingsTable).values({
-      userId: input.userId,
-      organizationId: input.organizationId,
-      role: input.role,
-      scopeType: input.scopeType,
-      scopeId: null,
-      startsAt: input.startsAt,
-      endsAt: input.endsAt,
-      grantedBy: input.actorUserId,
-    }).returning();
-    await tx.insert(auditEventsTable).values({
-      actorUserId: input.actorUserId,
-      organizationId: input.organizationId,
-      action: "AUTHORIZATION.ROLE_ASSIGNED",
-      targetType: "role_binding",
-      targetId: binding.id,
-      metadata: {
-        targetUserId: input.userId,
-        role: input.role,
-        scopeType: input.scopeType,
-        reason: input.reason,
-      },
+    .innerJoin(permissionsTable, eq(rolePermissionsTable.permissionId, permissionsTable.id))
+    .innerJoin(userRoleBindingsTable, eq(rolePermissionsTable.roleId, userRoleBindingsTable.roleId))
+    .innerJoin(rolesTable, eq(rolePermissionsTable.roleId, rolesTable.id))
+    .where(and(
+      eq(permissionsTable.code, permission),
+      eq(permissionsTable.status, "ACTIVE"),
+      eq(rolesTable.status, "ACTIVE"),
+      eq(userRoleBindingsTable.userId, request.actorUserId),
+      eq(userRoleBindingsTable.organizationId, request.organizationId),
+      eq(userRoleBindingsTable.status, "ACTIVE"),
+    ));
+  const activeGrants = grants.filter(({ binding }) => {
+    const state = validateRoleBindingState({
+      scopeType: binding.scopeType,
+      scopeId: binding.scopeId,
+      status: binding.status,
+      startsAt: binding.startsAt,
+      endsAt: binding.endsAt,
+      now,
     });
-    return binding;
+    return state.valid &&
+      (!binding.startsAt || binding.startsAt <= now) &&
+      (!binding.endsAt || binding.endsAt > now);
   });
-}
-
-export async function updateBinding(input: {
-  actorUserId: string;
-  organizationId: string;
-  bindingId: string;
-  status: typeof userRoleBindingsTable.$inferInsert.status;
-  startsAt?: Date | null;
-  endsAt?: Date | null;
-  reason: string;
-}) {
-  await assertRoleAdministrator(input.actorUserId, input.organizationId);
-  if (input.endsAt && input.startsAt && input.endsAt <= input.startsAt) {
-    throw new Error("INVALID_BINDING_WINDOW");
+  const denies = activeGrants.filter(({ rolePermission }) => rolePermission.effect === "DENY");
+  if (denies.length) {
+    const decision = { ...denied(request, "EXPLICIT_DENY"), scopeType: denies[0]?.rolePermission.defaultScopeType };
+    await auditDecision(request, decision);
+    return decision;
   }
-  return db.transaction(async (tx) => {
-    const [before] = await tx.select().from(userRoleBindingsTable).where(and(
-      eq(userRoleBindingsTable.id, input.bindingId),
-      eq(userRoleBindingsTable.organizationId, input.organizationId),
-    )).for("update");
-    if (!before) return null;
-    if (before.userId === input.actorUserId) throw new Error("SELF_ASSIGNMENT_DENIED");
-    if (before.status === "REVOKED") throw new Error("REVOKED_BINDING_IS_TERMINAL");
-    const [binding] = await tx.update(userRoleBindingsTable).set({
-      status: input.status,
-      startsAt: input.startsAt,
-      endsAt: input.endsAt,
-    }).where(eq(userRoleBindingsTable.id, input.bindingId)).returning();
-    await tx.insert(auditEventsTable).values({
-      actorUserId: input.actorUserId,
-      organizationId: input.organizationId,
-      action: "AUTHORIZATION.ROLE_BINDING_UPDATED",
-      targetType: "role_binding",
-      targetId: binding.id,
-      metadata: {
-        before: { status: before.status, startsAt: before.startsAt, endsAt: before.endsAt },
-        after: { status: binding.status, startsAt: binding.startsAt, endsAt: binding.endsAt },
-        reason: input.reason,
-      },
-    });
-    return binding;
-  });
+  if (!activeGrants.length) {
+    return denyAndAudit("PERMISSION_MISSING");
+  }
+
+  const resourceOrganizationId = stringValue(context, "organizationId", "resourceOrganizationId");
+  if (resourceOrganizationId && resourceOrganizationId !== request.organizationId) {
+    const decision = denied(request, "ORGANIZATION_MISMATCH");
+    await auditDecision(request, decision);
+    return decision;
+  }
+  for (const grant of activeGrants) {
+    const defaultScope = grant.rolePermission.defaultScopeType;
+    // A broad binding cannot satisfy an operational permission. Operational
+    // defaults require a compatible explicit binding at the same or narrower
+    // scope; the verified object context is still required below.
+    if (grant.binding.scopeType === "ORGANIZATION" && !["ORGANIZATION"].includes(defaultScope)) continue;
+    if (grant.binding.scopeType === "PLATFORM" && defaultScope !== "PLATFORM") continue;
+    const bindingScope = grant.binding.scopeType;
+    const bindingScopeId = grant.binding.scopeId;
+    const objectProof = context.scopeVerified === true &&
+      stringValue(context, "organizationId", "resourceOrganizationId") === request.organizationId;
+    const restrictedResources = ["ORGANIZATION", "USER", "ROLE", "PERMISSION", "SESSION", "AUDIT_LOG", "DOCUMENT", "REPORT", "NOTIFICATION"];
+    const contextScopeId = (scope: string) => stringValue(
+      context,
+      "scopeId",
+      "resourceScopeId",
+      `${scope.toLowerCase()}Id`,
+    );
+    if (!isBindingScopeCompatible(defaultScope, bindingScope)) continue;
+    const evaluateScope = (scope: string, scopeId?: string | null, bindingRestriction = false) => {
+      if (scope === "PLATFORM") return restrictedResources.includes(request.resourceType);
+      if (scope === "ORGANIZATION") return true;
+      if (["FACILITY", "BUILDING", "SPACE", "ASSET", "PORTFOLIO"].includes(scope)) {
+        const requestedScopeId = contextScopeId(scope);
+        if (!bindingRestriction) return objectProof && Boolean(requestedScopeId);
+        const bindingObjectId = contextScopeId(bindingScope);
+        return objectProof && Boolean(scopeId) && Boolean(requestedScopeId) && scopeId === bindingObjectId;
+      }
+      if (scope === "ASSIGNED") {
+        const assignedToActor = objectProof &&
+          stringValue(context, "assignedUserId", "assigneeUserId") === request.actorUserId;
+        if (!bindingRestriction) return assignedToActor;
+        const assignmentScopeId = request.resourceId ??
+          stringValue(context, "assignmentId", "resourceScopeId", "scopeId");
+        return assignedToActor && Boolean(scopeId) && assignmentScopeId === scopeId;
+      }
+      if (scope === "TEAM") {
+        const teamId = stringValue(context, "teamId");
+        return objectProof && Boolean(teamId) &&
+          (!bindingRestriction || (Boolean(scopeId) && teamId === scopeId));
+      }
+      if (scope === "VENDOR_ASSIGNMENT") {
+        const vendorRelated =
+          stringValue(context, "vendorUserId", "assignedVendorId") === request.actorUserId;
+        if (!bindingRestriction) return objectProof && vendorRelated;
+        return objectProof && vendorRelated && Boolean(scopeId) &&
+          stringValue(context, "vendorAssignmentId") === scopeId;
+      }
+      if (scope === "OWNED_REQUEST") {
+        const ownedByActor = objectProof &&
+          stringValue(context, "ownerUserId", "createdByUserId") === request.actorUserId;
+        if (!bindingRestriction) return ownedByActor;
+        const ownedScopeId = request.resourceId ?? stringValue(context, "resourceScopeId", "scopeId");
+        return ownedByActor && Boolean(scopeId) && ownedScopeId === scopeId;
+      }
+      return false;
+    };
+    // The effective decision is the intersection of the permission minimum
+    // and the binding restriction. Neither side can broaden the other.
+    const inScope = evaluateScope(defaultScope) &&
+      evaluateScope(bindingScope, bindingScopeId, true);
+    if (inScope) {
+      const decision = { allowed: true, reasonCode: "ALLOWED" as const, permission, scopeType: bindingScope === "ORGANIZATION" ? defaultScope : bindingScope };
+      await auditDecision(request, decision);
+      return decision;
+    }
+  }
+  const decision = denied(request, "SCOPE_MISMATCH");
+  await auditDecision(request, decision);
+  return decision;
 }
 
-export async function revokeBinding(input: {
-  actorUserId: string;
-  organizationId: string;
-  bindingId: string;
-  reason: string;
-}) {
-  await assertRoleAdministrator(input.actorUserId, input.organizationId);
-  return db.transaction(async (tx) => {
-    const [before] = await tx.select().from(userRoleBindingsTable).where(and(
-      eq(userRoleBindingsTable.id, input.bindingId),
-      eq(userRoleBindingsTable.organizationId, input.organizationId),
-    )).for("update");
-    if (!before) return null;
-    if (before.userId === input.actorUserId) throw new Error("SELF_ASSIGNMENT_DENIED");
-    if (before.status === "REVOKED") throw new Error("REVOKED_BINDING_IS_TERMINAL");
-    const [binding] = await tx.update(userRoleBindingsTable)
-      .set({ status: "REVOKED" })
-      .where(eq(userRoleBindingsTable.id, input.bindingId))
-      .returning();
-    await tx.insert(auditEventsTable).values({
-      actorUserId: input.actorUserId,
-      organizationId: input.organizationId,
-      action: "AUTHORIZATION.ROLE_REVOKED",
-      targetType: "role_binding",
-      targetId: binding.id,
-      metadata: {
-        before: {
-          status: before.status,
-          startsAt: before.startsAt,
-          endsAt: before.endsAt,
-        },
-        after: {
-          status: binding.status,
-          startsAt: binding.startsAt,
-          endsAt: binding.endsAt,
-        },
-        reason: input.reason,
-      },
-    });
-    return binding;
-  });
+export function requirePermission(permission: string) {
+  return async (req: import("express").Request, res: import("express").Response, next: import("express").NextFunction) => {
+    const actorUserId = (req as import("express").Request & { appUserId?: string }).appUserId;
+    const organizationId = (req as import("express").Request & { activeOrganizationId?: string }).activeOrganizationId;
+    const decision = await authorize({ actorUserId, organizationId, permission, resourceType: permission.split(".")[0] ?? "UNKNOWN", requestId: String(req.id) });
+    if (!decision.allowed) {
+      res.status(actorUserId ? 403 : 401).json({ error: "Authorization denied", reasonCode: decision.reasonCode });
+      return;
+    }
+    next();
+  };
 }
 
-async function assertRoleAdministrator(actorUserId: string, organizationId: string) {
-  const decision = await authorize({
-    actorUserId,
-    organizationId,
-    permission: "ROLE.MANAGE",
-  });
-  if (!decision.allowed) throw new Error("ADMIN_PERMISSION_REQUIRED");
+export function canCrossOrganizationFoundation(scopeType: string | undefined, activeOrganizationId: string | undefined, targetOrganizationId: string) {
+  return scopeType === "PLATFORM" || activeOrganizationId === targetOrganizationId;
+}
+
+export function authorizationProbeAvailable(environment = process.env.NODE_ENV) {
+  return environment !== "production";
+}
+
+export async function listUserPermissions(userId: string, organizationId: string) {
+  const rows = await db.select({
+    permission: permissionsTable,
+    role: rolesTable,
+    binding: userRoleBindingsTable,
+    rolePermission: rolePermissionsTable,
+  }).from(userRoleBindingsTable)
+    .innerJoin(rolesTable, eq(userRoleBindingsTable.roleId, rolesTable.id))
+    .innerJoin(rolePermissionsTable, eq(rolePermissionsTable.roleId, rolesTable.id))
+    .innerJoin(permissionsTable, eq(rolePermissionsTable.permissionId, permissionsTable.id))
+    .where(and(
+      eq(userRoleBindingsTable.userId, userId),
+      eq(userRoleBindingsTable.organizationId, organizationId),
+      eq(userRoleBindingsTable.status, "ACTIVE"),
+      eq(rolesTable.status, "ACTIVE"),
+      eq(permissionsTable.status, "ACTIVE"),
+      or(isNull(userRoleBindingsTable.startsAt), lte(userRoleBindingsTable.startsAt, new Date())),
+      or(isNull(userRoleBindingsTable.endsAt), gt(userRoleBindingsTable.endsAt, new Date())),
+    ));
+  const result = new Map<string, { code: string; scopeType: string; effect: string }>();
+  for (const row of rows) {
+    const bindingState = validateRoleBindingState({
+      scopeType: row.binding.scopeType,
+      scopeId: row.binding.scopeId,
+      status: row.binding.status,
+      startsAt: row.binding.startsAt,
+      endsAt: row.binding.endsAt,
+    });
+    if (!bindingState.valid) continue;
+    if (!isBindingScopeCompatible(row.rolePermission.defaultScopeType, row.binding.scopeType)) continue;
+    const current = result.get(row.permission.code);
+    if (row.rolePermission.effect === "DENY") {
+      result.set(row.permission.code, { code: row.permission.code, scopeType: row.binding.scopeType, effect: "DENY" });
+    } else if (!current || current.effect !== "DENY") {
+      result.set(row.permission.code, { code: row.permission.code, scopeType: row.binding.scopeType, effect: "ALLOW" });
+    }
+  }
+  return [...result.values()].filter((permission) => permission.effect !== "DENY");
 }

@@ -1,6 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
-import { seedAuthorizationCatalog } from "./services/authorization";
+import { seedAuthorizationCatalog } from "./services/authorization-catalog";
 
 const rawPort = process.env["PORT"];
 

@@ -6,12 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type BindingStatus = typeof BindingStatus[keyof typeof BindingStatus];
+export type UserRoleBindingStatus = typeof UserRoleBindingStatus[keyof typeof UserRoleBindingStatus];
 
 
-export const BindingStatus = {
+export const UserRoleBindingStatus = {
   ACTIVE: 'ACTIVE',
   SUSPENDED: 'SUSPENDED',
   EXPIRED: 'EXPIRED',
-  REVOKED: 'REVOKED',
 } as const;

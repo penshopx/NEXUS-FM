@@ -22,6 +22,13 @@
       "when": 1789181085462,
       "tag": "0002_spooky_satana",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789181085463,
+      "tag": "0003_adopt_current_authorization",
+      "breakpoints": true
     }
   ]
 }

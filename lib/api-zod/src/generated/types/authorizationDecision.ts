@@ -5,12 +5,10 @@
  * NEXUS-FM foundation API
  * OpenAPI spec version: 0.1.0
  */
-import type { AuthorizationDecisionReasonCode } from './authorizationDecisionReasonCode';
-import type { ScopeType } from './scopeType';
 
 export interface AuthorizationDecision {
   allowed: boolean;
-  reasonCode: AuthorizationDecisionReasonCode;
+  reasonCode: string;
   permission: string;
-  scopeType?: ScopeType | null;
+  scopeType?: string;
 }

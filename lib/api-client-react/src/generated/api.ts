@@ -21,20 +21,27 @@ import type {
 
 import type {
   AppSession,
-  AuthorizationCheckInput,
+  AuthorizationCheck,
   AuthorizationDecision,
-  AuthorizationProfile,
+  BadRequestResponse,
+  ConflictResponse,
   ErrorResponse,
+  ForbiddenResponse,
   FoundationSummary,
+  GetMyPermissions200,
   HealthStatus,
+  NotFoundResponse,
   OrganizationAccess,
   OrganizationSelection,
   Permission,
-  RoleBinding,
-  RoleBindingInput,
-  RoleBindingRevocation,
-  RoleBindingUpdate,
-  RoleCapability
+  PreconditionRequiredResponse,
+  Role,
+  RolePermission,
+  RolePermissionUpdate,
+  UnauthorizedResponse,
+  UserRoleBinding,
+  UserRoleBindingInput,
+  UserRoleBindingUpdate
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -460,20 +467,20 @@ export function useGetFoundationSummary<TData = Awaited<ReturnType<typeof getFou
 
 
 
-export const getGetMyAuthorizationUrl = () => {
+export const getListPermissionsUrl = () => {
 
 
 
 
-  return `/api/authorization/me`
+  return `/api/permissions`
 }
 
 /**
- * @summary Get effective permissions and scopes for the active organization
+ * @summary List canonical permissions
  */
-export const getMyAuthorization = async ( options?: Parameters<typeof customFetch>[1]): Promise<AuthorizationProfile> => {
+export const listPermissions = async ( options?: Parameters<typeof customFetch>[1]): Promise<Permission[]> => {
 
-  return customFetch<AuthorizationProfile>(getGetMyAuthorizationUrl(),
+  return customFetch<Permission[]>(getListPermissionsUrl(),
   {
     ...options,
     method: 'GET'
@@ -486,45 +493,776 @@ export const getMyAuthorization = async ( options?: Parameters<typeof customFetc
 
 
 
-export const getGetMyAuthorizationQueryKey = () => {
+export const getListPermissionsQueryKey = () => {
     return [
-    `/api/authorization/me`
+    `/api/permissions`
     ] as const;
     }
 
 
-export const getGetMyAuthorizationQueryOptions = <TData = Awaited<ReturnType<typeof getMyAuthorization>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyAuthorization>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListPermissionsQueryOptions = <TData = Awaited<ReturnType<typeof listPermissions>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPermissions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetMyAuthorizationQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListPermissionsQueryKey();
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyAuthorization>>> = ({ signal }) => getMyAuthorization({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPermissions>>> = ({ signal }) => listPermissions({ signal, ...requestOptions });
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMyAuthorization>>, TError, TData> & { queryKey: QueryKey }
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPermissions>>, TError, TData> & { queryKey: QueryKey }
 }
 
-export type GetMyAuthorizationQueryResult = NonNullable<Awaited<ReturnType<typeof getMyAuthorization>>>
-export type GetMyAuthorizationQueryError = ErrorType<ErrorResponse>
+export type ListPermissionsQueryResult = NonNullable<Awaited<ReturnType<typeof listPermissions>>>
+export type ListPermissionsQueryError = ErrorType<UnauthorizedResponse | ForbiddenResponse>
 
 
 /**
- * @summary Get effective permissions and scopes for the active organization
+ * @summary List canonical permissions
  */
 
-export function useGetMyAuthorization<TData = Awaited<ReturnType<typeof getMyAuthorization>>, TError = ErrorType<ErrorResponse>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyAuthorization>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export function useListPermissions<TData = Awaited<ReturnType<typeof listPermissions>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPermissions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getGetMyAuthorizationQueryOptions(options)
+  const queryOptions = getListPermissionsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListRolesUrl = () => {
+
+
+
+
+  return `/api/roles`
+}
+
+/**
+ * @summary List canonical roles
+ */
+export const listRoles = async ( options?: Parameters<typeof customFetch>[1]): Promise<Role[]> => {
+
+  return customFetch<Role[]>(getListRolesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListRolesQueryKey = () => {
+    return [
+    `/api/roles`
+    ] as const;
+    }
+
+
+export const getListRolesQueryOptions = <TData = Awaited<ReturnType<typeof listRoles>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listRoles>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListRolesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listRoles>>> = ({ signal }) => listRoles({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listRoles>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListRolesQueryResult = NonNullable<Awaited<ReturnType<typeof listRoles>>>
+export type ListRolesQueryError = ErrorType<UnauthorizedResponse | ForbiddenResponse>
+
+
+/**
+ * @summary List canonical roles
+ */
+
+export function useListRoles<TData = Awaited<ReturnType<typeof listRoles>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listRoles>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListRolesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetRolePermissionsUrl = (roleId: string,) => {
+
+
+
+
+  return `/api/roles/${roleId}/permissions`
+}
+
+/**
+ * @summary Read role permissions
+ */
+export const getRolePermissions = async (roleId: string, options?: Parameters<typeof customFetch>[1]): Promise<RolePermission[]> => {
+
+  return customFetch<RolePermission[]>(getGetRolePermissionsUrl(roleId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetRolePermissionsQueryKey = (roleId: string,) => {
+    return [
+    `/api/roles/${roleId}/permissions`
+    ] as const;
+    }
+
+
+export const getGetRolePermissionsQueryOptions = <TData = Awaited<ReturnType<typeof getRolePermissions>>, TError = ErrorType<ForbiddenResponse>>(roleId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRolePermissions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetRolePermissionsQueryKey(roleId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRolePermissions>>> = ({ signal }) => getRolePermissions(roleId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: roleId !== null && roleId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getRolePermissions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetRolePermissionsQueryResult = NonNullable<Awaited<ReturnType<typeof getRolePermissions>>>
+export type GetRolePermissionsQueryError = ErrorType<ForbiddenResponse>
+
+
+/**
+ * @summary Read role permissions
+ */
+
+export function useGetRolePermissions<TData = Awaited<ReturnType<typeof getRolePermissions>>, TError = ErrorType<ForbiddenResponse>>(
+ roleId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRolePermissions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetRolePermissionsQueryOptions(roleId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateRolePermissionsUrl = (roleId: string,) => {
+
+
+
+
+  return `/api/roles/${roleId}/permissions`
+}
+
+/**
+ * The If-Match header is the role policy version. Stale versions are rejected to prevent lost concurrent updates; omitted canonical capabilities are persisted as explicit DENY entries.
+ * @summary Replace role permissions
+ */
+export const updateRolePermissions = async (roleId: string,
+    rolePermissionUpdate: RolePermissionUpdate, options?: Parameters<typeof customFetch>[1]): Promise<RolePermission[]> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<RolePermission[]>(getUpdateRolePermissionsUrl(roleId),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(rolePermissionUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateRolePermissionsMutationKey = () => ['updateRolePermissions'] as const;
+
+export const getUpdateRolePermissionsMutationOptions = <TError = ErrorType<BadRequestResponse | ForbiddenResponse | ConflictResponse | PreconditionRequiredResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateRolePermissions>>, TError,UpdateRolePermissionsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateRolePermissions>>, TError,UpdateRolePermissionsMutationVariables, TContext> => {
+
+const mutationKey = getUpdateRolePermissionsMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateRolePermissions>>, UpdateRolePermissionsMutationVariables> = (props) => {
+          const {roleId,data} = props ?? {};
+
+          return  updateRolePermissions(roleId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateRolePermissionsMutationResult = NonNullable<Awaited<ReturnType<typeof updateRolePermissions>>>
+    export type UpdateRolePermissionsMutationBody = BodyType<RolePermissionUpdate>
+    export type UpdateRolePermissionsMutationError = ErrorType<BadRequestResponse | ForbiddenResponse | ConflictResponse | PreconditionRequiredResponse>
+    export type UpdateRolePermissionsMutationVariables = {roleId: string;data: BodyType<RolePermissionUpdate>}
+
+    /**
+ * @summary Replace role permissions
+ */
+export const useUpdateRolePermissions = <TError = ErrorType<BadRequestResponse | ForbiddenResponse | ConflictResponse | PreconditionRequiredResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateRolePermissions>>, TError,UpdateRolePermissionsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateRolePermissions>>,
+        TError,
+        UpdateRolePermissionsMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateRolePermissionsMutationOptions(options));
+    }
+
+export const getGetUserRoleBindingsUrl = (userId: string,) => {
+
+
+
+
+  return `/api/users/${userId}/role-bindings`
+}
+
+/**
+ * @summary Read a user's scoped role bindings
+ */
+export const getUserRoleBindings = async (userId: string, options?: Parameters<typeof customFetch>[1]): Promise<UserRoleBinding[]> => {
+
+  return customFetch<UserRoleBinding[]>(getGetUserRoleBindingsUrl(userId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetUserRoleBindingsQueryKey = (userId: string,) => {
+    return [
+    `/api/users/${userId}/role-bindings`
+    ] as const;
+    }
+
+
+export const getGetUserRoleBindingsQueryOptions = <TData = Awaited<ReturnType<typeof getUserRoleBindings>>, TError = ErrorType<ForbiddenResponse>>(userId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUserRoleBindings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetUserRoleBindingsQueryKey(userId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUserRoleBindings>>> = ({ signal }) => getUserRoleBindings(userId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: userId !== null && userId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getUserRoleBindings>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetUserRoleBindingsQueryResult = NonNullable<Awaited<ReturnType<typeof getUserRoleBindings>>>
+export type GetUserRoleBindingsQueryError = ErrorType<ForbiddenResponse>
+
+
+/**
+ * @summary Read a user's scoped role bindings
+ */
+
+export function useGetUserRoleBindings<TData = Awaited<ReturnType<typeof getUserRoleBindings>>, TError = ErrorType<ForbiddenResponse>>(
+ userId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUserRoleBindings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetUserRoleBindingsQueryOptions(userId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateUserRoleBindingUrl = (userId: string,) => {
+
+
+
+
+  return `/api/users/${userId}/role-bindings`
+}
+
+/**
+ * @summary Create a scoped role binding
+ */
+export const createUserRoleBinding = async (userId: string,
+    userRoleBindingInput: UserRoleBindingInput, options?: Parameters<typeof customFetch>[1]): Promise<UserRoleBinding> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<UserRoleBinding>(getCreateUserRoleBindingUrl(userId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(userRoleBindingInput)
+  }
+);}
+
+
+
+
+
+export const getCreateUserRoleBindingMutationKey = () => ['createUserRoleBinding'] as const;
+
+export const getCreateUserRoleBindingMutationOptions = <TError = ErrorType<BadRequestResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createUserRoleBinding>>, TError,CreateUserRoleBindingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createUserRoleBinding>>, TError,CreateUserRoleBindingMutationVariables, TContext> => {
+
+const mutationKey = getCreateUserRoleBindingMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createUserRoleBinding>>, CreateUserRoleBindingMutationVariables> = (props) => {
+          const {userId,data} = props ?? {};
+
+          return  createUserRoleBinding(userId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateUserRoleBindingMutationResult = NonNullable<Awaited<ReturnType<typeof createUserRoleBinding>>>
+    export type CreateUserRoleBindingMutationBody = BodyType<UserRoleBindingInput>
+    export type CreateUserRoleBindingMutationError = ErrorType<BadRequestResponse | ForbiddenResponse>
+    export type CreateUserRoleBindingMutationVariables = {userId: string;data: BodyType<UserRoleBindingInput>}
+
+    /**
+ * @summary Create a scoped role binding
+ */
+export const useCreateUserRoleBinding = <TError = ErrorType<BadRequestResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createUserRoleBinding>>, TError,CreateUserRoleBindingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createUserRoleBinding>>,
+        TError,
+        CreateUserRoleBindingMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateUserRoleBindingMutationOptions(options));
+    }
+
+export const getUpdateUserRoleBindingUrl = (userId: string,
+    bindingId: string,) => {
+
+
+
+
+  return `/api/users/${userId}/role-bindings/${bindingId}`
+}
+
+/**
+ * @summary Update or revoke a scoped role binding
+ */
+export const updateUserRoleBinding = async (userId: string,
+    bindingId: string,
+    userRoleBindingUpdate: UserRoleBindingUpdate, options?: Parameters<typeof customFetch>[1]): Promise<UserRoleBinding> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<UserRoleBinding>(getUpdateUserRoleBindingUrl(userId,bindingId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(userRoleBindingUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateUserRoleBindingMutationKey = () => ['updateUserRoleBinding'] as const;
+
+export const getUpdateUserRoleBindingMutationOptions = <TError = ErrorType<ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateUserRoleBinding>>, TError,UpdateUserRoleBindingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateUserRoleBinding>>, TError,UpdateUserRoleBindingMutationVariables, TContext> => {
+
+const mutationKey = getUpdateUserRoleBindingMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateUserRoleBinding>>, UpdateUserRoleBindingMutationVariables> = (props) => {
+          const {userId,bindingId,data} = props ?? {};
+
+          return  updateUserRoleBinding(userId,bindingId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateUserRoleBindingMutationResult = NonNullable<Awaited<ReturnType<typeof updateUserRoleBinding>>>
+    export type UpdateUserRoleBindingMutationBody = BodyType<UserRoleBindingUpdate>
+    export type UpdateUserRoleBindingMutationError = ErrorType<ForbiddenResponse | NotFoundResponse>
+    export type UpdateUserRoleBindingMutationVariables = {userId: string;bindingId: string;data: BodyType<UserRoleBindingUpdate>}
+
+    /**
+ * @summary Update or revoke a scoped role binding
+ */
+export const useUpdateUserRoleBinding = <TError = ErrorType<ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateUserRoleBinding>>, TError,UpdateUserRoleBindingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateUserRoleBinding>>,
+        TError,
+        UpdateUserRoleBindingMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateUserRoleBindingMutationOptions(options));
+    }
+
+export const getRevokeUserRoleBindingUrl = (userId: string,
+    bindingId: string,) => {
+
+
+
+
+  return `/api/users/${userId}/role-bindings/${bindingId}`
+}
+
+/**
+ * @summary Revoke a scoped role binding
+ */
+export const revokeUserRoleBinding = async (userId: string,
+    bindingId: string, options?: Parameters<typeof customFetch>[1]): Promise<UserRoleBinding> => {
+
+  return customFetch<UserRoleBinding>(getRevokeUserRoleBindingUrl(userId,bindingId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getRevokeUserRoleBindingMutationKey = () => ['revokeUserRoleBinding'] as const;
+
+export const getRevokeUserRoleBindingMutationOptions = <TError = ErrorType<ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeUserRoleBinding>>, TError,RevokeUserRoleBindingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof revokeUserRoleBinding>>, TError,RevokeUserRoleBindingMutationVariables, TContext> => {
+
+const mutationKey = getRevokeUserRoleBindingMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revokeUserRoleBinding>>, RevokeUserRoleBindingMutationVariables> = (props) => {
+          const {userId,bindingId} = props ?? {};
+
+          return  revokeUserRoleBinding(userId,bindingId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RevokeUserRoleBindingMutationResult = NonNullable<Awaited<ReturnType<typeof revokeUserRoleBinding>>>
+
+    export type RevokeUserRoleBindingMutationError = ErrorType<ForbiddenResponse | NotFoundResponse>
+    export type RevokeUserRoleBindingMutationVariables = {userId: string;bindingId: string}
+
+    /**
+ * @summary Revoke a scoped role binding
+ */
+export const useRevokeUserRoleBinding = <TError = ErrorType<ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeUserRoleBinding>>, TError,RevokeUserRoleBindingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof revokeUserRoleBinding>>,
+        TError,
+        RevokeUserRoleBindingMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRevokeUserRoleBindingMutationOptions(options));
+    }
+
+export const getGetMyPermissionsUrl = () => {
+
+
+
+
+  return `/api/me/permissions`
+}
+
+/**
+ * @summary Introspect current permissions
+ */
+export const getMyPermissions = async ( options?: Parameters<typeof customFetch>[1]): Promise<GetMyPermissions200> => {
+
+  return customFetch<GetMyPermissions200>(getGetMyPermissionsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMyPermissionsQueryKey = () => {
+    return [
+    `/api/me/permissions`
+    ] as const;
+    }
+
+
+export const getGetMyPermissionsQueryOptions = <TData = Awaited<ReturnType<typeof getMyPermissions>>, TError = ErrorType<UnauthorizedResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyPermissions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMyPermissionsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyPermissions>>> = ({ signal }) => getMyPermissions({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMyPermissions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMyPermissionsQueryResult = NonNullable<Awaited<ReturnType<typeof getMyPermissions>>>
+export type GetMyPermissionsQueryError = ErrorType<UnauthorizedResponse>
+
+
+/**
+ * @summary Introspect current permissions
+ */
+
+export function useGetMyPermissions<TData = Awaited<ReturnType<typeof getMyPermissions>>, TError = ErrorType<UnauthorizedResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyPermissions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMyPermissionsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetMyScopeUrl = () => {
+
+
+
+
+  return `/api/me/scope`
+}
+
+/**
+ * @summary Introspect current role bindings
+ */
+export const getMyScope = async ( options?: Parameters<typeof customFetch>[1]): Promise<UserRoleBinding[]> => {
+
+  return customFetch<UserRoleBinding[]>(getGetMyScopeUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMyScopeQueryKey = () => {
+    return [
+    `/api/me/scope`
+    ] as const;
+    }
+
+
+export const getGetMyScopeQueryOptions = <TData = Awaited<ReturnType<typeof getMyScope>>, TError = ErrorType<UnauthorizedResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyScope>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMyScopeQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyScope>>> = ({ signal }) => getMyScope({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMyScope>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMyScopeQueryResult = NonNullable<Awaited<ReturnType<typeof getMyScope>>>
+export type GetMyScopeQueryError = ErrorType<UnauthorizedResponse>
+
+
+/**
+ * @summary Introspect current role bindings
+ */
+
+export function useGetMyScope<TData = Awaited<ReturnType<typeof getMyScope>>, TError = ErrorType<UnauthorizedResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyScope>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMyScopeQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -546,9 +1284,10 @@ export const getCheckAuthorizationUrl = () => {
 }
 
 /**
- * @summary Check one canonical permission for the authenticated actor
+ * This endpoint is disabled in production and actionContext is diagnostic only; it cannot prove production object relationships or replace service-side resource resolution.
+ * @summary Development-only diagnostic permission check
  */
-export const checkAuthorization = async (authorizationCheckInput: AuthorizationCheckInput, options?: Parameters<typeof customFetch>[1]): Promise<AuthorizationDecision> => {
+export const checkAuthorization = async (authorizationCheck: AuthorizationCheck, options?: Parameters<typeof customFetch>[1]): Promise<AuthorizationDecision> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -569,7 +1308,7 @@ return customFetch<AuthorizationDecision>(getCheckAuthorizationUrl(),
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(authorizationCheckInput)
+    body: JSON.stringify(authorizationCheck)
   }
 );}
 
@@ -579,7 +1318,7 @@ return customFetch<AuthorizationDecision>(getCheckAuthorizationUrl(),
 
 export const getCheckAuthorizationMutationKey = () => ['checkAuthorization'] as const;
 
-export const getCheckAuthorizationMutationOptions = <TError = ErrorType<ErrorResponse>,
+export const getCheckAuthorizationMutationOptions = <TError = ErrorType<UnauthorizedResponse | ForbiddenResponse | NotFoundResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof checkAuthorization>>, TError,CheckAuthorizationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof checkAuthorization>>, TError,CheckAuthorizationMutationVariables, TContext> => {
 
@@ -607,14 +1346,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CheckAuthorizationMutationResult = NonNullable<Awaited<ReturnType<typeof checkAuthorization>>>
-    export type CheckAuthorizationMutationBody = BodyType<AuthorizationCheckInput>
-    export type CheckAuthorizationMutationError = ErrorType<ErrorResponse>
-    export type CheckAuthorizationMutationVariables = {data: BodyType<AuthorizationCheckInput>}
+    export type CheckAuthorizationMutationBody = BodyType<AuthorizationCheck>
+    export type CheckAuthorizationMutationError = ErrorType<UnauthorizedResponse | ForbiddenResponse | NotFoundResponse>
+    export type CheckAuthorizationMutationVariables = {data: BodyType<AuthorizationCheck>}
 
     /**
- * @summary Check one canonical permission for the authenticated actor
+ * @summary Development-only diagnostic permission check
  */
-export const useCheckAuthorization = <TError = ErrorType<ErrorResponse>,
+export const useCheckAuthorization = <TError = ErrorType<UnauthorizedResponse | ForbiddenResponse | NotFoundResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof checkAuthorization>>, TError,CheckAuthorizationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof checkAuthorization>>,
@@ -623,502 +1362,5 @@ export const useCheckAuthorization = <TError = ErrorType<ErrorResponse>,
         TContext
       > => {
       return useMutation(getCheckAuthorizationMutationOptions(options));
-    }
-
-export const getListPermissionCatalogUrl = () => {
-
-
-
-
-  return `/api/authorization/permissions`
-}
-
-/**
- * @summary List the canonical permission catalog
- */
-export const listPermissionCatalog = async ( options?: Parameters<typeof customFetch>[1]): Promise<Permission[]> => {
-
-  return customFetch<Permission[]>(getListPermissionCatalogUrl(),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getListPermissionCatalogQueryKey = () => {
-    return [
-    `/api/authorization/permissions`
-    ] as const;
-    }
-
-
-export const getListPermissionCatalogQueryOptions = <TData = Awaited<ReturnType<typeof listPermissionCatalog>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPermissionCatalog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getListPermissionCatalogQueryKey();
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPermissionCatalog>>> = ({ signal }) => listPermissionCatalog({ signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPermissionCatalog>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type ListPermissionCatalogQueryResult = NonNullable<Awaited<ReturnType<typeof listPermissionCatalog>>>
-export type ListPermissionCatalogQueryError = ErrorType<ErrorResponse>
-
-
-/**
- * @summary List the canonical permission catalog
- */
-
-export function useListPermissionCatalog<TData = Awaited<ReturnType<typeof listPermissionCatalog>>, TError = ErrorType<ErrorResponse>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPermissionCatalog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getListPermissionCatalogQueryOptions(options)
-
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-
-export const getListRoleCapabilitiesUrl = () => {
-
-
-
-
-  return `/api/authorization/roles`
-}
-
-/**
- * @summary List canonical role capability assignments
- */
-export const listRoleCapabilities = async ( options?: Parameters<typeof customFetch>[1]): Promise<RoleCapability[]> => {
-
-  return customFetch<RoleCapability[]>(getListRoleCapabilitiesUrl(),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getListRoleCapabilitiesQueryKey = () => {
-    return [
-    `/api/authorization/roles`
-    ] as const;
-    }
-
-
-export const getListRoleCapabilitiesQueryOptions = <TData = Awaited<ReturnType<typeof listRoleCapabilities>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listRoleCapabilities>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getListRoleCapabilitiesQueryKey();
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listRoleCapabilities>>> = ({ signal }) => listRoleCapabilities({ signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listRoleCapabilities>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type ListRoleCapabilitiesQueryResult = NonNullable<Awaited<ReturnType<typeof listRoleCapabilities>>>
-export type ListRoleCapabilitiesQueryError = ErrorType<ErrorResponse>
-
-
-/**
- * @summary List canonical role capability assignments
- */
-
-export function useListRoleCapabilities<TData = Awaited<ReturnType<typeof listRoleCapabilities>>, TError = ErrorType<ErrorResponse>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listRoleCapabilities>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getListRoleCapabilitiesQueryOptions(options)
-
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-
-export const getListUserRoleBindingsUrl = (userId: string,) => {
-
-
-
-
-  return `/api/users/${userId}/role-bindings`
-}
-
-/**
- * @summary List scoped role bindings for a user
- */
-export const listUserRoleBindings = async (userId: string, options?: Parameters<typeof customFetch>[1]): Promise<RoleBinding[]> => {
-
-  return customFetch<RoleBinding[]>(getListUserRoleBindingsUrl(userId),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getListUserRoleBindingsQueryKey = (userId: string,) => {
-    return [
-    `/api/users/${userId}/role-bindings`
-    ] as const;
-    }
-
-
-export const getListUserRoleBindingsQueryOptions = <TData = Awaited<ReturnType<typeof listUserRoleBindings>>, TError = ErrorType<ErrorResponse>>(userId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listUserRoleBindings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getListUserRoleBindingsQueryKey(userId);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listUserRoleBindings>>> = ({ signal }) => listUserRoleBindings(userId, { signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: userId !== null && userId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listUserRoleBindings>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type ListUserRoleBindingsQueryResult = NonNullable<Awaited<ReturnType<typeof listUserRoleBindings>>>
-export type ListUserRoleBindingsQueryError = ErrorType<ErrorResponse>
-
-
-/**
- * @summary List scoped role bindings for a user
- */
-
-export function useListUserRoleBindings<TData = Awaited<ReturnType<typeof listUserRoleBindings>>, TError = ErrorType<ErrorResponse>>(
- userId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listUserRoleBindings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getListUserRoleBindingsQueryOptions(userId,options)
-
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-
-export const getCreateRoleBindingUrl = () => {
-
-
-
-
-  return `/api/admin/role-bindings`
-}
-
-/**
- * @summary Grant a scoped canonical role
- */
-export const createRoleBinding = async (roleBindingInput: RoleBindingInput, options?: Parameters<typeof customFetch>[1]): Promise<RoleBinding> => {
-
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-return customFetch<RoleBinding>(getCreateRoleBindingUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(roleBindingInput)
-  }
-);}
-
-
-
-
-
-export const getCreateRoleBindingMutationKey = () => ['createRoleBinding'] as const;
-
-export const getCreateRoleBindingMutationOptions = <TError = ErrorType<ErrorResponse>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createRoleBinding>>, TError,CreateRoleBindingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof createRoleBinding>>, TError,CreateRoleBindingMutationVariables, TContext> => {
-
-const mutationKey = getCreateRoleBindingMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createRoleBinding>>, CreateRoleBindingMutationVariables> = (props) => {
-          const {data} = props ?? {};
-
-          return  createRoleBinding(data,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type CreateRoleBindingMutationResult = NonNullable<Awaited<ReturnType<typeof createRoleBinding>>>
-    export type CreateRoleBindingMutationBody = BodyType<RoleBindingInput>
-    export type CreateRoleBindingMutationError = ErrorType<ErrorResponse>
-    export type CreateRoleBindingMutationVariables = {data: BodyType<RoleBindingInput>}
-
-    /**
- * @summary Grant a scoped canonical role
- */
-export const useCreateRoleBinding = <TError = ErrorType<ErrorResponse>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createRoleBinding>>, TError,CreateRoleBindingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof createRoleBinding>>,
-        TError,
-        CreateRoleBindingMutationVariables,
-        TContext
-      > => {
-      return useMutation(getCreateRoleBindingMutationOptions(options));
-    }
-
-export const getUpdateRoleBindingUrl = (bindingId: string,) => {
-
-
-
-
-  return `/api/admin/role-bindings/${bindingId}`
-}
-
-/**
- * @summary Update scoped role binding lifecycle
- */
-export const updateRoleBinding = async (bindingId: string,
-    roleBindingUpdate: RoleBindingUpdate, options?: Parameters<typeof customFetch>[1]): Promise<RoleBinding> => {
-
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-return customFetch<RoleBinding>(getUpdateRoleBindingUrl(bindingId),
-  {
-    ...options,
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(roleBindingUpdate)
-  }
-);}
-
-
-
-
-
-export const getUpdateRoleBindingMutationKey = () => ['updateRoleBinding'] as const;
-
-export const getUpdateRoleBindingMutationOptions = <TError = ErrorType<ErrorResponse>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateRoleBinding>>, TError,UpdateRoleBindingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof updateRoleBinding>>, TError,UpdateRoleBindingMutationVariables, TContext> => {
-
-const mutationKey = getUpdateRoleBindingMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateRoleBinding>>, UpdateRoleBindingMutationVariables> = (props) => {
-          const {bindingId,data} = props ?? {};
-
-          return  updateRoleBinding(bindingId,data,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type UpdateRoleBindingMutationResult = NonNullable<Awaited<ReturnType<typeof updateRoleBinding>>>
-    export type UpdateRoleBindingMutationBody = BodyType<RoleBindingUpdate>
-    export type UpdateRoleBindingMutationError = ErrorType<ErrorResponse>
-    export type UpdateRoleBindingMutationVariables = {bindingId: string;data: BodyType<RoleBindingUpdate>}
-
-    /**
- * @summary Update scoped role binding lifecycle
- */
-export const useUpdateRoleBinding = <TError = ErrorType<ErrorResponse>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateRoleBinding>>, TError,UpdateRoleBindingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof updateRoleBinding>>,
-        TError,
-        UpdateRoleBindingMutationVariables,
-        TContext
-      > => {
-      return useMutation(getUpdateRoleBindingMutationOptions(options));
-    }
-
-export const getRevokeRoleBindingUrl = (bindingId: string,) => {
-
-
-
-
-  return `/api/admin/role-bindings/${bindingId}`
-}
-
-/**
- * @summary Revoke a scoped role binding
- */
-export const revokeRoleBinding = async (bindingId: string,
-    roleBindingRevocation: RoleBindingRevocation, options?: Parameters<typeof customFetch>[1]): Promise<RoleBinding> => {
-
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Symbol.iterator in h) {
-      return Object.fromEntries(
-        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
-      );
-    }
-    const headers: Record<string, string | readonly string[]> = {};
-    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
-      if (value !== undefined) headers[name] = value;
-    }
-    return headers;
-  };
-return customFetch<RoleBinding>(getRevokeRoleBindingUrl(bindingId),
-  {
-    ...options,
-    method: 'DELETE',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(roleBindingRevocation)
-  }
-);}
-
-
-
-
-
-export const getRevokeRoleBindingMutationKey = () => ['revokeRoleBinding'] as const;
-
-export const getRevokeRoleBindingMutationOptions = <TError = ErrorType<ErrorResponse>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeRoleBinding>>, TError,RevokeRoleBindingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof revokeRoleBinding>>, TError,RevokeRoleBindingMutationVariables, TContext> => {
-
-const mutationKey = getRevokeRoleBindingMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revokeRoleBinding>>, RevokeRoleBindingMutationVariables> = (props) => {
-          const {bindingId,data} = props ?? {};
-
-          return  revokeRoleBinding(bindingId,data,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type RevokeRoleBindingMutationResult = NonNullable<Awaited<ReturnType<typeof revokeRoleBinding>>>
-    export type RevokeRoleBindingMutationBody = BodyType<RoleBindingRevocation>
-    export type RevokeRoleBindingMutationError = ErrorType<ErrorResponse>
-    export type RevokeRoleBindingMutationVariables = {bindingId: string;data: BodyType<RoleBindingRevocation>}
-
-    /**
- * @summary Revoke a scoped role binding
- */
-export const useRevokeRoleBinding = <TError = ErrorType<ErrorResponse>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeRoleBinding>>, TError,RevokeRoleBindingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof revokeRoleBinding>>,
-        TError,
-        RevokeRoleBindingMutationVariables,
-        TContext
-      > => {
-      return useMutation(getRevokeRoleBindingMutationOptions(options));
     }
 

@@ -9,9 +9,10 @@ import type { PermissionStatus } from './permissionStatus';
 
 export interface Permission {
   id: string;
+  /** @pattern ^[A-Z_]+\.[A-Z_]+$ */
   code: string;
   resource: string;
   action: string;
-  description: string;
+  description?: string;
   status: PermissionStatus;
 }

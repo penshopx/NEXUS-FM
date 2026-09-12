@@ -1,31 +1,50 @@
 import { and, eq, sql } from "drizzle-orm";
 import {
   auditEventsTable,
+  rolesTable,
+  userRoleBindingsTable,
   canonicalRoleValues,
   db,
   membershipsTable,
   organizationsTable,
   userContextsTable,
-  userRoleBindingsTable,
   usersTable,
 } from "@workspace/db";
+import { seedAuthorizationCatalog } from "./authorization-catalog";
 
 type Identity = { externalAuthId: string; displayName: string; email: string };
 
 export async function ensureFoundationUser(identity: Identity) {
-  return db.transaction(async (tx) => {
-    const [user] = await tx.insert(usersTable).values(identity).onConflictDoUpdate({
-      target: usersTable.externalAuthId,
-      set: {
-        displayName: identity.displayName,
-        email: identity.email,
-      },
-    }).returning();
-    const [existingMembership] = await tx.select({ organizationId: membershipsTable.organizationId })
-      .from(membershipsTable)
-      .where(eq(membershipsTable.userId, user.id));
-    if (existingMembership) return user;
+  const user = await db.transaction(async (tx) => {
+    // Serialize first-access bootstrap by external identity. This preserves
+    // the locked one-user/one-organization contract under concurrent requests.
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${identity.externalAuthId}))`);
+    const [existing] = await tx.select().from(usersTable).where(eq(usersTable.externalAuthId, identity.externalAuthId));
+    if (existing) {
+      if (existing.displayName !== identity.displayName || existing.email !== identity.email) {
+        const [updated] = await tx.update(usersTable).set({
+          displayName: identity.displayName,
+          email: identity.email,
+        }).where(eq(usersTable.id, existing.id)).returning();
+        return updated;
+      }
+      return existing;
+    }
 
+    const [insertedUser] = await tx.insert(usersTable)
+      .values(identity)
+      .onConflictDoNothing({ target: usersTable.externalAuthId })
+      .returning();
+    if (!insertedUser) {
+      const [concurrentlyCreatedUser] = await tx.select()
+        .from(usersTable)
+        .where(eq(usersTable.externalAuthId, identity.externalAuthId));
+      if (!concurrentlyCreatedUser) {
+        throw new Error("Foundation user creation conflict could not be resolved");
+      }
+      return concurrentlyCreatedUser;
+    }
+    const user = insertedUser;
     const [organization] = await tx.insert(organizationsTable).values({
       name: `${identity.displayName}'s Organization`,
       slug: `org-${user.id.slice(0, 8)}`,
@@ -34,12 +53,6 @@ export async function ensureFoundationUser(identity: Identity) {
       userId: user.id,
       organizationId: organization.id,
       role: "FACILITY_MANAGER",
-    });
-    await tx.insert(userRoleBindingsTable).values({
-      userId: user.id,
-      organizationId: organization.id,
-      role: "FACILITY_MANAGER",
-      scopeType: "ORGANIZATION",
     });
     await tx.insert(userContextsTable).values({
       userId: user.id,
@@ -54,6 +67,35 @@ export async function ensureFoundationUser(identity: Identity) {
     });
     return user;
   });
+  // Authorization is additive to the locked membership contract. Existing
+  // FACILITY_MANAGER memberships are never rewritten; they receive a scoped
+  // binding only when one does not already exist.
+  await seedAuthorizationCatalog();
+  const memberships = await db.select().from(membershipsTable).where(eq(membershipsTable.userId, user.id));
+  const [facilityManagerRole] = await db.select().from(rolesTable).where(eq(rolesTable.code, "FACILITY_MANAGER"));
+  if (facilityManagerRole) {
+    for (const membership of memberships) {
+      if (membership.role !== "FACILITY_MANAGER") continue;
+      const existingBinding = await db.select({ id: userRoleBindingsTable.id })
+        .from(userRoleBindingsTable)
+        .where(and(
+          eq(userRoleBindingsTable.userId, user.id),
+          eq(userRoleBindingsTable.organizationId, membership.organizationId),
+          eq(userRoleBindingsTable.roleId, facilityManagerRole.id),
+          eq(userRoleBindingsTable.scopeType, "ORGANIZATION"),
+        ));
+      if (!existingBinding.length) {
+        await db.insert(userRoleBindingsTable).values({
+          userId: user.id,
+          organizationId: membership.organizationId,
+          roleId: facilityManagerRole.id,
+          scopeType: "ORGANIZATION",
+          grantedBy: user.id,
+        }).onConflictDoNothing();
+      }
+    }
+  }
+  return user;
 }
 
 export async function listMemberships(userId: string) {

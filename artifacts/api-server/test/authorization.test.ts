@@ -1,0 +1,718 @@
+import assert from "node:assert/strict";
+import { after, before, test } from "node:test";
+import { randomUUID } from "node:crypto";
+import express from "express";
+import { createServer } from "node:http";
+import { and, eq, inArray } from "drizzle-orm";
+import {
+  authorizationAuditLogsTable,
+  canonicalRoleValues,
+  db,
+  membershipsTable,
+  organizationsTable,
+  permissionsTable,
+  rolePermissionsTable,
+  rolesTable,
+  userContextsTable,
+  userRoleBindingsTable,
+  usersTable,
+} from "@workspace/db";
+import {
+  authorize,
+  assertOrganizationScope,
+  AuthorizationError,
+  isSelfRoleEscalation,
+  listUserPermissions,
+  authorizationProbeAvailable,
+  canCrossOrganizationFoundation,
+  recordAuthorizationConfigurationAudit,
+  requirePermission,
+  validateRoleBindingState,
+} from "../src/services/authorization.ts";
+import {
+  canonicalPermissions,
+  roleCapabilityRows,
+  isPermissionInRoleMatrix,
+  isRolePermissionConfigurationAllowed,
+  isPlatformOperationalPermission,
+  seedAuthorizationCatalog,
+} from "../src/services/authorization-catalog.ts";
+import {
+  ensureFoundationUser,
+  getAppSession,
+} from "../src/services/foundation.ts";
+import { createAuthorizationRouter } from "../src/routes/authorization.ts";
+
+type Fixture = {
+  userId: string;
+  organizationId: string;
+  roleId: string;
+  bindingId: string;
+};
+
+const fixtures: Fixture[] = [];
+let seededRoles: Map<string, string>;
+let seededPermissions: Map<string, string>;
+
+async function makeFixture(
+  roleCode: string,
+  scopeType: "PLATFORM" | "ORGANIZATION" | "FACILITY" | "BUILDING" | "ASSIGNED" | "TEAM" | "VENDOR_ASSIGNMENT",
+  scopeId?: string,
+) {
+  const [user] = await db.insert(usersTable).values({
+    externalAuthId: `task02-test-${randomUUID()}`,
+    displayName: `Task 02 ${roleCode}`,
+    email: `${randomUUID()}@task02.invalid`,
+  }).returning();
+  const [organization] = await db.insert(organizationsTable).values({
+    name: `Task 02 ${roleCode}`,
+    slug: `task02-${randomUUID()}`,
+  }).returning();
+  await db.insert(membershipsTable).values({
+    userId: user.id,
+    organizationId: organization.id,
+    role: roleCode as typeof canonicalRoleValues[number],
+  });
+  const roleId = seededRoles.get(roleCode);
+  assert.ok(roleId);
+  const [binding] = await db.insert(userRoleBindingsTable).values({
+    userId: user.id,
+    organizationId: organization.id,
+    roleId,
+    scopeType,
+    scopeId: scopeId ?? null,
+    grantedBy: user.id,
+  }).returning();
+  assert.ok(binding);
+  const fixture = { userId: user.id, organizationId: organization.id, roleId, bindingId: binding.id };
+  fixtures.push(fixture);
+  return fixture;
+}
+
+async function permissionId(code: string) {
+  const id = seededPermissions.get(code);
+  assert.ok(id, `seeded permission ${code}`);
+  return id;
+}
+
+before(async () => {
+  const first = await seedAuthorizationCatalog();
+  await seedAuthorizationCatalog();
+  seededRoles = new Map(first.roles.map((role) => [role.code, role.id]));
+  seededPermissions = new Map(first.permissions.map((permission) => [permission.code, permission.id]));
+});
+
+after(async () => {
+  for (const fixture of fixtures) {
+    await db.delete(authorizationAuditLogsTable).where(eq(authorizationAuditLogsTable.actorUserId, fixture.userId));
+    await db.delete(usersTable).where(eq(usersTable.id, fixture.userId));
+    await db.delete(organizationsTable).where(eq(organizationsTable.id, fixture.organizationId));
+  }
+  await db.delete(authorizationAuditLogsTable).where(eq(authorizationAuditLogsTable.requestId, "task02-test"));
+});
+
+test("canonical seven roles are unchanged and catalog is idempotent", async () => {
+  assert.deepEqual(canonicalRoleValues, [
+    "PLATFORM_ADMIN", "FACILITY_MANAGER", "FACILITY_SUPERVISOR", "INSPECTOR",
+    "MAINTENANCE_TECHNICIAN", "WAREHOUSE_SUPERVISOR", "VENDOR",
+  ]);
+  const roles = await db.select().from(rolesTable).where(inArray(rolesTable.code, [...canonicalRoleValues]));
+  assert.equal(roles.length, 7);
+  const permissions = await db.select().from(permissionsTable);
+  assert.equal(new Set(permissions.map((permission) => permission.code)).size, permissions.length);
+  const rolePermissions = await db.select().from(rolePermissionsTable);
+  assert.ok(rolePermissions.length >= roleCapabilityRows.length);
+  assert.ok(canonicalPermissions.includes("WORK_ORDER.VERIFY"));
+});
+
+test("representative matrix decisions cover all seven roles", async () => {
+  const teamId = randomUUID();
+  const facilityId = randomUUID();
+  const buildingId = randomUUID();
+  const assignmentId = randomUUID();
+  const inspectorAssignmentId = randomUUID();
+  const technicianAssignmentId = randomUUID();
+  const manager = await makeFixture("FACILITY_MANAGER", "ORGANIZATION");
+  const supervisor = await makeFixture("FACILITY_SUPERVISOR", "TEAM", teamId);
+  const inspector = await makeFixture("INSPECTOR", "ASSIGNED", inspectorAssignmentId);
+  const technician = await makeFixture("MAINTENANCE_TECHNICIAN", "ASSIGNED", technicianAssignmentId);
+  const warehouse = await makeFixture("WAREHOUSE_SUPERVISOR", "BUILDING", buildingId);
+  const vendor = await makeFixture("VENDOR", "VENDOR_ASSIGNMENT", assignmentId);
+  const platform = await makeFixture("PLATFORM_ADMIN", "PLATFORM");
+
+  const decisions = await Promise.all([
+    authorize({ actorUserId: manager.userId, organizationId: manager.organizationId, permission: "ORGANIZATION.VIEW", resourceType: "ORGANIZATION", requestId: "task02-test" }),
+    authorize({ actorUserId: supervisor.userId, organizationId: supervisor.organizationId, permission: "WORK_ORDER.VERIFY", resourceType: "WORK_ORDER", verifiedContext: { teamId, organizationId: supervisor.organizationId, scopeVerified: true }, requestId: "task02-test" }),
+    authorize({ actorUserId: inspector.userId, organizationId: inspector.organizationId, permission: "INSPECTION.EXECUTE", resourceType: "INSPECTION", resourceId: inspectorAssignmentId, verifiedContext: { assignedUserId: inspector.userId, organizationId: inspector.organizationId, scopeVerified: true }, requestId: "task02-test" }),
+    authorize({ actorUserId: technician.userId, organizationId: technician.organizationId, permission: "WORK_ORDER.EXECUTE", resourceType: "WORK_ORDER", resourceId: technicianAssignmentId, verifiedContext: { assignedUserId: technician.userId, organizationId: technician.organizationId, scopeVerified: true }, requestId: "task02-test" }),
+    authorize({ actorUserId: warehouse.userId, organizationId: warehouse.organizationId, permission: "WORK_ORDER.VERIFY", resourceType: "WORK_ORDER", verifiedContext: { resourceScopeId: buildingId, organizationId: warehouse.organizationId, scopeVerified: true }, requestId: "task02-test" }),
+    authorize({ actorUserId: vendor.userId, organizationId: vendor.organizationId, permission: "WORK_ORDER.EXECUTE", resourceType: "WORK_ORDER", verifiedContext: { vendorUserId: vendor.userId, vendorAssignmentId: assignmentId, organizationId: vendor.organizationId, scopeVerified: true }, requestId: "task02-test" }),
+    authorize({ actorUserId: platform.userId, organizationId: platform.organizationId, permission: "ROLE.MANAGE", resourceType: "ROLE", requestId: "task02-test" }),
+  ]);
+  assert.ok(decisions.every((decision) => decision.allowed), JSON.stringify(decisions));
+  const denied = await authorize({
+    actorUserId: technician.userId,
+    organizationId: technician.organizationId,
+    permission: "WORK_ORDER.VERIFY",
+    resourceType: "WORK_ORDER",
+    verifiedContext: { assignedUserId: technician.userId, organizationId: technician.organizationId, scopeVerified: true },
+    requestId: "task02-test",
+  });
+  assert.equal(denied.allowed, false);
+  assert.equal(denied.reasonCode, "PERMISSION_MISSING");
+  // A facility binding cannot use an unrelated object.
+  const facilityManager = await makeFixture("FACILITY_MANAGER", "FACILITY", facilityId);
+  const missingProof = await makeFixture("FACILITY_MANAGER", "ORGANIZATION");
+  const facilityDecision = await authorize({
+    actorUserId: facilityManager.userId,
+    organizationId: facilityManager.organizationId,
+    permission: "FACILITY.VIEW",
+    resourceType: "FACILITY",
+    verifiedContext: { resourceScopeId: randomUUID(), organizationId: facilityManager.organizationId, scopeVerified: true },
+  });
+  assert.equal(facilityDecision.reasonCode, "SCOPE_MISMATCH");
+  const absentProof = await authorize({
+    actorUserId: missingProof.userId,
+    organizationId: missingProof.organizationId,
+    permission: "FACILITY.VIEW",
+    resourceType: "FACILITY",
+    actionContext: { resourceScopeId: facilityId, organizationId: missingProof.organizationId },
+  });
+  assert.equal(absentProof.reasonCode, "SCOPE_MISMATCH");
+  const broadBindingOperational = await authorize({
+    actorUserId: missingProof.userId,
+    organizationId: missingProof.organizationId,
+    permission: "FACILITY.VIEW",
+    resourceType: "FACILITY",
+    verifiedContext: {
+      resourceScopeId: facilityId,
+      facilityId,
+      organizationId: missingProof.organizationId,
+      scopeVerified: true,
+    },
+  });
+  assert.equal(broadBindingOperational.reasonCode, "SCOPE_MISMATCH");
+});
+
+test("unknown permission, mismatched resource, organization isolation and missing binding deny", async () => {
+  const fixture = await makeFixture("FACILITY_MANAGER", "ORGANIZATION");
+  const otherOrg = await db.insert(organizationsTable).values({ name: "Other", slug: `task02-other-${randomUUID()}` }).returning();
+  const unknown = await authorize({ actorUserId: fixture.userId, organizationId: fixture.organizationId, permission: "WORK_ORDER.NOT_REAL", resourceType: "WORK_ORDER", requestId: "task02-test" });
+  assert.equal(unknown.reasonCode, "PERMISSION_MISSING");
+  const mismatch = await authorize({ actorUserId: fixture.userId, organizationId: fixture.organizationId, permission: "ROLE.MANAGE", resourceType: "WORK_ORDER", requestId: "task02-test" });
+  assert.equal(mismatch.reasonCode, "PERMISSION_MISSING");
+  const crossOrg = await authorize({ actorUserId: fixture.userId, organizationId: otherOrg[0]!.id, permission: "ORGANIZATION.VIEW", resourceType: "ORGANIZATION", requestId: "task02-test" });
+  assert.equal(crossOrg.reasonCode, "ORGANIZATION_MISMATCH");
+  await db.delete(organizationsTable).where(eq(organizationsTable.id, otherOrg[0]!.id));
+  await db.delete(userRoleBindingsTable).where(eq(userRoleBindingsTable.id, fixture.bindingId));
+  const missing = await authorize({ actorUserId: fixture.userId, organizationId: fixture.organizationId, permission: "ORGANIZATION.VIEW", resourceType: "ORGANIZATION", requestId: "task02-test" });
+  assert.equal(missing.reasonCode, "BINDING_INACTIVE");
+});
+
+test("suspended and expired bindings deny, and explicit DENY wins", async () => {
+  const fixture = await makeFixture("FACILITY_MANAGER", "ORGANIZATION");
+  await db.update(userRoleBindingsTable).set({ status: "SUSPENDED" }).where(eq(userRoleBindingsTable.id, fixture.bindingId));
+  const suspended = await authorize({ actorUserId: fixture.userId, organizationId: fixture.organizationId, permission: "ORGANIZATION.VIEW", resourceType: "ORGANIZATION", requestId: "task02-test" });
+  assert.equal(suspended.reasonCode, "BINDING_INACTIVE");
+  await db.update(userRoleBindingsTable).set({ status: "ACTIVE", endsAt: new Date(Date.now() - 1000) }).where(eq(userRoleBindingsTable.id, fixture.bindingId));
+  const expired = await authorize({ actorUserId: fixture.userId, organizationId: fixture.organizationId, permission: "ORGANIZATION.VIEW", resourceType: "ORGANIZATION", requestId: "task02-test" });
+  assert.equal(expired.reasonCode, "BINDING_INACTIVE");
+  await db.update(userRoleBindingsTable).set({ endsAt: null }).where(eq(userRoleBindingsTable.id, fixture.bindingId));
+  const permission = await permissionId("ORGANIZATION.VIEW");
+  await db.update(rolePermissionsTable).set({ effect: "DENY" }).where(and(eq(rolePermissionsTable.roleId, fixture.roleId), eq(rolePermissionsTable.permissionId, permission)));
+  const explicit = await authorize({ actorUserId: fixture.userId, organizationId: fixture.organizationId, permission: "ORGANIZATION.VIEW", resourceType: "ORGANIZATION", requestId: "task02-test" });
+  assert.equal(explicit.reasonCode, "EXPLICIT_DENY");
+  await db.update(rolePermissionsTable).set({ effect: "ALLOW" }).where(and(eq(rolePermissionsTable.roleId, fixture.roleId), eq(rolePermissionsTable.permissionId, permission)));
+});
+
+test("inactive user, organization, and future binding are denied", async () => {
+  const fixture = await makeFixture("FACILITY_MANAGER", "ORGANIZATION");
+  await db.update(usersTable).set({ isActive: false }).where(eq(usersTable.id, fixture.userId));
+  const inactiveUser = await authorize({ actorUserId: fixture.userId, organizationId: fixture.organizationId, permission: "ORGANIZATION.VIEW", resourceType: "ORGANIZATION" });
+  assert.equal(inactiveUser.reasonCode, "USER_INACTIVE");
+  await db.update(usersTable).set({ isActive: true }).where(eq(usersTable.id, fixture.userId));
+  await db.update(organizationsTable).set({ isActive: false }).where(eq(organizationsTable.id, fixture.organizationId));
+  const inactiveOrganization = await authorize({ actorUserId: fixture.userId, organizationId: fixture.organizationId, permission: "ORGANIZATION.VIEW", resourceType: "ORGANIZATION" });
+  assert.equal(inactiveOrganization.reasonCode, "ORGANIZATION_MISMATCH");
+  await db.update(organizationsTable).set({ isActive: true }).where(eq(organizationsTable.id, fixture.organizationId));
+  await db.update(userRoleBindingsTable).set({ startsAt: new Date(Date.now() + 60_000) }).where(eq(userRoleBindingsTable.id, fixture.bindingId));
+  const futureBinding = await authorize({ actorUserId: fixture.userId, organizationId: fixture.organizationId, permission: "ORGANIZATION.VIEW", resourceType: "ORGANIZATION" });
+  assert.equal(futureBinding.reasonCode, "BINDING_INACTIVE");
+});
+
+test("role binding state validation rejects missing scope IDs, invalid dates, and lifecycle states", async () => {
+  for (const scopeType of ["FACILITY", "BUILDING", "SPACE", "ASSET", "ASSIGNED", "TEAM", "VENDOR_ASSIGNMENT", "OWNED_REQUEST"]) {
+    const result = validateRoleBindingState({
+      scopeType,
+      scopeId: null,
+      status: "ACTIVE",
+      startsAt: null,
+      endsAt: null,
+    });
+    assert.equal(result.valid, false);
+  }
+  assert.equal(validateRoleBindingState({
+    scopeType: "ORGANIZATION", scopeId: null, status: "ACTIVE",
+    startsAt: "not-a-date", endsAt: null,
+  }).valid, false);
+  assert.equal(validateRoleBindingState({
+    scopeType: "ORGANIZATION", scopeId: null, status: "ACTIVE",
+    startsAt: "2026-02-01T00:00:00Z", endsAt: "2026-01-01T00:00:00Z",
+  }).valid, false);
+  assert.equal(validateRoleBindingState({
+    scopeType: "ORGANIZATION", scopeId: null, status: "ACTIVE",
+    startsAt: null, endsAt: new Date(Date.now() - 1000),
+  }).valid, false);
+  assert.equal(validateRoleBindingState({
+    scopeType: "ORGANIZATION", scopeId: null, status: "EXPIRED",
+    startsAt: null, endsAt: null,
+  }).valid, false);
+  assert.equal(validateRoleBindingState({
+    scopeType: "ORGANIZATION", scopeId: null, status: "EXPIRED",
+    startsAt: null, endsAt: new Date(Date.now() + 1000),
+  }).valid, false);
+});
+
+test("duplicate null-scope bindings are rejected by the database constraint", async () => {
+  const fixture = await makeFixture("FACILITY_MANAGER", "ORGANIZATION");
+  await assert.rejects(
+    db.insert(userRoleBindingsTable).values({
+      userId: fixture.userId,
+      organizationId: fixture.organizationId,
+      roleId: fixture.roleId,
+      scopeType: "ORGANIZATION",
+      scopeId: null,
+      grantedBy: fixture.userId,
+    }),
+    (error: unknown) => (error as { cause?: { code?: string } }).cause?.code === "23505",
+  );
+});
+
+test("technician and vendor assignment isolation is enforced", async () => {
+  const technicianAssignment = randomUUID();
+  const technician = await makeFixture("MAINTENANCE_TECHNICIAN", "ASSIGNED", technicianAssignment);
+  const vendorAssignment = randomUUID();
+  const vendor = await makeFixture("VENDOR", "VENDOR_ASSIGNMENT", vendorAssignment);
+  const ownWork = await authorize({ actorUserId: technician.userId, organizationId: technician.organizationId, permission: "WORK_ORDER.EXECUTE", resourceType: "WORK_ORDER", resourceId: technicianAssignment, verifiedContext: { assignedUserId: technician.userId, organizationId: technician.organizationId, scopeVerified: true } });
+  const otherWork = await authorize({ actorUserId: technician.userId, organizationId: technician.organizationId, permission: "WORK_ORDER.EXECUTE", resourceType: "WORK_ORDER", resourceId: randomUUID(), verifiedContext: { assignedUserId: randomUUID(), organizationId: technician.organizationId, scopeVerified: true } });
+  const ownVendor = await authorize({ actorUserId: vendor.userId, organizationId: vendor.organizationId, permission: "WORK_ORDER.EXECUTE", resourceType: "WORK_ORDER", verifiedContext: { vendorUserId: vendor.userId, vendorAssignmentId: vendorAssignment, organizationId: vendor.organizationId, scopeVerified: true } });
+  const otherVendor = await authorize({ actorUserId: vendor.userId, organizationId: vendor.organizationId, permission: "WORK_ORDER.EXECUTE", resourceType: "WORK_ORDER", verifiedContext: { vendorUserId: vendor.userId, vendorAssignmentId: randomUUID(), organizationId: vendor.organizationId, scopeVerified: true } });
+  const clientClaim = await authorize({ actorUserId: technician.userId, organizationId: technician.organizationId, permission: "WORK_ORDER.EXECUTE", resourceType: "WORK_ORDER", actionContext: { assignedUserId: technician.userId } });
+  assert.equal(ownWork.allowed, true);
+  assert.equal(otherWork.reasonCode, "SCOPE_MISMATCH");
+  assert.equal(ownVendor.allowed, true);
+  assert.equal(otherVendor.reasonCode, "SCOPE_MISMATCH");
+  assert.equal(clientClaim.reasonCode, "SCOPE_MISMATCH");
+});
+
+test("platform administration is separated from operational access", async () => {
+  const platform = await makeFixture("PLATFORM_ADMIN", "PLATFORM");
+  const foundation = await authorize({ actorUserId: platform.userId, organizationId: platform.organizationId, permission: "PERMISSION.MANAGE", resourceType: "PERMISSION" });
+  const operational = await authorize({ actorUserId: platform.userId, organizationId: platform.organizationId, permission: "WORK_ORDER.EXECUTE", resourceType: "WORK_ORDER" });
+  assert.equal(foundation.allowed, true);
+  assert.equal(operational.reasonCode, "PERMISSION_MISSING");
+  assert.equal(assertOrganizationScope(platform.organizationId, platform.organizationId), undefined);
+  assert.throws(() => assertOrganizationScope(randomUUID(), platform.organizationId), (error: unknown) =>
+    error instanceof AuthorizationError && error.reasonCode === "ORGANIZATION_MISMATCH");
+  assert.equal(isSelfRoleEscalation(platform.userId, platform.userId), true);
+  assert.equal(isSelfRoleEscalation(platform.userId, randomUUID()), false);
+  assert.equal(isPlatformOperationalPermission("WORK_ORDER.EXECUTE"), true);
+  assert.equal(isPermissionInRoleMatrix("PLATFORM_ADMIN", "WORK_ORDER.EXECUTE"), false);
+  assert.equal(isPermissionInRoleMatrix("PLATFORM_ADMIN", "ROLE.MANAGE"), true);
+  assert.equal(isRolePermissionConfigurationAllowed("MAINTENANCE_TECHNICIAN", "WORK_ORDER.EXECUTE", "ASSIGNED"), true);
+  assert.equal(isRolePermissionConfigurationAllowed("MAINTENANCE_TECHNICIAN", "WORK_ORDER.EXECUTE", "ORGANIZATION"), false);
+  assert.equal(canCrossOrganizationFoundation("ORGANIZATION", platform.organizationId, platform.organizationId), true);
+  assert.equal(canCrossOrganizationFoundation("ORGANIZATION", platform.organizationId, randomUUID()), false);
+  assert.equal(canCrossOrganizationFoundation("PLATFORM", platform.organizationId, randomUUID()), true);
+});
+
+test("permission middleware enforces the same evaluator as direct service calls", async () => {
+  const fixture = await makeFixture("FACILITY_MANAGER", "ORGANIZATION");
+  const middleware = requirePermission("ORGANIZATION.VIEW");
+  let nextCalled = false;
+  await middleware(
+    { appUserId: fixture.userId, activeOrganizationId: fixture.organizationId, id: "task02-test" } as never,
+    { status: () => ({ json: () => undefined }) } as never,
+    () => { nextCalled = true; },
+  );
+  assert.equal(nextCalled, true);
+});
+
+test("production authorization probe is disabled", async () => {
+  assert.equal(authorizationProbeAvailable("production"), false);
+  assert.equal(authorizationProbeAvailable("development"), true);
+});
+
+test("authorization routes run through a real HTTP app with injected currentUser", async () => {
+  const platform = await makeFixture("PLATFORM_ADMIN", "PLATFORM");
+  const manager = await makeFixture("FACILITY_MANAGER", "ORGANIZATION");
+  const target = await makeFixture("FACILITY_SUPERVISOR", "ORGANIZATION");
+  await db.insert(userContextsTable).values({
+    userId: platform.userId,
+    activeOrganizationId: platform.organizationId,
+  }).onConflictDoUpdate({
+    target: userContextsTable.userId,
+    set: { activeOrganizationId: platform.organizationId },
+  });
+  await db.insert(userContextsTable).values({
+    userId: manager.userId,
+    activeOrganizationId: manager.organizationId,
+  }).onConflictDoUpdate({
+    target: userContextsTable.userId,
+    set: { activeOrganizationId: manager.organizationId },
+  });
+  await db.insert(userRoleBindingsTable).values({
+    userId: manager.userId,
+    organizationId: target.organizationId,
+    roleId: manager.roleId,
+    scopeType: "ORGANIZATION",
+    grantedBy: platform.userId,
+  });
+  let actorId = platform.userId;
+  const app = express();
+  app.use(express.json());
+  app.use(createAuthorizationRouter({
+    currentUser: async () => {
+      const [actor] = await db.select().from(usersTable).where(eq(usersTable.id, actorId));
+      return actor ?? null;
+    },
+  }));
+  const server = createServer(app);
+  await new Promise<void>((resolve) => server.listen(0, resolve));
+  const address = server.address();
+  assert.ok(address && typeof address === "object");
+  const base = `http://127.0.0.1:${address.port}`;
+  const request = async (path: string, init: RequestInit = {}) => {
+    const response = await fetch(`${base}${path}`, {
+      ...init,
+      headers: { "content-type": "application/json", ...(init.headers ?? {}) },
+    });
+    return { response, body: await response.json() as Record<string, unknown> | unknown[] };
+  };
+  try {
+    const permissions = await request("/permissions");
+    assert.equal(permissions.response.status, 200);
+    const roles = await request("/roles");
+    assert.equal(roles.response.status, 200);
+    const rolePermissions = await request(`/roles/${manager.roleId}/permissions`);
+    assert.equal(rolePermissions.response.status, 200);
+    const version = rolePermissions.response.headers.get("etag");
+    assert.ok(version);
+    const missingPrecondition = await request(`/roles/${manager.roleId}/permissions`, {
+      method: "PUT",
+      body: JSON.stringify({ permissions: [] }),
+    });
+    assert.equal(missingPrecondition.response.status, 428);
+
+    const revoked = await request(`/roles/${manager.roleId}/permissions`, {
+      method: "PUT",
+      headers: { "if-match": version! },
+      body: JSON.stringify({ permissions: [] }),
+    });
+    assert.equal(revoked.response.status, 200, JSON.stringify(revoked.body));
+    assert.ok(Array.isArray(revoked.body));
+    assert.ok((revoked.body as Array<{ effect: string }>).every((row) => row.effect === "DENY"));
+    await seedAuthorizationCatalog({ force: true });
+    const durable = await authorize({
+      actorUserId: manager.userId,
+      organizationId: manager.organizationId,
+      permission: "ORGANIZATION.VIEW",
+      resourceType: "ORGANIZATION",
+    });
+    assert.equal(durable.reasonCode, "EXPLICIT_DENY");
+
+    const stale = await request(`/roles/${manager.roleId}/permissions`, {
+      method: "PUT",
+      headers: { "if-match": version! },
+      body: JSON.stringify({ permissions: [] }),
+    });
+    assert.equal(stale.response.status, 409);
+    const reflected = await request(`/roles/${manager.roleId}/permissions`);
+    assert.equal(reflected.response.status, 200);
+    assert.ok((reflected.body as Array<{ effect: string }>).some((row) => row.effect === "DENY"));
+
+    const created = await request(`/users/${target.userId}/role-bindings`, {
+      method: "POST",
+      body: JSON.stringify({
+        organizationId: target.organizationId,
+        roleId: manager.roleId,
+        scopeType: "ORGANIZATION",
+      }),
+    });
+    assert.equal(created.response.status, 201, JSON.stringify(created.body));
+    const createdBindingId = (created.body as { id: string }).id;
+    const [createdBeforeValidation] = await db.select().from(userRoleBindingsTable).where(eq(userRoleBindingsTable.id, createdBindingId));
+    assert.ok(createdBeforeValidation);
+    const auditsBeforeRejectedBindingPatches = await db.select().from(authorizationAuditLogsTable)
+      .where(and(
+        eq(authorizationAuditLogsTable.actorUserId, platform.userId),
+        eq(authorizationAuditLogsTable.resource, "USER_ROLE_BINDING"),
+      ));
+    for (const scopeType of ["FACILITY", "BUILDING", "SPACE", "ASSET", "ASSIGNED", "TEAM", "VENDOR_ASSIGNMENT", "OWNED_REQUEST"]) {
+      const rejectedScope = await request(`/users/${target.userId}/role-bindings/${createdBindingId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ scopeType, scopeId: null }),
+      });
+      assert.equal(rejectedScope.response.status, 400);
+      const [unchanged] = await db.select().from(userRoleBindingsTable).where(eq(userRoleBindingsTable.id, createdBindingId));
+      assert.deepEqual(unchanged, createdBeforeValidation);
+    }
+    for (const invalidPatch of [
+      { startsAt: "not-a-date" },
+      { startsAt: "2026-02-01T00:00:00Z", endsAt: "2026-01-01T00:00:00Z" },
+      { status: "ACTIVE", endsAt: new Date(Date.now() - 1000).toISOString() },
+      { status: "EXPIRED" },
+      { status: "EXPIRED", endsAt: new Date(Date.now() + 1000).toISOString() },
+    ]) {
+      const rejectedLifecycle = await request(`/users/${target.userId}/role-bindings/${createdBindingId}`, {
+        method: "PATCH",
+        body: JSON.stringify(invalidPatch),
+      });
+      assert.equal(rejectedLifecycle.response.status, 400);
+      const [unchanged] = await db.select().from(userRoleBindingsTable).where(eq(userRoleBindingsTable.id, createdBindingId));
+      assert.deepEqual(unchanged, createdBeforeValidation);
+    }
+    const auditsAfterRejectedBindingPatches = await db.select().from(authorizationAuditLogsTable)
+      .where(and(
+        eq(authorizationAuditLogsTable.actorUserId, platform.userId),
+        eq(authorizationAuditLogsTable.resource, "USER_ROLE_BINDING"),
+      ));
+    assert.equal(auditsAfterRejectedBindingPatches.length, auditsBeforeRejectedBindingPatches.length);
+    const duplicate = await request(`/users/${target.userId}/role-bindings`, {
+      method: "POST",
+      body: JSON.stringify({
+        organizationId: target.organizationId,
+        roleId: manager.roleId,
+        scopeType: "ORGANIZATION",
+      }),
+    });
+    assert.equal(duplicate.response.status, 409);
+    const listed = await request(`/users/${target.userId}/role-bindings`);
+    assert.equal(listed.response.status, 200);
+    assert.ok((listed.body as unknown[]).some((row) => (row as { id: string }).id === createdBindingId));
+
+    const patched = await request(`/users/${target.userId}/role-bindings/${createdBindingId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status: "SUSPENDED" }),
+    });
+    assert.equal(patched.response.status, 200, JSON.stringify(patched.body));
+    const [freshBinding] = await db.select().from(userRoleBindingsTable).where(eq(userRoleBindingsTable.id, createdBindingId));
+    assert.ok(freshBinding);
+    const concurrent = await Promise.all([
+      request(`/users/${target.userId}/role-bindings/${createdBindingId}`, { method: "PATCH", body: JSON.stringify({ status: "ACTIVE" }) }),
+      request(`/users/${target.userId}/role-bindings/${createdBindingId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: "EXPIRED", endsAt: new Date(Date.now() - 1000).toISOString() }),
+      }),
+    ]);
+    assert.equal(concurrent.filter(({ response }) => response.status === 200).length, 1);
+    assert.equal(concurrent.filter(({ response }) => response.status === 409).length, 1);
+
+    const selfPatch = await request(`/users/${platform.userId}/role-bindings/${platform.bindingId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status: "SUSPENDED" }),
+    });
+    assert.equal(selfPatch.response.status, 403);
+    const selfDelete = await request(`/users/${platform.userId}/role-bindings/${platform.bindingId}`, { method: "DELETE" });
+    assert.equal(selfDelete.response.status, 403);
+    actorId = manager.userId;
+    const crossOrgList = await request(`/users/${target.userId}/role-bindings`);
+    assert.equal(crossOrgList.response.status, 403);
+    const crossOrgCreate = await request(`/users/${target.userId}/role-bindings`, {
+      method: "POST",
+      body: JSON.stringify({ organizationId: target.organizationId, roleId: manager.roleId, scopeType: "ORGANIZATION" }),
+    });
+    assert.equal(crossOrgCreate.response.status, 403);
+    const crossOrgDelete = await request(`/users/${target.userId}/role-bindings/${createdBindingId}`, { method: "DELETE" });
+    assert.equal(crossOrgDelete.response.status, 403);
+
+    const mePermissions = await request("/me/permissions");
+    assert.equal(mePermissions.response.status, 200);
+    assert.equal((mePermissions.body as { organizationId: string }).organizationId, manager.organizationId);
+    const meScope = await request("/me/scope");
+    assert.equal(meScope.response.status, 200);
+    assert.ok((meScope.body as Array<{ organizationId: string }>).every((row) => row.organizationId === manager.organizationId));
+
+    const previousEnvironment = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+    const probe = await request("/authorization/check", {
+      method: "POST",
+      body: JSON.stringify({ permission: "ORGANIZATION.VIEW", resourceType: "ORGANIZATION" }),
+    });
+    if (previousEnvironment === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = previousEnvironment;
+    assert.equal(probe.response.status, 404);
+  } finally {
+    server.close();
+    await db.delete(rolePermissionsTable).where(eq(rolePermissionsTable.roleId, manager.roleId));
+    const restored = roleCapabilityRows
+      .filter(([, roleCode]) => roleCode === "FACILITY_MANAGER")
+      .flatMap(([resource, , actions, defaultScopeType]) => actions.map((action) => ({
+        roleId: manager.roleId,
+        permissionId: seededPermissions.get(`${resource}.${action}`)!,
+        defaultScopeType: defaultScopeType as "ORGANIZATION",
+        effect: "ALLOW" as const,
+      })));
+    await db.insert(rolePermissionsTable).values(restored).onConflictDoNothing();
+  }
+});
+
+test("permission introspection follows binding scope intersection and deny precedence", async () => {
+  const manager = await makeFixture("FACILITY_MANAGER", "ORGANIZATION");
+  await db.update(rolePermissionsTable).set({ effect: "ALLOW" }).where(eq(rolePermissionsTable.roleId, manager.roleId));
+  await db.insert(userContextsTable).values({
+    userId: manager.userId,
+    activeOrganizationId: manager.organizationId,
+  }).onConflictDoUpdate({
+    target: userContextsTable.userId,
+    set: { activeOrganizationId: manager.organizationId },
+  });
+  const app = express();
+  app.use(express.json());
+  app.use(createAuthorizationRouter({
+    currentUser: async () => {
+      const [actor] = await db.select().from(usersTable).where(eq(usersTable.id, manager.userId));
+      return actor ?? null;
+    },
+  }));
+  const server = createServer(app);
+  await new Promise<void>((resolve) => server.listen(0, resolve));
+  const address = server.address();
+  assert.ok(address && typeof address === "object");
+  try {
+    const list = await listUserPermissions(manager.userId, manager.organizationId);
+    assert.ok(list.some((permission) => permission.code === "ORGANIZATION.VIEW"));
+    assert.equal(list.some((permission) => permission.code === "FACILITY.VIEW"), false);
+    assert.equal(list.some((permission) => permission.code === "WORK_ORDER.VIEW"), false);
+    const response = await fetch(`http://127.0.0.1:${address.port}/me/permissions`);
+    assert.equal(response.status, 200);
+    const body = await response.json() as { permissions: Array<{ code: string; scopeType: string }> };
+    assert.ok(body.permissions.some((permission) => permission.code === "ORGANIZATION.VIEW"));
+    assert.equal(body.permissions.some((permission) => permission.code === "FACILITY.VIEW"), false);
+    assert.equal(body.permissions.some((permission) => permission.code === "WORK_ORDER.VIEW"), false);
+
+    await db.insert(userRoleBindingsTable).values({
+      userId: manager.userId,
+      organizationId: manager.organizationId,
+      roleId: manager.roleId,
+      scopeType: "FACILITY",
+      scopeId: null,
+      grantedBy: manager.userId,
+    });
+    const legacyInvalidDecision = await authorize({
+      actorUserId: manager.userId,
+      organizationId: manager.organizationId,
+      permission: "FACILITY.VIEW",
+      resourceType: "FACILITY",
+      verifiedContext: {
+        organizationId: manager.organizationId,
+        resourceScopeId: randomUUID(),
+        scopeVerified: true,
+      },
+    });
+    assert.equal(legacyInvalidDecision.allowed, false);
+    assert.equal(
+      (await listUserPermissions(manager.userId, manager.organizationId))
+        .some((permission) => permission.code === "FACILITY.VIEW"),
+      false,
+    );
+
+    const facilityScopeId = randomUUID();
+    await db.insert(userRoleBindingsTable).values({
+      userId: manager.userId,
+      organizationId: manager.organizationId,
+      roleId: manager.roleId,
+      scopeType: "FACILITY",
+      scopeId: facilityScopeId,
+      grantedBy: manager.userId,
+    });
+    const scopedList = await listUserPermissions(manager.userId, manager.organizationId);
+    assert.ok(scopedList.some((permission) => permission.code === "FACILITY.VIEW" && permission.scopeType === "FACILITY"));
+    const scopedResponse = await fetch(`http://127.0.0.1:${address.port}/me/permissions`);
+    const scopedBody = await scopedResponse.json() as { permissions: Array<{ code: string; scopeType: string }> };
+    assert.ok(scopedBody.permissions.some((permission) => permission.code === "WORK_ORDER.VIEW" && permission.scopeType === "FACILITY"));
+
+    const facilityPermission = await permissionId("FACILITY.VIEW");
+    await db.update(rolePermissionsTable).set({ effect: "DENY" }).where(and(
+      eq(rolePermissionsTable.roleId, manager.roleId),
+      eq(rolePermissionsTable.permissionId, facilityPermission),
+    ));
+    const deniedList = await listUserPermissions(manager.userId, manager.organizationId);
+    assert.equal(deniedList.some((permission) => permission.code === "FACILITY.VIEW"), false);
+    const deniedResponse = await fetch(`http://127.0.0.1:${address.port}/me/permissions`);
+    const deniedBody = await deniedResponse.json() as { permissions: Array<{ code: string }> };
+    assert.equal(deniedBody.permissions.some((permission) => permission.code === "FACILITY.VIEW"), false);
+    await db.update(rolePermissionsTable).set({ effect: "ALLOW" }).where(and(
+      eq(rolePermissionsTable.roleId, manager.roleId),
+      eq(rolePermissionsTable.permissionId, facilityPermission),
+    ));
+  } finally {
+    server.close();
+  }
+});
+
+test("foundation bootstrap remains idempotent and audit payload is sanitized", async () => {
+  const externalAuthId = `task02-foundation-${randomUUID()}`;
+  const identity = { externalAuthId, displayName: "Task 02 Foundation", email: `${randomUUID()}@task02.invalid` };
+  const [first, second] = await Promise.all([
+    ensureFoundationUser(identity),
+    ensureFoundationUser(identity),
+  ]);
+  assert.equal(first.id, second.id);
+  const firstSession = await getAppSession(first);
+  const secondSession = await getAppSession(second);
+  assert.equal(firstSession.memberships.length, 1);
+  assert.deepEqual(secondSession.memberships, firstSession.memberships);
+  const bindingCount = await db.select().from(userRoleBindingsTable).where(eq(userRoleBindingsTable.userId, first.id));
+  assert.equal(bindingCount.length, 1);
+  const decision = await authorize({
+    actorUserId: first.id,
+    organizationId: firstSession.activeOrganization?.organization.id,
+    permission: "NOTIFICATION.VIEW",
+    resourceType: "NOTIFICATION",
+    actionContext: { password: "secret", token: "secret", sessionSecret: "secret" },
+    requestId: "task02-test",
+  });
+  assert.equal(decision.allowed, true);
+  const auditRows = await db.select().from(authorizationAuditLogsTable).where(and(eq(authorizationAuditLogsTable.actorUserId, first.id), eq(authorizationAuditLogsTable.requestId, "task02-test")));
+  assert.ok(auditRows.length > 0);
+  assert.ok(auditRows.every((row) => !JSON.stringify(row).includes("secret")));
+  await recordAuthorizationConfigurationAudit({
+    actorUserId: first.id,
+    organizationId: firstSession.activeOrganization?.organization.id,
+    action: "PERMISSION_CHANGED",
+    resource: "ROLE",
+    resourceId: first.id,
+    beforeState: { effect: "ALLOW", token: "secret" },
+    afterState: { effect: "DENY", password: "secret" },
+    reasonCode: "POLICY_TEST",
+    requestId: "task02-test",
+  });
+  const configurationAudit = await db.select().from(authorizationAuditLogsTable).where(and(eq(authorizationAuditLogsTable.actorUserId, first.id), eq(authorizationAuditLogsTable.resource, "ROLE"), eq(authorizationAuditLogsTable.requestId, "task02-test")));
+  assert.ok(configurationAudit.some((row) => row.beforeState?.includes("ALLOW") && row.afterState?.includes("DENY") && row.reasonCode === "POLICY_TEST"));
+  assert.ok(configurationAudit.every((row) => !JSON.stringify(row).includes("secret")));
+  await db.delete(authorizationAuditLogsTable).where(eq(authorizationAuditLogsTable.actorUserId, first.id));
+  await db.delete(usersTable).where(eq(usersTable.id, first.id));
+});
+
+test("concurrent foundation bootstrap remains one user, membership, context and binding", async () => {
+  const identity = {
+    externalAuthId: `task02-concurrent-${randomUUID()}`,
+    displayName: "Task 02 Concurrent",
+    email: `${randomUUID()}@task02.invalid`,
+  };
+  const users = await Promise.all([
+    ensureFoundationUser(identity),
+    ensureFoundationUser(identity),
+    ensureFoundationUser(identity),
+  ]);
+  assert.equal(new Set(users.map((user) => user.id)).size, 1);
+  const userId = users[0]!.id;
+  const memberships = await db.select().from(membershipsTable).where(eq(membershipsTable.userId, userId));
+  const contexts = await db.select().from(userContextsTable).where(eq(userContextsTable.userId, userId));
+  const bindings = await db.select().from(userRoleBindingsTable).where(eq(userRoleBindingsTable.userId, userId));
+  assert.equal(memberships.length, 1);
+  assert.equal(contexts.length, 1);
+  assert.equal(bindings.length, 1);
+  await db.delete(usersTable).where(eq(usersTable.id, userId));
+});

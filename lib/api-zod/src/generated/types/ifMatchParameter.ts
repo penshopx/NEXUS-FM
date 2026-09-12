@@ -6,7 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface RoleBindingRevocation {
-  /** @minLength 1 */
-  reason: string;
-}
+/**
+ * Exact role policyVersion token returned as the ETag header.
+ */
+export type IfMatchParameter = string;

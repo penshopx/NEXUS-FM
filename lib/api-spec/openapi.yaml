@@ -127,273 +127,241 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-  /authorization/me:
+  /permissions:
     get:
-      operationId: getMyAuthorization
+      operationId: listPermissions
       tags: [authorization]
-      summary: Get effective permissions and scopes for the active organization
+      summary: List canonical permissions
       responses:
         "200":
-          description: Effective authorization profile
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AuthorizationProfile"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Active organization context required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /authorization/check:
-    post:
-      operationId: checkAuthorization
-      tags: [authorization]
-      summary: Check one canonical permission for the authenticated actor
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AuthorizationCheckInput"
-      responses:
-        "200":
-          description: Authorization decision
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AuthorizationDecision"
-        "400":
-          description: Invalid request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /authorization/permissions:
-    get:
-      operationId: listPermissionCatalog
-      tags: [authorization]
-      summary: List the canonical permission catalog
-      responses:
-        "200":
-          description: Canonical permissions
+          description: Permission catalog
           content:
             application/json:
               schema:
                 type: array
                 items:
                   $ref: "#/components/schemas/Permission"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Administrative permission required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /authorization/roles:
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /roles:
     get:
-      operationId: listRoleCapabilities
+      operationId: listRoles
       tags: [authorization]
-      summary: List canonical role capability assignments
+      summary: List canonical roles
       responses:
         "200":
-          description: Canonical role capabilities
+          description: Roles
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/RoleCapability"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Administrative permission required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /users/{userId}/role-bindings:
+                  $ref: "#/components/schemas/Role"
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /roles/{roleId}/permissions:
+    parameters:
+      - {$ref: "#/components/parameters/RoleId"}
     get:
-      operationId: listUserRoleBindings
+      operationId: getRolePermissions
       tags: [authorization]
-      summary: List scoped role bindings for a user
+      summary: Read role permissions
+      responses:
+        "200":
+          description: Role permission assignments
+          headers:
+            ETag:
+              description: Exact role policyVersion required by a replacement PUT.
+              schema: {type: string}
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RolePermission"
+        "403": {$ref: "#/components/responses/Forbidden"}
+    put:
+      operationId: updateRolePermissions
+      tags: [authorization]
+      summary: Replace role permissions
+      description: The If-Match header is the role policy version. Stale versions are rejected to prevent lost concurrent updates; omitted canonical capabilities are persisted as explicit DENY entries.
       parameters:
-        - $ref: "#/components/parameters/UserId"
-      responses:
-        "200":
-          description: User role bindings
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/RoleBinding"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Administrative permission required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /admin/role-bindings:
-    post:
-      operationId: createRoleBinding
-      tags: [authorization]
-      summary: Grant a scoped canonical role
+        - $ref: "#/components/parameters/IfMatch"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/RoleBindingInput"
+              $ref: "#/components/schemas/RolePermissionUpdate"
+      responses:
+        "200":
+          description: Updated role permission assignments
+          headers:
+            ETag:
+              description: New role policyVersion.
+              schema: {type: string}
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RolePermission"
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "409": {$ref: "#/components/responses/Conflict"}
+        "428": {$ref: "#/components/responses/PreconditionRequired"}
+  /users/{userId}/role-bindings:
+    parameters:
+      - {$ref: "#/components/parameters/UserId"}
+    get:
+      operationId: getUserRoleBindings
+      tags: [authorization]
+      summary: Read a user's scoped role bindings
+      responses:
+        "200":
+          description: Role bindings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserRoleBinding"
+        "403": {$ref: "#/components/responses/Forbidden"}
+    post:
+      operationId: createUserRoleBinding
+      tags: [authorization]
+      summary: Create a scoped role binding
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserRoleBindingInput"
       responses:
         "201":
-          description: Role binding created
+          description: Created role binding
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/RoleBinding"
-        "400":
-          description: Invalid binding
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Administrative permission required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /admin/role-bindings/{bindingId}:
+                $ref: "#/components/schemas/UserRoleBinding"
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /users/{userId}/role-bindings/{bindingId}:
+    parameters:
+      - {$ref: "#/components/parameters/UserId"}
+      - {$ref: "#/components/parameters/BindingId"}
     patch:
-      operationId: updateRoleBinding
+      operationId: updateUserRoleBinding
       tags: [authorization]
-      summary: Update scoped role binding lifecycle
-      parameters:
-        - $ref: "#/components/parameters/BindingId"
+      summary: Update or revoke a scoped role binding
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/RoleBindingUpdate"
+              $ref: "#/components/schemas/UserRoleBindingUpdate"
       responses:
         "200":
-          description: Role binding updated
+          description: Updated role binding
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/RoleBinding"
-        "400":
-          description: Invalid update
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Administrative permission required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "404":
-          description: Binding not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                $ref: "#/components/schemas/UserRoleBinding"
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
     delete:
-      operationId: revokeRoleBinding
+      operationId: revokeUserRoleBinding
       tags: [authorization]
       summary: Revoke a scoped role binding
-      parameters:
-        - $ref: "#/components/parameters/BindingId"
+      responses:
+        "200":
+          description: Revoked role binding
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserRoleBinding"
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /me/permissions:
+    get:
+      operationId: getMyPermissions
+      tags: [authorization]
+      summary: Introspect current permissions
+      responses:
+        "200":
+          description: Current user permissions and scopes
+          content:
+            application/json:
+              schema:
+                type: object
+        "401": {$ref: "#/components/responses/Unauthorized"}
+  /me/scope:
+    get:
+      operationId: getMyScope
+      tags: [authorization]
+      summary: Introspect current role bindings
+      responses:
+        "200":
+          description: Current user role bindings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserRoleBinding"
+        "401": {$ref: "#/components/responses/Unauthorized"}
+  /authorization/check:
+    post:
+      operationId: checkAuthorization
+      tags: [authorization]
+      summary: Development-only diagnostic permission check
+      description: This endpoint is disabled in production and actionContext is diagnostic only; it cannot prove production object relationships or replace service-side resource resolution.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/RoleBindingRevocation"
+              $ref: "#/components/schemas/AuthorizationCheck"
       responses:
         "200":
-          description: Role binding revoked
+          description: Allow decision
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/RoleBinding"
-        "401":
-          description: Authentication required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Administrative permission required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "404":
-          description: Binding not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                $ref: "#/components/schemas/AuthorizationDecision"
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
 components:
   parameters:
-    UserId:
-      name: userId
-      in: path
+    RoleId: {name: roleId, in: path, required: true, schema: {type: string, format: uuid}}
+    UserId: {name: userId, in: path, required: true, schema: {type: string, format: uuid}}
+    BindingId: {name: bindingId, in: path, required: true, schema: {type: string, format: uuid}}
+    IfMatch:
+      name: If-Match
+      in: header
       required: true
-      schema:
-        type: string
-        format: uuid
-    BindingId:
-      name: bindingId
-      in: path
-      required: true
-      schema:
-        type: string
-        format: uuid
+      description: Exact role policyVersion token returned as the ETag header.
+      schema: {type: string}
+  responses:
+    Unauthorized:
+      description: Authentication required
+      content: {application/json: {schema: {$ref: "#/components/schemas/ErrorResponse"}}}
+    Forbidden:
+      description: Authorization denied
+      content: {application/json: {schema: {$ref: "#/components/schemas/ErrorResponse"}}}
+    BadRequest:
+      description: Invalid request
+      content: {application/json: {schema: {$ref: "#/components/schemas/ErrorResponse"}}}
+    NotFound:
+      description: Resource not found
+      content: {application/json: {schema: {$ref: "#/components/schemas/ErrorResponse"}}}
+    Conflict:
+      description: Policy version or resource conflict
+      content: {application/json: {schema: {$ref: "#/components/schemas/ErrorResponse"}}}
+    PreconditionRequired:
+      description: An exact policy version precondition is required
+      content: {application/json: {schema: {$ref: "#/components/schemas/ErrorResponse"}}}
   schemas:
     HealthStatus:
       type: object
@@ -500,223 +468,96 @@ components:
         auditStatus:
           type: string
           enum: [ACTIVE]
+    Permission:
+      type: object
+      required: [id, code, resource, action, status]
+      properties:
+        id: {type: string, format: uuid}
+        code: {type: string, pattern: "^[A-Z_]+\\.[A-Z_]+$"}
+        resource: {type: string}
+        action: {type: string}
+        description: {type: string}
+        status: {type: string, enum: [ACTIVE, DEPRECATED]}
+    Role:
+      type: object
+      required: [id, code, status, updatedAt, policyVersion]
+      properties:
+        id: {type: string, format: uuid}
+        code: {$ref: "#/components/schemas/CanonicalRole"}
+        description: {type: string}
+        status: {type: string, enum: [ACTIVE, DEPRECATED]}
+        updatedAt: {type: string, format: date-time}
+        policyVersion: {type: string, format: uuid}
+    ScopeType:
+      type: string
+      enum: [PLATFORM, ORGANIZATION, PORTFOLIO, FACILITY, BUILDING, SPACE, ASSET, ASSIGNED, TEAM, VENDOR_ASSIGNMENT, OWNED_REQUEST]
+    RolePermission:
+      type: object
+      required: [permissionId, defaultScopeType, effect]
+      properties:
+        id: {type: string, format: uuid}
+        permissionId: {type: string, format: uuid}
+        code: {type: string}
+        defaultScopeType: {$ref: "#/components/schemas/ScopeType"}
+        effect: {type: string, enum: [ALLOW, DENY]}
+    RolePermissionUpdate:
+      type: object
+      required: [permissions]
+      properties:
+        permissions:
+          type: array
+          items:
+            $ref: "#/components/schemas/RolePermission"
+    UserRoleBinding:
+      type: object
+      required: [id, userId, organizationId, roleId, version, scopeType, status]
+      properties:
+        id: {type: string, format: uuid}
+        userId: {type: string, format: uuid}
+        organizationId: {type: string, format: uuid}
+        roleId: {type: string, format: uuid}
+        version: {type: string, format: uuid}
+        scopeType: {$ref: "#/components/schemas/ScopeType"}
+        scopeId: {type: string, format: uuid, nullable: true}
+        status: {type: string, enum: [ACTIVE, SUSPENDED, EXPIRED]}
+        startsAt: {type: string, format: date-time, nullable: true}
+        endsAt: {type: string, format: date-time, nullable: true}
+    UserRoleBindingInput:
+      type: object
+      required: [organizationId, roleId, scopeType]
+      properties:
+        organizationId: {type: string, format: uuid}
+        roleId: {type: string, format: uuid}
+        scopeType: {$ref: "#/components/schemas/ScopeType"}
+        scopeId: {type: string, format: uuid, nullable: true}
+        startsAt: {type: string, format: date-time, nullable: true}
+        endsAt: {type: string, format: date-time, nullable: true}
+    UserRoleBindingUpdate:
+      type: object
+      properties:
+        status: {type: string, enum: [ACTIVE, SUSPENDED, EXPIRED]}
+        scopeType: {$ref: "#/components/schemas/ScopeType"}
+        scopeId: {type: string, format: uuid, nullable: true}
+        endsAt: {type: string, format: date-time, nullable: true}
+    AuthorizationCheck:
+      type: object
+      required: [permission, resourceType]
+      properties:
+        permission: {type: string}
+        resourceType: {type: string}
+        resourceId: {type: string}
+        context: {type: object, additionalProperties: true}
+    AuthorizationDecision:
+      type: object
+      required: [allowed, reasonCode, permission]
+      properties:
+        allowed: {type: boolean}
+        reasonCode: {type: string}
+        permission: {type: string}
+        scopeType: {type: string}
     ErrorResponse:
       type: object
       required: [error]
       properties:
         error:
           type: string
-    ScopeType:
-      type: string
-      enum:
-        - PLATFORM
-        - ORGANIZATION
-        - PORTFOLIO
-        - FACILITY
-        - BUILDING
-        - SPACE
-        - ASSET
-        - ASSIGNED
-        - TEAM
-        - VENDOR_ASSIGNMENT
-        - OWNED_REQUEST
-    BindingStatus:
-      type: string
-      enum: [ACTIVE, SUSPENDED, EXPIRED, REVOKED]
-    PermissionEffect:
-      type: string
-      enum: [ALLOW, DENY]
-    Permission:
-      type: object
-      required: [id, code, resource, action, description, status]
-      properties:
-        id:
-          type: string
-          format: uuid
-        code:
-          type: string
-        resource:
-          type: string
-        action:
-          type: string
-        description:
-          type: string
-        status:
-          type: string
-          enum: [ACTIVE, DEPRECATED]
-    RoleCapability:
-      type: object
-      required: [role, permission, defaultScopeType, effect]
-      properties:
-        role:
-          $ref: "#/components/schemas/CanonicalRole"
-        permission:
-          type: string
-        defaultScopeType:
-          $ref: "#/components/schemas/ScopeType"
-        effect:
-          $ref: "#/components/schemas/PermissionEffect"
-    RoleBinding:
-      type: object
-      required:
-        - id
-        - userId
-        - organizationId
-        - role
-        - scopeType
-        - status
-        - createdAt
-        - updatedAt
-      properties:
-        id:
-          type: string
-          format: uuid
-        userId:
-          type: string
-          format: uuid
-        organizationId:
-          type: string
-          format: uuid
-        role:
-          $ref: "#/components/schemas/CanonicalRole"
-        scopeType:
-          $ref: "#/components/schemas/ScopeType"
-        scopeId:
-          type: ["string", "null"]
-          format: uuid
-        status:
-          $ref: "#/components/schemas/BindingStatus"
-        startsAt:
-          type: ["string", "null"]
-          format: date-time
-        endsAt:
-          type: ["string", "null"]
-          format: date-time
-        grantedBy:
-          type: ["string", "null"]
-          format: uuid
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-    RoleBindingInput:
-      type: object
-      additionalProperties: false
-      required: [userId, organizationId, role, scopeType, reason]
-      properties:
-        userId:
-          type: string
-          format: uuid
-        organizationId:
-          type: string
-          format: uuid
-        role:
-          $ref: "#/components/schemas/CanonicalRole"
-        scopeType:
-          $ref: "#/components/schemas/ScopeType"
-        scopeId:
-          type: ["string", "null"]
-          format: uuid
-        startsAt:
-          type: ["string", "null"]
-          format: date-time
-        endsAt:
-          type: ["string", "null"]
-          format: date-time
-        reason:
-          type: string
-          minLength: 1
-    RoleBindingUpdate:
-      type: object
-      additionalProperties: false
-      required: [status, reason]
-      properties:
-        status:
-          $ref: "#/components/schemas/BindingStatus"
-        startsAt:
-          type: ["string", "null"]
-          format: date-time
-        endsAt:
-          type: ["string", "null"]
-          format: date-time
-        reason:
-          type: string
-          minLength: 1
-    RoleBindingRevocation:
-      type: object
-      additionalProperties: false
-      required: [reason]
-      properties:
-        reason:
-          type: string
-          minLength: 1
-    AuthorizationCheckInput:
-      type: object
-      additionalProperties: false
-      required: [permission]
-      properties:
-        permission:
-          type: string
-          pattern: "^[A-Z_]+\\.[A-Z_]+$"
-        resourceId:
-          type: string
-          format: uuid
-    AuthorizationDecision:
-      type: object
-      required: [allowed, reasonCode, permission]
-      properties:
-        allowed:
-          type: boolean
-        reasonCode:
-          type: string
-          enum:
-            - AUTH_REQUIRED
-            - USER_INACTIVE
-            - ORGANIZATION_MISMATCH
-            - ROLE_NOT_ASSIGNED
-            - BINDING_INACTIVE
-            - PERMISSION_NOT_GRANTED
-            - RESOURCE_NOT_FOUND
-            - SCOPE_DENIED
-            - ASSIGNMENT_REQUIRED
-            - OWNERSHIP_REQUIRED
-            - VENDOR_SCOPE_DENIED
-            - EXPLICIT_DENY
-            - POLICY_DENIED
-            - PERMISSION_GRANTED
-        permission:
-          type: string
-        scopeType:
-          oneOf:
-            - $ref: "#/components/schemas/ScopeType"
-            - type: "null"
-    AuthorizationProfile:
-      type: object
-      required: [organizationId, roles, permissions, scopes]
-      properties:
-        organizationId:
-          type: string
-          format: uuid
-        roles:
-          type: array
-          items:
-            $ref: "#/components/schemas/CanonicalRole"
-        permissions:
-          type: array
-          items:
-            type: string
-        scopes:
-          type: array
-          items:
-            type: object
-            required: [role, scopeType]
-            properties:
-              role:
-                $ref: "#/components/schemas/CanonicalRole"
-              scopeType:
-                $ref: "#/components/schemas/ScopeType"
-              scopeId:
-                type: ["string", "null"]
-                format: uuid

@@ -91,8 +91,39 @@ export interface FoundationSummary {
   auditStatus: FoundationSummaryAuditStatus;
 }
 
-export interface ErrorResponse {
-  error: string;
+export type PermissionStatus = typeof PermissionStatus[keyof typeof PermissionStatus];
+
+
+export const PermissionStatus = {
+  ACTIVE: 'ACTIVE',
+  DEPRECATED: 'DEPRECATED',
+} as const;
+
+export interface Permission {
+  id: string;
+  /** @pattern ^[A-Z_]+\.[A-Z_]+$ */
+  code: string;
+  resource: string;
+  action: string;
+  description?: string;
+  status: PermissionStatus;
+}
+
+export type RoleStatus = typeof RoleStatus[keyof typeof RoleStatus];
+
+
+export const RoleStatus = {
+  ACTIVE: 'ACTIVE',
+  DEPRECATED: 'DEPRECATED',
+} as const;
+
+export interface Role {
+  id: string;
+  code: CanonicalRole;
+  description?: string;
+  status: RoleStatus;
+  updatedAt: string;
+  policyVersion: string;
 }
 
 export type ScopeType = typeof ScopeType[keyof typeof ScopeType];
@@ -112,141 +143,127 @@ export const ScopeType = {
   OWNED_REQUEST: 'OWNED_REQUEST',
 } as const;
 
-export type BindingStatus = typeof BindingStatus[keyof typeof BindingStatus];
+export type RolePermissionEffect = typeof RolePermissionEffect[keyof typeof RolePermissionEffect];
 
 
-export const BindingStatus = {
-  ACTIVE: 'ACTIVE',
-  SUSPENDED: 'SUSPENDED',
-  EXPIRED: 'EXPIRED',
-  REVOKED: 'REVOKED',
-} as const;
-
-export type PermissionEffect = typeof PermissionEffect[keyof typeof PermissionEffect];
-
-
-export const PermissionEffect = {
+export const RolePermissionEffect = {
   ALLOW: 'ALLOW',
   DENY: 'DENY',
 } as const;
 
-export type PermissionStatus = typeof PermissionStatus[keyof typeof PermissionStatus];
-
-
-export const PermissionStatus = {
-  ACTIVE: 'ACTIVE',
-  DEPRECATED: 'DEPRECATED',
-} as const;
-
-export interface Permission {
-  id: string;
-  code: string;
-  resource: string;
-  action: string;
-  description: string;
-  status: PermissionStatus;
-}
-
-export interface RoleCapability {
-  role: CanonicalRole;
-  permission: string;
+export interface RolePermission {
+  id?: string;
+  permissionId: string;
+  code?: string;
   defaultScopeType: ScopeType;
-  effect: PermissionEffect;
+  effect: RolePermissionEffect;
 }
 
-export interface RoleBinding {
+export interface RolePermissionUpdate {
+  permissions: RolePermission[];
+}
+
+export type UserRoleBindingStatus = typeof UserRoleBindingStatus[keyof typeof UserRoleBindingStatus];
+
+
+export const UserRoleBindingStatus = {
+  ACTIVE: 'ACTIVE',
+  SUSPENDED: 'SUSPENDED',
+  EXPIRED: 'EXPIRED',
+} as const;
+
+export interface UserRoleBinding {
   id: string;
   userId: string;
   organizationId: string;
-  role: CanonicalRole;
+  roleId: string;
+  version: string;
   scopeType: ScopeType;
-  /** @nullable */
   scopeId?: string | null;
-  status: BindingStatus;
-  /** @nullable */
+  status: UserRoleBindingStatus;
   startsAt?: string | null;
-  /** @nullable */
   endsAt?: string | null;
-  /** @nullable */
-  grantedBy?: string | null;
-  createdAt: string;
-  updatedAt: string;
 }
 
-export interface RoleBindingInput {
-  userId: string;
+export interface UserRoleBindingInput {
   organizationId: string;
-  role: CanonicalRole;
+  roleId: string;
   scopeType: ScopeType;
-  /** @nullable */
   scopeId?: string | null;
-  /** @nullable */
   startsAt?: string | null;
-  /** @nullable */
   endsAt?: string | null;
-  /** @minLength 1 */
-  reason: string;
 }
 
-export interface RoleBindingUpdate {
-  status: BindingStatus;
-  /** @nullable */
-  startsAt?: string | null;
-  /** @nullable */
-  endsAt?: string | null;
-  /** @minLength 1 */
-  reason: string;
-}
-
-export interface RoleBindingRevocation {
-  /** @minLength 1 */
-  reason: string;
-}
-
-export interface AuthorizationCheckInput {
-  /** @pattern ^[A-Z_]+\.[A-Z_]+$ */
-  permission: string;
-  resourceId?: string;
-}
-
-export type AuthorizationDecisionReasonCode = typeof AuthorizationDecisionReasonCode[keyof typeof AuthorizationDecisionReasonCode];
+export type UserRoleBindingUpdateStatus = typeof UserRoleBindingUpdateStatus[keyof typeof UserRoleBindingUpdateStatus];
 
 
-export const AuthorizationDecisionReasonCode = {
-  AUTH_REQUIRED: 'AUTH_REQUIRED',
-  USER_INACTIVE: 'USER_INACTIVE',
-  ORGANIZATION_MISMATCH: 'ORGANIZATION_MISMATCH',
-  ROLE_NOT_ASSIGNED: 'ROLE_NOT_ASSIGNED',
-  BINDING_INACTIVE: 'BINDING_INACTIVE',
-  PERMISSION_NOT_GRANTED: 'PERMISSION_NOT_GRANTED',
-  RESOURCE_NOT_FOUND: 'RESOURCE_NOT_FOUND',
-  SCOPE_DENIED: 'SCOPE_DENIED',
-  ASSIGNMENT_REQUIRED: 'ASSIGNMENT_REQUIRED',
-  OWNERSHIP_REQUIRED: 'OWNERSHIP_REQUIRED',
-  VENDOR_SCOPE_DENIED: 'VENDOR_SCOPE_DENIED',
-  EXPLICIT_DENY: 'EXPLICIT_DENY',
-  POLICY_DENIED: 'POLICY_DENIED',
-  PERMISSION_GRANTED: 'PERMISSION_GRANTED',
+export const UserRoleBindingUpdateStatus = {
+  ACTIVE: 'ACTIVE',
+  SUSPENDED: 'SUSPENDED',
+  EXPIRED: 'EXPIRED',
 } as const;
+
+export interface UserRoleBindingUpdate {
+  status?: UserRoleBindingUpdateStatus;
+  scopeType?: ScopeType;
+  scopeId?: string | null;
+  endsAt?: string | null;
+}
+
+export type AuthorizationCheckContext = { [key: string]: unknown };
+
+export interface AuthorizationCheck {
+  permission: string;
+  resourceType: string;
+  resourceId?: string;
+  context?: AuthorizationCheckContext;
+}
 
 export interface AuthorizationDecision {
   allowed: boolean;
-  reasonCode: AuthorizationDecisionReasonCode;
+  reasonCode: string;
   permission: string;
-  scopeType?: ScopeType | null;
+  scopeType?: string;
 }
 
-export type AuthorizationProfileScopesItem = {
-  role: CanonicalRole;
-  scopeType: ScopeType;
-  /** @nullable */
-  scopeId?: string | null;
-};
-
-export interface AuthorizationProfile {
-  organizationId: string;
-  roles: CanonicalRole[];
-  permissions: string[];
-  scopes: AuthorizationProfileScopesItem[];
+export interface ErrorResponse {
+  error: string;
 }
+
+/**
+ * Authentication required
+ */
+export type UnauthorizedResponse = ErrorResponse;
+
+/**
+ * Authorization denied
+ */
+export type ForbiddenResponse = ErrorResponse;
+
+/**
+ * Invalid request
+ */
+export type BadRequestResponse = ErrorResponse;
+
+/**
+ * Resource not found
+ */
+export type NotFoundResponse = ErrorResponse;
+
+/**
+ * Policy version or resource conflict
+ */
+export type ConflictResponse = ErrorResponse;
+
+/**
+ * An exact policy version precondition is required
+ */
+export type PreconditionRequiredResponse = ErrorResponse;
+
+/**
+ * Exact role policyVersion token returned as the ETag header.
+ */
+export type IfMatchParameter = string;
+
+export type GetMyPermissions200 = { [key: string]: unknown };
 

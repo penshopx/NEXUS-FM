@@ -38,7 +38,7 @@ async function identityFromRequest(req: Request) {
   return { externalAuthId, email, displayName };
 }
 
-async function currentUser(req: Request) {
+export async function currentUser(req: Request) {
   const identity = await identityFromRequest(req);
   return identity ? ensureFoundationUser(identity) : null;
 }
