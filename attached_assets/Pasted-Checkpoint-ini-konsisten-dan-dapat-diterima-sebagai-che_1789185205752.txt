@@ -1,0 +1,90 @@
+Checkpoint ini **konsisten dan dapat diterima sebagai checkpoint operasional NEXUS-FM**.
+
+### Status saat ini
+
+* **Task #01 — Foundation & Authentication:** `VERIFIED → STABLE → LOCKED`
+* **Task #02 — Authorization & Permission Matrix:** kontrak sudah `READY FOR IMPLEMENTATION`
+* Perbaikan migration journal sudah dilakukan secara **forward-only** dan berdasarkan **schema fingerprint verification**.
+* Tidak ada operasi schema destruktif.
+* Migration authorization berikutnya sudah berhasil diterapkan.
+* `pnpm-lock.yaml` sudah sinkron.
+* API Server kembali normal dan endpoint utama merespons `200`.
+* Workflow yang sudah berjalan, termasuk NEXUS-FM video, tetap dipertahankan.
+
+### Yang penting dari checkpoint ini
+
+Perbaikan journal **bukan perubahan domain**. Ia hanya merekonstruksi histori migration setelah struktur database aktual terbukti cocok dengan baseline.
+
+Jadi boundary tetap:
+
+```text
+Task #01
+VERIFIED → STABLE → LOCKED
+             ↓
+Task #02
+READY FOR IMPLEMENTATION
+             ↓
+Authorization implementation
+             ↓
+Verification
+             ↓
+Stable
+             ↓
+Locked
+```
+
+Dan prinsip governance tetap:
+
+> **Canonical → Additive → Isolated → Verify → Reconcile → Lock**
+
+### Langkah berikutnya
+
+Karena Replit sudah menyelesaikan pekerjaan pasca-merge dan membuat checkpoint, **jangan melakukan recovery atau perubahan tambahan terhadap migration journal**.
+
+Fokus berikutnya adalah **Task #02 Authorization**, sesuai kontrak yang sudah dikunci:
+
+1. Permission catalog `RESOURCE.ACTION`
+2. 7 canonical roles
+3. Role-policy evaluation
+4. Object/scope resolver
+5. Deny-by-default
+6. Cross-organization isolation
+7. Server-side enforcement
+8. Authorization audit
+9. Regression terhadap Task #01
+10. E2E verification
+
+MVP domain tetap tidak berubah:
+
+```text
+Login
+  ↓
+Facility
+  ↓
+Asset
+  ↓
+Inspection
+  ↓
+Finding
+  ↓
+Issue
+  ↓
+Work Order
+  ↓
+Execution
+  ↓
+Evidence
+  ↓
+Verification
+  ↓
+History
+```
+
+**Kesimpulan checkpoint:**
+`Task #01 = LOCKED`
+`Migration baseline = reconciled`
+`Post-merge setup = PASS`
+`API = HEALTHY`
+`Task #02 = READY FOR ISOLATED IMPLEMENTATION`
+
+Jangan menyentuh task berikutnya sampai Task #02 melewati verification gate.
