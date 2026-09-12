@@ -45,3 +45,17 @@ storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/conversation:97946011-
 storage_version_token = "1789174402297930"
 content_type = "text/markdown"
 source_uri = "file://NEXUS-FM-Task-02-Replit-Implementation-Prompt-v1.0.md"
+
+[[outputs]]
+id = "m_gj8I_ZRjdtXBGlmUQi-"
+uri = "file://NEXUS-FM-Task-01-Verification-Evidence-v1.0.md"
+type = "text"
+title = "NEXUS-FM Task #01 Verification Evidence"
+description = "Signed-in E2E evidence, database and audit checks, regression results, build boundary, and final lock decision."
+logical_id = "d1a9ca3e-2f23-4545-bf63-06e262a48e5a"
+content_hash = "sha256:9fc4d6ee760cf5d2cfa2096e9bed508fbc160ed6d2abbba675d02e576c08386f"
+size = 4839
+mtime_ms = 1789179400383
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:cbea1875-a294-4d6a-a29c-556784c47bf0/d1a9ca3e-2f23-4545-bf63-06e262a48e5a/8b2729f7-df9c-442e-9e77-c7a55cf01c54"
+storage_version_token = "1789179411166826"
+content_type = "text/markdown"

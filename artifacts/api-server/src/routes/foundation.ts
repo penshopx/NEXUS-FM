@@ -1,5 +1,5 @@
 import { Router, type IRouter, type Request } from "express";
-import { getAuth } from "@clerk/express";
+import { clerkClient, getAuth } from "@clerk/express";
 import {
   GetFoundationSummaryResponse,
   GetSessionResponse,
@@ -17,24 +17,29 @@ import {
 
 const router: IRouter = Router();
 
-function identityFromRequest(req: Request) {
+async function identityFromRequest(req: Request) {
   const auth = getAuth(req);
   const claimedUserId = auth.sessionClaims?.userId;
   const externalAuthId =
     typeof claimedUserId === "string" ? claimedUserId : auth.userId;
   if (!externalAuthId) return null;
   const claims = auth.sessionClaims as Record<string, unknown> | null;
-  const email = typeof claims?.email === "string" ? claims.email : `${externalAuthId}@clerk.invalid`;
-  const displayName = typeof claims?.fullName === "string"
-    ? claims.fullName
-    : typeof claims?.firstName === "string"
-      ? claims.firstName
-      : "NEXUS-FM User";
+  const clerkUser = await clerkClient.users.getUser(externalAuthId);
+  const email =
+    clerkUser.primaryEmailAddress?.emailAddress ??
+    (typeof claims?.email === "string" ? claims.email : null);
+  if (!email) {
+    throw new Error("Authenticated Clerk user has no primary email address");
+  }
+  const displayName =
+    clerkUser.fullName ??
+    [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ") ??
+    "NEXUS-FM User";
   return { externalAuthId, email, displayName };
 }
 
 async function currentUser(req: Request) {
-  const identity = identityFromRequest(req);
+  const identity = await identityFromRequest(req);
   return identity ? ensureFoundationUser(identity) : null;
 }
 
