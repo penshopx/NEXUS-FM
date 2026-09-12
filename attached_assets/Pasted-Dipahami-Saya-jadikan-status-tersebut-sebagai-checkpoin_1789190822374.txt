@@ -1,0 +1,80 @@
+Dipahami. Saya jadikan status tersebut sebagai **checkpoint operasional terbaru**.
+
+```text
+Task #02 — Facility & Space Registry
+MERGED
+
+Task #04 — Schema Check / Hardening
+IN_PROGRESS
+↑ ACTIVE ISOLATED BOUNDARY
+
+Task #07 — Facility & Space Web Admin
+PENDING
+
+Task #08 — Portfolio Performance
+PENDING
+
+Task #09 — Safe Portfolio Import
+PENDING
+```
+
+### Governance aktif Task #04
+
+Boundary yang saya pegang:
+
+1. **Verify first, mutate only if explicitly required**
+
+   * Schema check harus terlebih dahulu membuktikan kondisi aktual.
+   * Tidak menganggap migration/schema mutation sebagai langkah otomatis.
+
+2. **Destructive operation = hard stop**
+
+   * `truncate`
+   * `DROP`
+   * delete/recreate
+   * `push --force`
+   * destructive migration
+   * menjawab prompt migration secara otomatis
+
+3. **Migration journal tetap immutable**
+
+   * Tidak diedit, direkonstruksi, atau diselaraskan secara manual untuk menghilangkan perbedaan.
+
+4. **Constraint protection**
+
+   * Nullable uniqueness tidak boleh dilemahkan hanya agar schema check menjadi PASS.
+   * Existing semantics harus dipertahankan.
+
+5. **Drizzle destructive diff**
+
+   * Jika Drizzle mengusulkan operasi destruktif, **STOP**.
+   * Laporkan **exact diff/operation** terlebih dahulu.
+   * Tidak mengambil keputusan implisit untuk meneruskannya.
+
+6. **Task #02 tetap tertutup**
+
+   * Facility & Space Registry yang sudah `MERGED` tidak dibuka kembali.
+   * Hanya regresi yang terbukti dapat menjadi alasan membuka kembali boundary tersebut.
+
+### Urutan keputusan
+
+```text
+Inspect actual schema
+        ↓
+Compare against canonical contract
+        ↓
+Non-destructive discrepancy?
+        ├── YES → document / proceed only within Task #04 scope
+        │
+        └── NO / destructive proposal
+                  ↓
+               HARD STOP
+                  ↓
+          report exact diff
+                  ↓
+          explicit decision required
+```
+
+Dengan demikian **tidak ada implementasi tambahan dari saya pada Task #02, #07, #08, atau #09 selama Task #04 masih `IN_PROGRESS — ACTIVE ISOLATED BOUNDARY`**.
+
+Saya juga tidak akan menganggap Task #04 selesai sampai ada evidence verification yang eksplisit dan boundary berikutnya memang secara resmi dibuka.
