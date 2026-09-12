@@ -1,0 +1,76 @@
+Ya — ini berarti **Task Administrasi Akses sudah selesai**, dan boundary proyek resmi **bergeser ke Task Facility & Space Registry**.
+
+### Checkpoint terbaru
+
+```text
+Task #01 — Authentication
+VERIFIED → STABLE → LOCKED
+
+Task #02 — Authorization
+E2E VERIFIED → STABLE → LOCKED → MERGED
+
+Task #03 — Administrasi Akses
+COMPLETED → POST-MERGE SETUP PASS
+
+Task #04 — Facility & Space Registry
+IN_PROGRESS  ← CURRENT ISOLATION
+
+Schema Check / Hardening
+PENDING
+```
+
+### Makna Task baru
+
+Task ini bukan sekadar membuat CRUD fasilitas.
+
+Tujuan arsitekturalnya adalah membangun **hierarki objek nyata** yang nantinya menjadi dasar enforcement authorization berbasis ancestor/scope:
+
+```text
+Organization
+   │
+   ├── Facility
+   │      │
+   │      ├── Building
+   │      │      │
+   │      │      ├── Space
+   │      │      │
+   │      │      └── System
+   │      │             │
+   │      │             └── Asset
+   │      │
+   │      └── ...
+   │
+   └── ...
+```
+
+Sehingga authorization yang sebelumnya masih future-ready dapat berkembang menjadi pemeriksaan nyata:
+
+```text
+User
+ ↓
+Role / Permission
+ ↓
+Scoped Binding
+ ↓
+Requested Object
+ ↓
+Ancestor Relationship Check
+ ↓
+ALLOW / DENY
+```
+
+Contohnya, akses ke sebuah **Asset** tidak cukup hanya memeriksa apakah user memiliki permission `ASSET.READ`; server juga harus dapat memastikan bahwa asset tersebut memang berada dalam **Facility/Building/Space scope** yang boleh diakses user.
+
+### Boundary penting
+
+Task #03 yang sudah selesai **jangan dibuka kembali** kecuali ditemukan regresi nyata.
+
+Task Facility & Space sekarang menjadi satu-satunya area implementasi aktif:
+
+> **Build the canonical Facility → Building → Space → System → Asset registry and establish real object relationships without weakening the locked authorization foundation.**
+
+Dan tetap:
+
+**Canonical → Additive → Isolated → Verify → Reconcile → Lock**
+
+Jadi saya akan memperlakukan status terbaru ini sebagai checkpoint operasional berikutnya.
