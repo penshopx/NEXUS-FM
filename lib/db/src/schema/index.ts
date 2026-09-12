@@ -1,4 +1,5 @@
 export * from "./audit-events";
+export * from "./authorization";
 export * from "./memberships";
 export * from "./organizations";
 export * from "./user-contexts";

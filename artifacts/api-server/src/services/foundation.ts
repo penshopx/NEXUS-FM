@@ -6,6 +6,7 @@ import {
   membershipsTable,
   organizationsTable,
   userContextsTable,
+  userRoleBindingsTable,
   usersTable,
 } from "@workspace/db";
 
@@ -13,19 +14,18 @@ type Identity = { externalAuthId: string; displayName: string; email: string };
 
 export async function ensureFoundationUser(identity: Identity) {
   return db.transaction(async (tx) => {
-    const [existing] = await tx.select().from(usersTable).where(eq(usersTable.externalAuthId, identity.externalAuthId));
-    if (existing) {
-      if (existing.displayName !== identity.displayName || existing.email !== identity.email) {
-        const [updated] = await tx.update(usersTable).set({
-          displayName: identity.displayName,
-          email: identity.email,
-        }).where(eq(usersTable.id, existing.id)).returning();
-        return updated;
-      }
-      return existing;
-    }
+    const [user] = await tx.insert(usersTable).values(identity).onConflictDoUpdate({
+      target: usersTable.externalAuthId,
+      set: {
+        displayName: identity.displayName,
+        email: identity.email,
+      },
+    }).returning();
+    const [existingMembership] = await tx.select({ organizationId: membershipsTable.organizationId })
+      .from(membershipsTable)
+      .where(eq(membershipsTable.userId, user.id));
+    if (existingMembership) return user;
 
-    const [user] = await tx.insert(usersTable).values(identity).returning();
     const [organization] = await tx.insert(organizationsTable).values({
       name: `${identity.displayName}'s Organization`,
       slug: `org-${user.id.slice(0, 8)}`,
@@ -34,6 +34,12 @@ export async function ensureFoundationUser(identity: Identity) {
       userId: user.id,
       organizationId: organization.id,
       role: "FACILITY_MANAGER",
+    });
+    await tx.insert(userRoleBindingsTable).values({
+      userId: user.id,
+      organizationId: organization.id,
+      role: "FACILITY_MANAGER",
+      scopeType: "ORGANIZATION",
     });
     await tx.insert(userContextsTable).values({
       userId: user.id,

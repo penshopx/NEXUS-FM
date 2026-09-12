@@ -13,9 +13,11 @@ NEXUS-FM is an evidence-based facility management operating system.
 
 ## Current implementation boundary
 
-Task #01 covers the application shell, Clerk authentication/session handling, organization context, canonical roles, minimum RBAC, protected routes, and audit-ready foundation data.
+Task #01 is verified, stable, and locked. It covers the application shell, Clerk authentication/session handling, organization context, canonical roles, protected routes, and audit-ready foundation data.
 
-Do not add operational modules or begin the full Task #02 permission matrix until Task #01 is verified and stable.
+Task #02 is verified, stable, and locked. It covers the canonical permission catalog, role capability matrix, scoped role bindings, central server authorization evaluator, admin binding APIs, audit evidence, and additive migrations.
+
+Operational modules are not implemented yet. Their reserved permissions remain fail-closed until a later task adds server-side resource and relationship resolvers.
 
 Canonical roles:
 
@@ -36,3 +38,5 @@ Canonical roles:
 - Generated Zod contracts and React Query hooks live under `lib/api-zod` and `lib/api-client-react`.
 
 Implement API changes contract-first: update OpenAPI, run codegen, then implement the server and frontend consumers.
+
+Authorization-sensitive routes must call the central evaluator or an authorization service that does so internally. UI visibility is never an authorization boundary.

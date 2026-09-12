@@ -95,3 +95,158 @@ export interface ErrorResponse {
   error: string;
 }
 
+export type ScopeType = typeof ScopeType[keyof typeof ScopeType];
+
+
+export const ScopeType = {
+  PLATFORM: 'PLATFORM',
+  ORGANIZATION: 'ORGANIZATION',
+  PORTFOLIO: 'PORTFOLIO',
+  FACILITY: 'FACILITY',
+  BUILDING: 'BUILDING',
+  SPACE: 'SPACE',
+  ASSET: 'ASSET',
+  ASSIGNED: 'ASSIGNED',
+  TEAM: 'TEAM',
+  VENDOR_ASSIGNMENT: 'VENDOR_ASSIGNMENT',
+  OWNED_REQUEST: 'OWNED_REQUEST',
+} as const;
+
+export type BindingStatus = typeof BindingStatus[keyof typeof BindingStatus];
+
+
+export const BindingStatus = {
+  ACTIVE: 'ACTIVE',
+  SUSPENDED: 'SUSPENDED',
+  EXPIRED: 'EXPIRED',
+  REVOKED: 'REVOKED',
+} as const;
+
+export type PermissionEffect = typeof PermissionEffect[keyof typeof PermissionEffect];
+
+
+export const PermissionEffect = {
+  ALLOW: 'ALLOW',
+  DENY: 'DENY',
+} as const;
+
+export type PermissionStatus = typeof PermissionStatus[keyof typeof PermissionStatus];
+
+
+export const PermissionStatus = {
+  ACTIVE: 'ACTIVE',
+  DEPRECATED: 'DEPRECATED',
+} as const;
+
+export interface Permission {
+  id: string;
+  code: string;
+  resource: string;
+  action: string;
+  description: string;
+  status: PermissionStatus;
+}
+
+export interface RoleCapability {
+  role: CanonicalRole;
+  permission: string;
+  defaultScopeType: ScopeType;
+  effect: PermissionEffect;
+}
+
+export interface RoleBinding {
+  id: string;
+  userId: string;
+  organizationId: string;
+  role: CanonicalRole;
+  scopeType: ScopeType;
+  /** @nullable */
+  scopeId?: string | null;
+  status: BindingStatus;
+  /** @nullable */
+  startsAt?: string | null;
+  /** @nullable */
+  endsAt?: string | null;
+  /** @nullable */
+  grantedBy?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RoleBindingInput {
+  userId: string;
+  organizationId: string;
+  role: CanonicalRole;
+  scopeType: ScopeType;
+  /** @nullable */
+  scopeId?: string | null;
+  /** @nullable */
+  startsAt?: string | null;
+  /** @nullable */
+  endsAt?: string | null;
+  /** @minLength 1 */
+  reason: string;
+}
+
+export interface RoleBindingUpdate {
+  status: BindingStatus;
+  /** @nullable */
+  startsAt?: string | null;
+  /** @nullable */
+  endsAt?: string | null;
+  /** @minLength 1 */
+  reason: string;
+}
+
+export interface RoleBindingRevocation {
+  /** @minLength 1 */
+  reason: string;
+}
+
+export interface AuthorizationCheckInput {
+  /** @pattern ^[A-Z_]+\.[A-Z_]+$ */
+  permission: string;
+  resourceId?: string;
+}
+
+export type AuthorizationDecisionReasonCode = typeof AuthorizationDecisionReasonCode[keyof typeof AuthorizationDecisionReasonCode];
+
+
+export const AuthorizationDecisionReasonCode = {
+  AUTH_REQUIRED: 'AUTH_REQUIRED',
+  USER_INACTIVE: 'USER_INACTIVE',
+  ORGANIZATION_MISMATCH: 'ORGANIZATION_MISMATCH',
+  ROLE_NOT_ASSIGNED: 'ROLE_NOT_ASSIGNED',
+  BINDING_INACTIVE: 'BINDING_INACTIVE',
+  PERMISSION_NOT_GRANTED: 'PERMISSION_NOT_GRANTED',
+  RESOURCE_NOT_FOUND: 'RESOURCE_NOT_FOUND',
+  SCOPE_DENIED: 'SCOPE_DENIED',
+  ASSIGNMENT_REQUIRED: 'ASSIGNMENT_REQUIRED',
+  OWNERSHIP_REQUIRED: 'OWNERSHIP_REQUIRED',
+  VENDOR_SCOPE_DENIED: 'VENDOR_SCOPE_DENIED',
+  EXPLICIT_DENY: 'EXPLICIT_DENY',
+  POLICY_DENIED: 'POLICY_DENIED',
+  PERMISSION_GRANTED: 'PERMISSION_GRANTED',
+} as const;
+
+export interface AuthorizationDecision {
+  allowed: boolean;
+  reasonCode: AuthorizationDecisionReasonCode;
+  permission: string;
+  scopeType?: ScopeType | null;
+}
+
+export type AuthorizationProfileScopesItem = {
+  role: CanonicalRole;
+  scopeType: ScopeType;
+  /** @nullable */
+  scopeId?: string | null;
+};
+
+export interface AuthorizationProfile {
+  organizationId: string;
+  roles: CanonicalRole[];
+  permissions: string[];
+  scopes: AuthorizationProfileScopesItem[];
+}
+

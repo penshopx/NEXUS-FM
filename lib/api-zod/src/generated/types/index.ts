@@ -8,6 +8,12 @@
 
 export * from './appSession';
 export * from './appUser';
+export * from './authorizationCheckInput';
+export * from './authorizationDecision';
+export * from './authorizationDecisionReasonCode';
+export * from './authorizationProfile';
+export * from './authorizationProfileScopesItem';
+export * from './bindingStatus';
 export * from './canonicalRole';
 export * from './errorResponse';
 export * from './foundationSummary';
@@ -19,3 +25,12 @@ export * from './healthStatus';
 export * from './organization';
 export * from './organizationAccess';
 export * from './organizationSelection';
+export * from './permission';
+export * from './permissionEffect';
+export * from './permissionStatus';
+export * from './roleBinding';
+export * from './roleBindingInput';
+export * from './roleBindingRevocation';
+export * from './roleBindingUpdate';
+export * from './roleCapability';
+export * from './scopeType';

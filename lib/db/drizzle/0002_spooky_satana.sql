@@ -1,0 +1,2 @@
+DROP INDEX "user_role_binding_unique";--> statement-breakpoint
+ALTER TABLE "user_role_bindings" ADD CONSTRAINT "user_role_binding_unique" UNIQUE NULLS NOT DISTINCT("user_id","organization_id","role","scope_type","scope_id");
