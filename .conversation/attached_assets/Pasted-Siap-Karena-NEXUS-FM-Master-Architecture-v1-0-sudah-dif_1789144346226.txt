@@ -1,0 +1,1724 @@
+Siap. Karena **NEXUS-FM Master Architecture v1.0 sudah difinalkan**, prompt Replit sebaiknya tidak meminta Replit membangun seluruh sistem sekaligus. Prompt pertama harus berfungsi sebagai **master instruction + foundation**, lalu task berikutnya dieksekusi terisolasi.
+
+Di bawah ini saya buat **MASTER PROMPT untuk Replit Agent**. Ini bukan prompt demo, tetapi prompt untuk membangun aplikasi production-oriented dengan governance yang ketat.
+
+# NEXUS-FM — REPLIT MASTER BUILD PROMPT v1.0
+
+## PROJECT TITLE
+
+**NEXUS-FM — Integrated Building & Warehouse Management Operating System**
+
+---
+
+# 1. YOUR ROLE
+
+You are the lead product engineer, software architect, UX engineer, database engineer, QA engineer, and technical implementation agent for this project.
+
+You are building a serious operational facility-management platform, not a landing-page prototype and not a simple CRUD demo.
+
+The product is called:
+
+> **NEXUS-FM**
+
+Product category:
+
+> **Integrated Building & Warehouse Management Operating System**
+
+Core promise:
+
+> **Know the Facility. Control the Work. Protect the Operation. Improve the Asset.**
+
+Primary users are facility managers, facility supervisors, inspectors, maintenance teams, warehouse supervisors, management, and controlled vendors/contractors.
+
+---
+
+# 2. PRODUCT DEFINITION
+
+NEXUS-FM manages the operational lifecycle of buildings and warehouses.
+
+The platform connects:
+
+* facilities
+* buildings
+* warehouses
+* floors
+* zones
+* spaces
+* systems
+* assets
+* inspections
+* findings
+* condition
+* risks
+* work orders
+* maintenance
+* safety
+* compliance
+* vendors
+* contracts
+* costs
+* renovation
+* restoration
+* replacement
+* improvement projects
+* evidence
+* verification
+* history
+* analytics
+* decision support
+* AI
+
+NEXUS-FM must NOT be reduced to a generic:
+
+* maintenance app
+* asset inventory
+* checklist app
+* document repository
+* project management app
+* dashboard
+
+The core product is:
+
+> **an evidence-based operating system for controlling the condition, work, risk, cost, and lifecycle of buildings and warehouses.**
+
+---
+
+# 3. NORTH STAR
+
+Every implementation decision must answer:
+
+> Does this feature help a facility manager know the condition of the facility, understand its risks, control the work, verify the result, understand the cost, preserve history, and make a better next decision?
+
+If not, do not make it part of the core workflow.
+
+---
+
+# 4. CORE OPERATING LOOP
+
+The most important workflow is:
+
+FACILITY
+→ ASSET / AREA
+→ INSPECTION
+→ FINDING
+→ CONDITION
+→ RISK
+→ DECISION
+→ WORK / PROJECT
+→ EXECUTION
+→ EVIDENCE
+→ VERIFICATION
+→ CONDITION UPDATE
+→ COST
+→ HISTORY
+→ ANALYSIS
+→ NEXT DECISION
+
+This is the core domain model.
+
+Do not replace this architecture with a simpler generic CRUD workflow.
+
+---
+
+# 5. GOLDEN RULES
+
+These rules are mandatory.
+
+## Rule 1 — Facility First
+
+Every operational object must have a facility context.
+
+## Rule 2 — Asset-Centric
+
+Assets are lifecycle objects, not simple inventory records.
+
+## Rule 3 — Evidence-Based
+
+Important operational states must be supported by evidence.
+
+## Rule 4 — History Cannot Be Lost
+
+Do not overwrite important historical states.
+
+Use append-only history/event records where appropriate.
+
+## Rule 5 — Completed Is Not Closed
+
+A technician completing a work order does not automatically close it.
+
+It must pass verification.
+
+## Rule 6 — Critical Issues Override Average Scores
+
+A facility with a high average score but an unresolved critical safety issue must still be classified as requiring critical attention.
+
+## Rule 7 — UI Does Not Own Business Logic
+
+Business rules belong in domain/service layers.
+
+Do not implement critical transitions only inside React components.
+
+## Rule 8 — Audit Important Changes
+
+Record:
+
+WHO
+WHAT
+WHEN
+WHY
+BEFORE
+AFTER
+
+for important changes and decisions.
+
+## Rule 9 — AI Does Not Replace Accountability
+
+AI may recommend.
+
+Authorized humans make final operational decisions.
+
+## Rule 10 — Additive Development
+
+Do not destroy or replace stable domain models simply to implement a new feature.
+
+---
+
+# 6. CORE DATA HIERARCHY
+
+Use this hierarchy as the canonical model:
+
+Portfolio
+→ Facility
+→ Building / Warehouse
+→ Floor
+→ Zone
+→ Space / Area
+→ System
+→ Asset
+→ Component
+
+Outdoor areas may belong directly to a facility or building.
+
+Operational objects such as inspections, findings, risks, work orders, projects, documents, costs, and history must be linkable to the relevant facility/object.
+
+---
+
+# 7. CORE DOMAINS
+
+Implement the product around these domains:
+
+## A. FACILITY
+
+* Portfolio
+* Facility
+* Building
+* Warehouse
+* Floor
+* Zone
+* Space
+* Outdoor Area
+* Facility Map
+
+## B. ASSET
+
+* Asset Register
+* System
+* Component
+* Critical Asset
+* Warranty
+* Asset Lifecycle
+
+## C. CONDITION
+
+* Inspection
+* Inspection Template
+* Condition Assessment
+* Finding
+* Risk
+* Facility Health
+
+## D. WORK
+
+* Service Request
+* Work Order
+* Preventive Maintenance
+* Corrective Maintenance
+* Emergency Work
+* Work Verification
+
+## E. PROJECT
+
+* Renovation
+* Restoration
+* Replacement
+* Improvement
+* Capital Project
+
+## F. SAFETY
+
+* Hazard
+* Risk Control
+* Safety Inspection
+* Incident
+* Emergency
+* Corrective Safety Action
+
+## G. COMPLIANCE
+
+* Requirement
+* Certificate
+* Permit/Record
+* Inspection
+* Document
+* Expiry Monitoring
+
+## H. COMMERCIAL
+
+* Vendor
+* Contract
+* SLA
+* Budget
+* Cost
+* Procurement Reference
+
+## I. REPORTING
+
+* Facility Report
+* Condition Report
+* Maintenance Report
+* Safety Report
+* Compliance Report
+* Cost Report
+* Project Report
+* Management Report
+
+## J. INTELLIGENCE
+
+* Analytics
+* Alerts
+* Recommendations
+* AI Advisor
+* Predictive Insights
+
+---
+
+# 8. INITIAL IMPLEMENTATION PRIORITY
+
+DO NOT attempt to fully implement all domains in one uncontrolled operation.
+
+The controlled implementation sequence is:
+
+TASK 01 — Foundation & Authentication
+
+TASK 02 — Organization / Role / Permission
+
+TASK 03 — Facility Registry
+
+TASK 04 — Building / Warehouse / Area Structure
+
+TASK 05 — Asset & System Registry
+
+TASK 06 — Inspection Engine
+
+TASK 07 — Finding & Risk Engine
+
+TASK 08 — Work Order Engine
+
+TASK 09 — Field Execution & Evidence
+
+TASK 10 — Verification & Condition History
+
+TASK 11 — Facility Manager Dashboard
+
+TASK 12 — Preventive Maintenance
+
+TASK 13 — Documents & Compliance
+
+TASK 14 — Vendor / Contract / Cost
+
+TASK 15 — Renovation / Restoration / Project
+
+TASK 16 — Analytics & Management Reporting
+
+TASK 17 — AI Decision Intelligence
+
+For the initial build, establish the architecture and application foundation, then implement Task 01.
+
+Do not pretend Tasks 02–17 are complete.
+
+---
+
+# 9. REQUIRED TECHNOLOGY APPROACH
+
+Use the existing Replit environment and existing technology stack if a project already exists.
+
+Do not unnecessarily rewrite the project.
+
+If no application exists yet, create a modern full-stack TypeScript application.
+
+Preferred architecture:
+
+Frontend:
+
+* React
+* TypeScript
+* modern responsive UI
+* accessible components
+
+Backend:
+
+* TypeScript
+* REST or typed API/service architecture
+* domain/service layer
+* validation layer
+* authorization layer
+
+Database:
+
+* PostgreSQL
+* ORM appropriate to the existing project, preferably Drizzle if starting fresh
+
+Authentication:
+
+* secure session/authentication architecture appropriate to the Replit environment
+
+Use environment variables for secrets.
+
+Never hardcode credentials.
+
+---
+
+# 10. ARCHITECTURAL LAYERS
+
+Keep the application logically separated:
+
+```text
+UI
+↓
+Application / API
+↓
+Domain Services
+↓
+Repositories / Data Access
+↓
+Database
+```
+
+Cross-cutting:
+
+```text
+Authentication
+Authorization
+Validation
+Audit
+Events
+Notifications
+Logging
+```
+
+Do not put business rules directly into UI components.
+
+---
+
+# 11. DATABASE PRINCIPLES
+
+Database must be designed for lifecycle and history.
+
+Do not create a flat database with unrelated tables.
+
+Relationships must reflect the facility hierarchy.
+
+Important entities should contain:
+
+* id
+* organization scope where applicable
+* createdAt
+* updatedAt
+* createdBy where applicable
+* updatedBy where applicable
+* status where applicable
+
+Historical entities should not simply overwrite previous states.
+
+Use dedicated history/event records where required.
+
+---
+
+# 12. ORGANIZATION AND DATA ISOLATION
+
+The architecture must support multiple organizations/facility owners in the future.
+
+Use organization scoping from the beginning.
+
+Conceptually:
+
+```text
+Organization
+  ↓
+Portfolio
+  ↓
+Facility
+  ↓
+Building / Warehouse
+```
+
+Users should only access objects within their authorized organization and scope.
+
+Do not build global unrestricted data access into normal application routes.
+
+---
+
+# 13. ROLE MODEL
+
+Initial roles:
+
+### PLATFORM_ADMIN
+
+System/platform administration.
+
+### FACILITY_MANAGER
+
+Facility decisions and operational control.
+
+### FACILITY_SUPERVISOR
+
+Daily operational control.
+
+### INSPECTOR
+
+Inspection and condition assessment.
+
+### MAINTENANCE_TECHNICIAN
+
+Assigned field execution.
+
+### WAREHOUSE_SUPERVISOR
+
+Warehouse operational readiness.
+
+### VENDOR
+
+Controlled external work execution.
+
+Future roles may include:
+
+* management/owner
+* finance
+* procurement
+* safety officer
+* document controller
+* auditor
+
+Do not overbuild those roles during Task 01 unless required for architecture.
+
+---
+
+# 14. RBAC + OBJECT SCOPE
+
+Do not implement permission as only:
+
+```text
+admin = everything
+user = limited
+```
+
+Use role + object scope.
+
+Examples:
+
+Facility Manager:
+→ authorized facilities
+
+Warehouse Supervisor:
+→ authorized warehouse
+
+Technician:
+→ assigned work
+
+Vendor:
+→ assigned project/work only
+
+Inspector:
+→ assigned inspections/facilities
+
+---
+
+# 15. FACILITY HEALTH MODEL
+
+Facility health must eventually support:
+
+* Physical Condition
+* Functional Condition
+* Safety Health
+* Compliance Health
+* Maintenance Health
+* Reliability
+* Energy Performance
+
+Do not hardcode one simplistic overall percentage into the architecture.
+
+The eventual health engine must support configurable weighting.
+
+Most importantly:
+
+### CRITICAL OVERRIDE
+
+If an unresolved critical issue exists, the facility cannot be represented as healthy merely because the average score is high.
+
+---
+
+# 16. CONDITION MODEL
+
+Canonical condition values:
+
+```text
+GOOD
+FAIR
+POOR
+CRITICAL
+```
+
+Apply condition to appropriate objects:
+
+* facility
+* building
+* warehouse
+* area
+* system
+* asset
+* component
+
+Every meaningful condition change must preserve history.
+
+Example:
+
+```text
+2024 GOOD
+2025 FAIR
+2026 POOR
+2026 FAIR
+```
+
+Do not destroy historical condition records.
+
+---
+
+# 17. INSPECTION MODEL
+
+Inspection must support:
+
+* template
+* schedule
+* inspector
+* facility
+* building
+* area
+* asset
+* inspection items
+* observations
+* evidence
+* finding
+* condition
+* risk
+
+Inspection is NOT automatically maintenance.
+
+Correct separation:
+
+```text
+Inspection
+↓
+Finding
+↓
+Risk
+↓
+Required Action
+↓
+Work Order / Project
+```
+
+---
+
+# 18. FINDING MODEL
+
+A finding should support:
+
+* location
+* facility
+* object
+* description
+* observation
+* severity
+* risk
+* evidence
+* recommendation
+* required action
+* owner
+* due date
+* status
+
+Finding state:
+
+```text
+OPEN
+→ ASSESSED
+→ PRIORITIZED
+→ ACTION_REQUIRED
+→ ACTION_IN_PROGRESS
+→ RESOLVED
+→ VERIFIED
+→ CLOSED
+```
+
+---
+
+# 19. RISK MODEL
+
+Risk should support:
+
+* cause
+* likelihood
+* impact
+* severity
+* existing control
+* required control
+* owner
+* due date
+* residual risk
+
+Concept:
+
+```text
+INHERENT RISK
+↓
+CONTROL
+↓
+RESIDUAL RISK
+```
+
+Critical risks must have escalation capability.
+
+---
+
+# 20. WORK ORDER STATE MACHINE
+
+Canonical work order states:
+
+```text
+DRAFT
+→ APPROVED
+→ ASSIGNED
+→ IN_PROGRESS
+→ WAITING
+→ COMPLETED
+→ VERIFICATION
+→ VERIFIED
+→ CLOSED
+```
+
+Also support:
+
+```text
+REWORK
+CANCELLED
+```
+
+Important:
+
+```text
+COMPLETED ≠ CLOSED
+```
+
+Verification must be an explicit transition.
+
+---
+
+# 21. WORK ORDER EVIDENCE
+
+A work order may require:
+
+* before photo
+* after photo
+* technician notes
+* material
+* spare parts
+* labor
+* cost
+* timestamp
+* location
+* safety confirmation
+
+Evidence must be linked to the specific work order/action.
+
+---
+
+# 22. VERIFICATION
+
+Verifier should be able to:
+
+```text
+VERIFY
+```
+
+or:
+
+```text
+RETURN FOR REWORK
+```
+
+Verification should consider:
+
+* original problem
+* work scope
+* evidence
+* result
+* condition
+* cost where relevant
+
+---
+
+# 23. PROJECT MODEL
+
+Do not force major renovation/restoration into ordinary maintenance.
+
+Project types:
+
+```text
+RENOVATION
+RESTORATION
+REPLACEMENT
+IMPROVEMENT
+CAPITAL_PROJECT
+```
+
+Project lifecycle:
+
+```text
+PROPOSAL
+→ ASSESSMENT
+→ APPROVAL
+→ PLANNING
+→ PROCUREMENT
+→ EXECUTION
+→ COMMISSIONING
+→ HANDOVER
+→ CLOSED
+```
+
+---
+
+# 24. WAREHOUSE-SPECIFIC MODEL
+
+Warehouse support is a first-class product requirement.
+
+Support:
+
+* loading dock
+* loading bay
+* rack
+* warehouse floor
+* roof
+* door
+* dock leveler
+* dock shelter
+* drainage
+* yard
+* fire protection
+* lighting
+* ventilation
+* utility area
+* circulation area
+
+Future warehouse readiness:
+
+```text
+READY
+READY_WITH_RESTRICTION
+NOT_READY
+```
+
+This is an internal operational readiness indicator, not an official certification.
+
+---
+
+# 25. DOCUMENT ARCHITECTURE
+
+Documents must be associated with business objects.
+
+Possible relationships:
+
+```text
+Facility
+Building
+Area
+System
+Asset
+Inspection
+Finding
+Work Order
+Project
+Vendor
+Contract
+Compliance Requirement
+```
+
+Document metadata should eventually include:
+
+* title
+* type
+* object
+* issue date
+* expiry date
+* version
+* status
+* owner
+
+---
+
+# 26. EVENT ARCHITECTURE
+
+Design the system so important actions can generate domain events.
+
+Examples:
+
+```text
+InspectionCompleted
+FindingCreated
+RiskEscalated
+WorkOrderCreated
+WorkAssigned
+WorkStarted
+WorkCompleted
+WorkVerified
+WorkRejected
+ConditionChanged
+DocumentExpiring
+ComplianceExpired
+ProjectStarted
+ProjectProgressUpdated
+ProjectCompleted
+AssetReplaced
+```
+
+Do not implement a massive event infrastructure prematurely.
+
+Establish clean service boundaries so it can be added incrementally.
+
+---
+
+# 27. AUDIT ARCHITECTURE
+
+Important actions must eventually generate audit records.
+
+Audit format:
+
+```text
+WHO
+WHAT
+WHEN
+WHERE
+BEFORE
+AFTER
+WHY
+```
+
+Important changes include:
+
+* priority override
+* condition change
+* risk escalation
+* approval
+* work verification
+* project approval
+* status transition
+* permission change
+
+---
+
+# 28. UI / UX PRINCIPLES
+
+Design for professional facility operations.
+
+Visual character:
+
+* professional
+* clean
+* operational
+* information-dense but readable
+* desktop-first for managers
+* responsive for field personnel
+* mobile-friendly technician execution
+* clear status hierarchy
+* clear critical alerts
+* minimal decorative UI
+
+Avoid:
+
+* excessive gradients
+* excessive animation
+* generic SaaS card overload
+* meaningless charts
+* fake AI
+* dashboard clutter
+
+The UI should feel like an operational control system.
+
+---
+
+# 29. NAVIGATION
+
+Primary navigation:
+
+```text
+Dashboard
+
+Facility
+  Portfolio
+  Facilities
+  Buildings
+  Warehouses
+  Areas
+
+Assets
+  Asset Register
+  Systems
+  Critical Assets
+
+Condition
+  Inspections
+  Findings
+  Risk
+  Facility Health
+
+Work
+  Requests
+  Work Orders
+  Maintenance
+  Work Calendar
+
+Projects
+  Renovation
+  Restoration
+  Replacement
+  Improvement
+
+Safety
+
+Compliance
+  Requirements
+  Documents
+  Expiry Monitor
+
+Vendors
+  Contracts
+  Performance
+
+Cost
+  Budget
+  Maintenance Cost
+  Project Cost
+
+Reports
+
+Analytics
+
+AI Advisor
+
+Administration
+```
+
+Do not expose every future feature as a fake menu item if the underlying feature does not exist.
+
+---
+
+# 30. DASHBOARD DESIGN
+
+Facility Manager dashboard should eventually contain:
+
+### Facility Health
+
+### Critical Issues
+
+### Action Queue
+
+### Open Work
+
+### Overdue Work
+
+### Compliance
+
+### Maintenance Cost
+
+### Project Status
+
+### High-Risk Assets
+
+### Recent Activity
+
+### Recommendations
+
+The dashboard must show actionable information, not merely decorative metrics.
+
+---
+
+# 31. ACTION CENTER
+
+The most important manager feature is:
+
+> **MY ACTION QUEUE**
+
+Categories:
+
+```text
+CRITICAL
+APPROVAL REQUIRED
+VERIFICATION REQUIRED
+OVERDUE
+UPCOMING
+```
+
+Examples:
+
+* critical safety finding
+* emergency repair approval
+* work verification
+* compliance expiry
+* overdue maintenance
+* project approval
+* budget variance
+
+---
+
+# 32. API DESIGN PRINCIPLE
+
+API endpoints must follow domain boundaries.
+
+Avoid giant generic endpoints such as:
+
+```text
+/update-anything
+```
+
+Prefer domain-specific operations.
+
+Examples:
+
+```text
+POST /api/facilities
+GET /api/facilities/:id
+
+POST /api/inspections
+POST /api/inspections/:id/complete
+
+POST /api/findings
+POST /api/findings/:id/assess
+
+POST /api/work-orders
+POST /api/work-orders/:id/assign
+POST /api/work-orders/:id/start
+POST /api/work-orders/:id/complete
+POST /api/work-orders/:id/verify
+POST /api/work-orders/:id/rework
+```
+
+Use service-layer functions behind these endpoints.
+
+---
+
+# 33. VALIDATION
+
+All critical input must be validated on the server.
+
+Do not rely only on frontend validation.
+
+Validate:
+
+* authorization
+* object ownership/scope
+* state transition
+* required evidence
+* required fields
+* valid relationships
+* permission
+
+---
+
+# 34. STATE TRANSITION SAFETY
+
+Never allow arbitrary status mutation such as:
+
+```text
+PATCH /work-orders/:id
+{
+  "status": "CLOSED"
+}
+```
+
+without domain validation.
+
+Use explicit transition commands/services.
+
+Example:
+
+```text
+completeWorkOrder()
+verifyWorkOrder()
+rejectVerification()
+closeWorkOrder()
+```
+
+This prevents invalid workflow states.
+
+---
+
+# 35. DEMO DATA
+
+Create realistic demo data only if needed.
+
+Use examples such as:
+
+```text
+Warehouse A
+Office Building A
+Production Facility A
+```
+
+Example assets:
+
+* HVAC
+* generator
+* fire pump
+* electrical panel
+* roof
+* loading dock
+* rolling door
+* water pump
+* lighting system
+
+Demo data must clearly be marked as demo/seed data.
+
+Never make fake data look like real customer data.
+
+---
+
+# 36. INITIAL TASK — TASK 01
+
+Implement:
+
+## Foundation & Authentication
+
+Required:
+
+### Application shell
+
+* responsive layout
+* sidebar
+* top navigation
+* user menu
+* notification area
+* main content area
+
+### Authentication
+
+* login
+* logout
+* session handling
+* protected routes
+
+### User
+
+* user model
+* basic profile
+* role relationship
+
+### Organization
+
+* organization model
+* organization scope
+
+### Basic RBAC
+
+* Platform Admin
+* Facility Manager
+* Facility Supervisor
+* Inspector
+* Maintenance Technician
+* Warehouse Supervisor
+* Vendor
+
+### Basic authorization middleware
+
+Protect application routes and API endpoints.
+
+---
+
+# 37. TASK 01 MUST NOT IMPLEMENT
+
+Do NOT prematurely implement:
+
+* AI agents
+* predictive maintenance
+* complex analytics
+* full project management
+* advanced BIM
+* full IoT
+* advanced compliance
+* complicated financial accounting
+* complex procurement
+* fake placeholder dashboards pretending those systems already work
+
+Build the foundation correctly first.
+
+---
+
+# 38. TASK 01 ACCEPTANCE CRITERIA
+
+Task 01 is complete only when:
+
+### Authentication
+
+* user can log in
+* user can log out
+* protected routes reject unauthenticated access
+* session persists correctly
+* unauthorized access is handled correctly
+
+### Organization
+
+* user belongs to an organization
+* organization scope is available to backend services
+
+### Role
+
+* role is stored
+* role is loaded in session/context
+* role can be used for authorization
+
+### Authorization
+
+A user cannot access resources outside their authorized scope.
+
+### UI
+
+* application shell works
+* responsive behavior works
+* navigation works
+* empty states are intentional
+* no broken links
+
+### Engineering
+
+* no TypeScript errors
+* no obvious runtime errors
+* database migration works
+* seed/demo process works if implemented
+* existing functionality is not unnecessarily broken
+
+---
+
+# 39. TESTING REQUIREMENTS
+
+Before declaring Task 01 complete, test:
+
+1. login
+2. logout
+3. protected route
+4. invalid login
+5. session persistence
+6. role loading
+7. unauthorized role access
+8. organization scope
+9. API authorization
+10. responsive layout
+
+If any critical test fails:
+
+> DO NOT declare Task 01 complete.
+
+---
+
+# 40. DEVELOPMENT GOVERNANCE
+
+Use this exact development cycle:
+
+```text
+INSPECT
+↓
+PLAN
+↓
+IMPLEMENT
+↓
+TYPECHECK
+↓
+TEST
+↓
+VERIFY
+↓
+REVIEW
+↓
+STABILIZE
+↓
+REPORT
+```
+
+Do not blindly rewrite large portions of the project.
+
+Before changing existing code:
+
+1. inspect current structure;
+2. identify dependencies;
+3. identify existing conventions;
+4. make the smallest safe change;
+5. test;
+6. report what changed.
+
+---
+
+# 41. REGRESSION PROTECTION
+
+Before modifying existing functionality:
+
+* inspect current routes
+* inspect current database schema
+* inspect authentication
+* inspect existing components
+* inspect API patterns
+* inspect package configuration
+
+Do not replace an existing implementation merely because you prefer another architecture.
+
+Preserve working functionality unless it conflicts with the canonical NEXUS-FM architecture.
+
+---
+
+# 42. NO FAKE COMPLETION
+
+Never report:
+
+> “implemented”
+
+if only the UI exists.
+
+Never report:
+
+> “fully functional”
+
+if backend/state/database behavior is missing.
+
+Clearly distinguish:
+
+```text
+IMPLEMENTED
+PARTIALLY IMPLEMENTED
+PLACEHOLDER
+NOT IMPLEMENTED
+```
+
+---
+
+# 43. NO MOCK BUSINESS LOGIC
+
+Do not create fake numbers such as:
+
+```text
+Facility Health = 87%
+```
+
+unless the number is calculated from real stored data or explicitly marked as demo data.
+
+Do not create fake:
+
+* work orders
+* costs
+* risks
+* compliance
+* maintenance
+* AI recommendations
+
+and present them as real operational state.
+
+---
+
+# 44. ERROR HANDLING
+
+Use consistent:
+
+* API error responses
+* user-friendly UI messages
+* validation errors
+* authorization errors
+* not-found handling
+* server error logging
+
+Do not expose sensitive server information to users.
+
+---
+
+# 45. SECURITY
+
+Minimum requirements:
+
+* password/session security appropriate to selected auth solution
+* authorization on server
+* organization scope enforcement
+* input validation
+* safe file handling
+* environment variables for secrets
+* no credentials in source code
+* audit important changes
+* prevent unauthorized object access
+
+Assume the application will eventually contain operationally sensitive facility data.
+
+---
+
+# 46. PERFORMANCE
+
+Do not prematurely optimize.
+
+However:
+
+* avoid unnecessary full-table queries
+* paginate lists
+* use appropriate database indexes
+* avoid N+1 queries
+* lazy-load heavy pages where appropriate
+* keep dashboards efficient
+
+---
+
+# 47. FUTURE AI CONTRACT
+
+Do not implement AI prematurely.
+
+But design clean interfaces so future AI can consume:
+
+```text
+Facility
+Asset
+Condition
+Inspection
+Finding
+Risk
+Work
+Cost
+Project
+Document
+History
+```
+
+Future AI outputs must contain:
+
+```text
+Recommendation
+Reason
+Evidence
+Impact
+Confidence
+Suggested Action
+Human Decision Required
+```
+
+---
+
+# 48. FINAL IMPLEMENTATION PRINCIPLE
+
+The system must evolve like this:
+
+```text
+FOUNDATION
+↓
+FACILITY
+↓
+ASSET
+↓
+CONDITION
+↓
+INSPECTION
+↓
+FINDING
+↓
+RISK
+↓
+WORK
+↓
+EVIDENCE
+↓
+VERIFICATION
+↓
+HISTORY
+↓
+MAINTENANCE
+↓
+COMPLIANCE / COST / VENDOR
+↓
+PROJECT
+↓
+ANALYTICS
+↓
+AI
+```
+
+Do not reverse this order.
+
+---
+
+# 49. YOUR IMMEDIATE ACTION
+
+First inspect the existing Replit project.
+
+Do not start by blindly generating files.
+
+Report:
+
+1. existing framework
+2. frontend architecture
+3. backend architecture
+4. database/ORM
+5. authentication
+6. existing routes
+7. existing schema
+8. package structure
+9. current runtime/build status
+10. existing functionality that must be preserved
+
+Then produce a concise:
+
+> **BASELINE AUDIT**
+
+After the audit, implement **TASK 01 — Foundation & Authentication** only.
+
+Do not proceed to Task 02 unless Task 01 is verified.
+
+---
+
+# 50. TASK COMPLETION REPORT
+
+At the end of the task, report:
+
+## TASK
+
+Task number and name.
+
+## STATUS
+
+One of:
+
+```text
+RUNNING
+IMPLEMENTED
+VERIFIED
+STABLE
+BLOCKED
+```
+
+## CHANGES
+
+List actual changes.
+
+## DATABASE
+
+List schema/migration changes.
+
+## ROUTES
+
+List new/changed routes.
+
+## AUTHORIZATION
+
+List implemented permission rules.
+
+## TESTS
+
+List tests performed and result.
+
+## ISSUES
+
+List remaining issues.
+
+## REGRESSION
+
+State whether existing functionality was affected.
+
+## NEXT TASK
+
+Recommend the next isolated task.
+
+Do not claim completion unless acceptance criteria have actually been verified.
+
+---
+
+# 51. ARCHITECTURAL GOVERNANCE
+
+All future tasks must follow:
+
+> **CANONICAL → ADDITIVE → ISOLATED → VERIFY → RECONCILE → LOCK**
+
+A stable task should not be casually modified by a later task.
+
+If a future task requires changing a locked domain:
+
+1. identify the dependency;
+2. explain why;
+3. propose the smallest additive change;
+4. preserve backward compatibility;
+5. test regression;
+6. only then modify.
+
+---
+
+# 52. FINAL INSTRUCTION
+
+Build NEXUS-FM as a serious operational platform.
+
+Do not optimize for:
+
+> “how quickly can I make a visually impressive dashboard?”
+
+Optimize for:
+
+> **“Can this system eventually become a trustworthy operational record and decision-support system for real building and warehouse management?”**
+
+The quality hierarchy is:
+
+```text
+DOMAIN CORRECTNESS
+>
+DATA INTEGRITY
+>
+AUTHORIZATION
+>
+WORKFLOW CORRECTNESS
+>
+AUDITABILITY
+>
+EVIDENCE
+>
+USABILITY
+>
+VISUAL POLISH
+```
+
+A beautiful interface with incorrect workflow is a failure.
+
+A simple interface with correct operational workflow is a valid foundation.
+
+Start by inspecting the existing Replit project.
+
+Then implement **TASK 01 — Foundation & Authentication** only.
+
+Do not silently expand scope.
+Do not invent completed functionality.
+Do not destroy existing working functionality without justification.
+
+Follow the NEXUS-FM Master Architecture v1.0 as the canonical product baseline.
+
+### Cara menjalankannya di Replit
+
+Saya sarankan **jangan berhenti pada satu prompt besar di atas**. Setelah Replit membaca dan mengaudit project, gunakan pola task terisolasi:
+
+**Prompt Master di atas → Audit → Task #01 → Verify → Lock → Task #02 → Verify → Lock → dst.**
+
+Dan yang sangat penting: **jangan langsung meminta Replit membangun Task #01–#17 sekaligus**. Untuk aplikasi sebesar ini, itu justru meningkatkan risiko schema kacau, workflow palsu, authorization bolong, dan regresi.
+
+Tahap berikutnya yang paling tepat adalah saya buatkan **PROMPT TASK #01 yang jauh lebih operasional dan siap paste ke Replit Agent**, lengkap dengan acceptance criteria, schema awal, route, auth, RBAC, test scenario, dan Definition of Done.

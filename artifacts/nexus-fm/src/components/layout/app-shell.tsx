@@ -1,0 +1,140 @@
+import { ReactNode } from 'react';
+import { Link, useLocation } from 'wouter';
+import { useClerk } from '@clerk/react';
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  getGetFoundationSummaryQueryKey,
+  getGetSessionQueryKey,
+  useGetSession,
+  useListOrganizations,
+  useSelectOrganization,
+} from '@workspace/api-client-react';
+import { Building2, LayoutDashboard, Shield, ChevronDown, Check, LogOut } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+
+export function AppShell({ children }: { children: ReactNode }) {
+  const [location] = useLocation();
+  const { signOut } = useClerk();
+  const queryClient = useQueryClient();
+
+  const { data: session, isLoading: sessionLoading } = useGetSession();
+  const { data: orgs, isLoading: orgsLoading } = useListOrganizations();
+  const selectOrg = useSelectOrganization();
+
+  const handleSelectOrg = (organizationId: string) => {
+    selectOrg.mutate({ data: { organizationId } }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetSessionQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetFoundationSummaryQueryKey() });
+      }
+    });
+  };
+
+  const navItems = [
+    { href: '/app', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/profile', label: 'Identity & Access', icon: Shield },
+  ];
+
+  return (
+    <div className="min-h-[100dvh] flex flex-col bg-background">
+      <header className="sticky top-0 z-40 w-full border-b border-border bg-card">
+        <div className="flex h-14 items-center px-4 md:px-6 gap-6">
+          <Link href="/app" className="flex items-center gap-2 mr-4">
+            <div className="size-6 bg-primary rounded flex items-center justify-center">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="size-4 text-primary-foreground">
+                <path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v4" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <span className="font-mono font-bold tracking-tight hidden md:inline-block">NEXUS-FM</span>
+          </Link>
+
+          <div className="flex-1 flex items-center gap-2">
+            {sessionLoading || orgsLoading ? (
+              <Skeleton className="h-9 w-[200px]" />
+            ) : session ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="font-mono justify-between min-w-[200px] border-border hover:bg-muted/50">
+                    <div className="flex items-center gap-2 truncate">
+                      <Building2 className="size-4 text-primary" />
+                      <span className="truncate">
+                        {session.activeOrganization?.organization.name ?? "Select Organization"}
+                      </span>
+                    </div>
+                    <ChevronDown className="size-4 ml-2 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-[240px] font-mono">
+                  <DropdownMenuLabel className="text-xs text-muted-foreground uppercase tracking-wider">
+                    Available Organizations
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {orgs?.map((orgAccess) => (
+                    <DropdownMenuItem
+                      key={orgAccess.organization.id}
+                      onClick={() => handleSelectOrg(orgAccess.organization.id)}
+                      disabled={selectOrg.isPending}
+                      className="flex items-center justify-between cursor-pointer"
+                    >
+                      <span className="truncate">{orgAccess.organization.name}</span>
+                      {session.activeOrganization?.organization.id === orgAccess.organization.id && (
+                        <Check className="size-4 text-primary" />
+                      )}
+                    </DropdownMenuItem>
+                  ))}
+                  {orgs?.length === 0 && (
+                    <div className="px-2 py-4 text-center text-xs text-muted-foreground">
+                      No organizations available.
+                    </div>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : null}
+          </div>
+
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="sm" onClick={() => signOut({ redirectUrl: import.meta.env.BASE_URL })}>
+              <LogOut className="size-4" />
+              <span className="hidden sm:inline">Sign out</span>
+            </Button>
+          </div>
+        </div>
+        <div className="flex items-center px-4 md:px-6 h-10 border-t border-border bg-background overflow-x-auto gap-1">
+          {navItems.map((item) => {
+            const isActive = location === item.href || (location.startsWith(item.href) && item.href !== '/app');
+            const Icon = item.icon;
+            return (
+              <Link key={item.href} href={item.href}>
+                <div
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-mono transition-colors cursor-pointer whitespace-nowrap
+                    ${isActive 
+                      ? 'bg-primary/10 text-primary border border-primary/20' 
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50 border border-transparent'
+                    }`}
+                >
+                  <Icon className="size-4" />
+                  {item.label}
+                </div>
+              </Link>
+            )
+          })}
+        </div>
+      </header>
+
+      <main className="flex-1 overflow-y-auto">
+        <div className="container py-8">
+          {children}
+        </div>
+      </main>
+    </div>
+  );
+}

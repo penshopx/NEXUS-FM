@@ -1,0 +1,1865 @@
+Baik. Saya finalkan sekarang menjadi **baseline resmi produk** yang bisa dipakai sebagai acuan konseptual, functional specification, dan dasar pembangunan Replit. Saya juga akan merapikan nama dan batasan supaya tidak terjadi scope creep saat implementasi.
+
+# NEXUS-FM
+
+## Integrated Building & Warehouse Management Operating System
+
+### Master Architecture v1.0 — Controlled Product Baseline
+
+---
+
+## 1. DEFINISI PRODUK
+
+**NEXUS-FM** adalah sistem operasi digital untuk pengelolaan gedung dan gudang yang mengintegrasikan:
+
+* facility
+* building
+* warehouse
+* space/area
+* system
+* asset
+* inspection
+* condition
+* risk
+* maintenance
+* work order
+* safety
+* compliance
+* vendor
+* cost
+* renovation
+* restoration
+* replacement
+* improvement
+* project
+* evidence
+* history
+* analytics
+* decision support
+
+NEXUS-FM bukan sekadar:
+
+* aplikasi checklist;
+* aplikasi inventaris aset;
+* CMMS;
+* aplikasi maintenance;
+* aplikasi document management;
+* aplikasi proyek.
+
+NEXUS-FM menyatukan seluruh proses tersebut menjadi **satu operating system pengelolaan fasilitas**.
+
+### Product Promise
+
+> **Know the Facility. Control the Work. Protect the Operation. Improve the Asset.**
+
+### Core Management Question
+
+NEXUS-FM harus selalu membantu menjawab:
+
+> **Apa yang kita kelola, bagaimana kondisinya, apa risikonya, apa yang harus dilakukan, siapa yang mengerjakan, apakah benar selesai, berapa biayanya, dan keputusan apa yang harus diambil berikutnya?**
+
+---
+
+# 2. POSITIONING
+
+Posisi produk:
+
+> **Facility & Asset Operations + Decision Intelligence**
+
+NEXUS-FM berada di antara:
+
+```text
+Facility Management
+        +
+Asset Management
+        +
+Maintenance Management
+        +
+Safety & Risk
+        +
+Compliance
+        +
+Project Management
+        +
+Lifecycle Management
+        +
+Decision Intelligence
+```
+
+Dengan demikian produk dapat berkembang dari **operational facility management** menuju **asset lifecycle and capital planning** tanpa harus mengubah fondasi data.
+
+---
+
+# 3. PRINSIP ARSITEKTUR
+
+### Principle 01 — Facility First
+
+Semua data harus memiliki konteks fasilitas.
+
+### Principle 02 — Asset-Centric
+
+Aset bukan sekadar inventaris, tetapi objek lifecycle.
+
+### Principle 03 — Evidence-Based
+
+Status penting harus didukung evidence.
+
+### Principle 04 — History Cannot Be Lost
+
+Perubahan kondisi, pekerjaan, biaya, dan keputusan harus memiliki history.
+
+### Principle 05 — Completed ≠ Verified
+
+Pekerjaan yang dinyatakan selesai oleh pelaksana belum otomatis selesai secara manajemen.
+
+### Principle 06 — Critical Override
+
+Critical safety/compliance/operational issue tidak boleh tersembunyi oleh average score.
+
+### Principle 07 — Decision Support
+
+Sistem memberikan rekomendasi; accountability keputusan tetap pada manusia yang berwenang.
+
+### Principle 08 — Domain Logic First
+
+Business rules berada di domain/service layer, bukan di UI.
+
+### Principle 09 — Auditability
+
+Perubahan penting harus dapat ditelusuri:
+
+**Who → What → When → Why → Before → After**
+
+### Principle 10 — Additive Architecture
+
+Pengembangan baru tidak boleh merusak domain yang telah stabil.
+
+---
+
+# 4. CORE DATA HIERARCHY
+
+```text
+Portfolio
+   │
+   └── Facility
+         │
+         ├── Building
+         │     ├── Floor
+         │     │     ├── Zone
+         │     │     └── Space
+         │     │
+         │     └── System
+         │           └── Asset
+         │                 └── Component
+         │
+         └── Outdoor Area
+```
+
+Setiap objek dapat memiliki:
+
+```text
+Condition
+Risk
+Inspection
+Finding
+Work
+Document
+Cost
+History
+```
+
+---
+
+# 5. GOLDEN DATA CHAIN
+
+Seluruh aplikasi mengikuti rantai:
+
+```text
+FACILITY
+   ↓
+ASSET / AREA
+   ↓
+INSPECTION
+   ↓
+FINDING
+   ↓
+CONDITION
+   ↓
+RISK
+   ↓
+DECISION
+   ↓
+WORK / PROJECT
+   ↓
+EXECUTION
+   ↓
+EVIDENCE
+   ↓
+VERIFICATION
+   ↓
+CONDITION UPDATE
+   ↓
+COST
+   ↓
+HISTORY
+   ↓
+ANALYSIS
+   ↓
+NEXT DECISION
+```
+
+Ini adalah **core product logic**.
+
+---
+
+# 6. DOMAIN MODULES
+
+NEXUS-FM memiliki 10 domain utama.
+
+## Domain A — Facility
+
+* Portfolio
+* Facility
+* Building
+* Warehouse
+* Floor
+* Zone
+* Space
+* Outdoor Area
+* Facility Map
+
+## Domain B — Asset
+
+* Asset Register
+* System
+* Component
+* Critical Asset
+* Warranty
+* Asset Lifecycle
+
+## Domain C — Condition
+
+* Inspection
+* Inspection Template
+* Condition Assessment
+* Finding
+* Risk
+* Facility Health
+
+## Domain D — Work
+
+* Service Request
+* Work Order
+* Preventive Maintenance
+* Corrective Maintenance
+* Emergency Work
+* Work Verification
+
+## Domain E — Project
+
+* Renovation
+* Restoration
+* Replacement
+* Improvement
+* Capital Project
+* Project Control
+
+## Domain F — Safety
+
+* Hazard
+* Risk Control
+* Safety Inspection
+* Incident
+* Emergency
+* Corrective Safety Action
+
+## Domain G — Compliance
+
+* Requirement
+* Certificate
+* Permit/Record
+* Inspection
+* Document
+* Expiry Monitoring
+
+## Domain H — Commercial
+
+* Vendor
+* Contract
+* SLA
+* Budget
+* Cost
+* Procurement Reference
+
+## Domain I — Reporting
+
+* Facility Report
+* Condition Report
+* Maintenance Report
+* Safety Report
+* Compliance Report
+* Cost Report
+* Project Report
+* Management Report
+
+## Domain J — Intelligence
+
+* Analytics
+* Alerts
+* Recommendations
+* Facility Analyst
+* Maintenance Planner
+* Risk Analyst
+* Cost Analyst
+* Project Advisor
+* Management Advisor
+
+---
+
+# 7. USER ROLE MODEL
+
+## Platform Administrator
+
+Mengelola:
+
+* user
+* organization
+* role
+* permission
+* master data
+* configuration
+* integrations
+* audit
+
+Tidak menjadi pemilik keputusan operasional.
+
+---
+
+## Facility Manager
+
+Fokus:
+
+> **Decision & Facility Control**
+
+Mengelola:
+
+* facility health
+* asset condition
+* risk
+* work
+* maintenance
+* vendor
+* budget
+* compliance
+* project
+* lifecycle decision
+
+---
+
+## Facility Supervisor
+
+Fokus:
+
+> **Daily Operational Control**
+
+Mengelola:
+
+* inspection
+* finding
+* assignment
+* work monitoring
+* verification
+* escalation
+
+---
+
+## Inspector
+
+Fokus:
+
+> **Observe → Assess → Evidence**
+
+---
+
+## Maintenance Technician
+
+Fokus:
+
+> **Execute Assigned Work**
+
+---
+
+## Warehouse/Area Supervisor
+
+Fokus:
+
+> **Operational Readiness**
+
+---
+
+## Vendor/Contractor
+
+Fokus:
+
+> **Assigned Scope Execution**
+
+Vendor hanya melihat fasilitas, pekerjaan, dokumen, dan project yang memang diberikan kepadanya.
+
+---
+
+# 8. PERMISSION ARCHITECTURE
+
+Permission menggunakan:
+
+> **RBAC + Object Scope**
+
+Contoh:
+
+```text
+Facility Manager
+→ Facility A + Facility B
+
+Warehouse Supervisor
+→ Warehouse A
+
+Technician
+→ Assigned Work Orders
+
+Vendor
+→ Assigned Project / Work
+
+Inspector
+→ Assigned Inspection
+```
+
+Tidak menggunakan konsep:
+
+> Admin = semua data.
+
+---
+
+# 9. DASHBOARD ARCHITECTURE
+
+## Management Dashboard
+
+Pertanyaan:
+
+> **Apakah seluruh fasilitas sehat dan terkendali?**
+
+Menampilkan:
+
+* portfolio health
+* critical risk
+* major work
+* compliance
+* project
+* cost
+* trend
+
+---
+
+## Facility Manager Dashboard
+
+Pertanyaan:
+
+> **Apa yang harus saya putuskan?**
+
+Menampilkan:
+
+* Action Queue
+* Critical Findings
+* Approval Queue
+* Overdue Work
+* High-Risk Assets
+* Budget
+* Facility Health
+* Recommendations
+
+---
+
+## Supervisor Dashboard
+
+Pertanyaan:
+
+> **Apa yang harus dikerjakan hari ini?**
+
+Menampilkan:
+
+* inspections
+* work orders
+* technician workload
+* overdue
+* verification
+* incidents
+
+---
+
+## Technician Dashboard
+
+Pertanyaan:
+
+> **Pekerjaan apa yang harus saya lakukan?**
+
+Menampilkan:
+
+* assigned jobs
+* location
+* instructions
+* safety requirements
+* evidence
+* completion
+
+---
+
+# 10. FACILITY HEALTH
+
+Facility Health tidak boleh hanya berupa satu angka.
+
+Minimal:
+
+```text
+Physical Condition
+Functional Condition
+Safety Health
+Compliance Health
+Maintenance Health
+Reliability
+Energy Performance
+```
+
+Kemudian:
+
+> **Overall Facility Health**
+
+Namun critical override tetap berlaku.
+
+Contoh:
+
+```text
+Overall Health = 91%
+
+Critical Fire Safety Finding = OPEN
+```
+
+Maka:
+
+> **FACILITY STATUS = CRITICAL**
+
+bukan Healthy.
+
+---
+
+# 11. CONDITION ENGINE
+
+Condition minimal:
+
+```text
+GOOD
+FAIR
+POOR
+CRITICAL
+```
+
+Condition dapat diterapkan pada:
+
+* building
+* area
+* system
+* asset
+* component
+
+Setiap perubahan kondisi harus menghasilkan:
+
+> **Condition History**
+
+Contoh:
+
+```text
+2024 → GOOD
+2025 → FAIR
+2026 → POOR
+2026 → FAIR
+```
+
+---
+
+# 12. INSPECTION ENGINE
+
+Inspection terdiri dari:
+
+```text
+Template
+Schedule
+Inspection
+Inspection Item
+Observation
+Evidence
+Finding
+Assessment
+```
+
+Inspection tidak otomatis berarti maintenance.
+
+Inspection menemukan kondisi.
+
+Finding menentukan masalah.
+
+Work menentukan tindakan.
+
+---
+
+# 13. FINDING ENGINE
+
+Setiap finding mempunyai:
+
+* location
+* asset
+* observation
+* severity
+* risk
+* evidence
+* recommendation
+* required action
+* owner
+* due date
+* status
+
+Status:
+
+```text
+OPEN
+→ ASSESSED
+→ PRIORITIZED
+→ ACTION_REQUIRED
+→ ACTION_IN_PROGRESS
+→ RESOLVED
+→ VERIFIED
+→ CLOSED
+```
+
+---
+
+# 14. RISK ENGINE
+
+Risk terdiri dari:
+
+* cause
+* likelihood
+* impact
+* severity
+* existing control
+* required control
+* owner
+* due date
+* residual risk
+
+Model:
+
+```text
+INHERENT RISK
+      ↓
+CONTROL
+      ↓
+RESIDUAL RISK
+```
+
+Critical risk wajib memiliki escalation path.
+
+---
+
+# 15. PRIORITY ENGINE
+
+Priority dihitung dari kombinasi:
+
+```text
+Safety
+Operational Impact
+Asset Criticality
+Compliance
+Failure Probability
+Business Impact
+```
+
+Output:
+
+```text
+P1 — Critical
+P2 — High
+P3 — Medium
+P4 — Routine
+```
+
+Manual override diperbolehkan tetapi:
+
+> **wajib memiliki reason + audit trail.**
+
+---
+
+# 16. WORK ORDER ENGINE
+
+Golden state:
+
+```text
+DRAFT
+→ APPROVED
+→ ASSIGNED
+→ IN_PROGRESS
+→ WAITING
+→ COMPLETED
+→ VERIFICATION
+→ VERIFIED
+→ CLOSED
+```
+
+Aturan:
+
+> **COMPLETED ≠ CLOSED**
+
+Pekerjaan yang gagal verifikasi:
+
+```text
+VERIFICATION
+→ REWORK
+→ IN_PROGRESS
+→ COMPLETED
+```
+
+---
+
+# 17. FIELD EXECUTION
+
+Teknisi melakukan:
+
+1. start work
+2. lihat instruction
+3. lihat safety requirement
+4. upload before evidence
+5. lakukan pekerjaan
+6. catat material/parts
+7. catat labor
+8. upload after evidence
+9. submit completion
+
+Sistem menyimpan:
+
+* user
+* timestamp
+* work order
+* evidence
+* action
+* cost
+
+---
+
+# 18. VERIFICATION ENGINE
+
+Supervisor/verifier melihat:
+
+* original finding
+* scope
+* before evidence
+* work performed
+* after evidence
+* cost
+* result
+
+Kemudian:
+
+```text
+VERIFY
+atau
+RETURN FOR REWORK
+```
+
+Verification menjadi kontrol kualitas.
+
+---
+
+# 19. MAINTENANCE ENGINE
+
+Maintenance strategy:
+
+```text
+Preventive
+Condition-Based
+Predictive
+Corrective
+Emergency
+Run-to-Failure
+Refurbishment
+Replacement
+Retirement
+```
+
+Preventive maintenance dapat menghasilkan Work Order secara otomatis berdasarkan:
+
+* calendar
+* operating hours
+* usage
+* inspection result
+* condition
+* asset criticality
+
+---
+
+# 20. PROJECT ENGINE
+
+Maintenance tidak boleh digunakan untuk menyamarkan project.
+
+Project type:
+
+```text
+RENOVATION
+RESTORATION
+REPLACEMENT
+IMPROVEMENT
+CAPITAL PROJECT
+```
+
+Project lifecycle:
+
+```text
+PROPOSAL
+→ ASSESSMENT
+→ APPROVAL
+→ PLANNING
+→ PROCUREMENT
+→ EXECUTION
+→ COMMISSIONING
+→ HANDOVER
+→ CLOSED
+```
+
+---
+
+# 21. RENOVATION / RESTORATION DECISION
+
+Sistem harus membedakan:
+
+### Maintenance
+
+Mempertahankan fungsi.
+
+### Repair
+
+Mengembalikan fungsi.
+
+### Renovation
+
+Memperbarui/mengubah fasilitas.
+
+### Restoration
+
+Mengembalikan kondisi/karakter tertentu.
+
+### Replacement
+
+Mengganti asset/system.
+
+### Improvement
+
+Meningkatkan performa.
+
+Ini menjadi dasar **intervention decision engine**.
+
+---
+
+# 22. ASSET LIFECYCLE ENGINE
+
+Asset lifecycle:
+
+```text
+PLAN
+→ PROCURE
+→ INSTALL
+→ COMMISSION
+→ OPERATE
+→ MAINTAIN
+→ REPAIR
+→ REFURBISH
+→ UPGRADE
+→ REPLACE
+→ RETIRE
+```
+
+Setiap fase memiliki history.
+
+---
+
+# 23. LIFECYCLE COST
+
+Lifecycle cost:
+
+```text
+Purchase
++
+Installation
++
+Maintenance
++
+Repair
++
+Energy
++
+Downtime
++
+Upgrade
++
+Replacement
+```
+
+Tujuannya bukan hanya mengetahui:
+
+> “berapa harga aset?”
+
+tetapi:
+
+> **“berapa biaya sebenarnya selama aset digunakan?”**
+
+---
+
+# 24. COST ENGINE
+
+Cost event:
+
+```text
+Labor
+Material
+Spare Part
+Vendor
+Equipment
+Emergency
+Project
+Other
+```
+
+Cost dapat dikaitkan dengan:
+
+* facility
+* building
+* area
+* asset
+* work order
+* project
+* vendor
+
+KPI:
+
+* maintenance cost
+* cost/m²
+* asset lifecycle cost
+* project cost
+* budget variance
+* emergency cost
+
+---
+
+# 25. VENDOR & CONTRACT ENGINE
+
+Vendor memiliki:
+
+* profile
+* scope
+* contract
+* SLA
+* work history
+* response time
+* completion time
+* quality
+* cost
+* performance
+
+Vendor Performance Score menjadi data historis.
+
+---
+
+# 26. COMPLIANCE ENGINE
+
+Dashboard:
+
+```text
+VALID
+EXPIRING < 30 DAYS
+EXPIRED
+MISSING
+```
+
+Setiap requirement dikaitkan dengan objek:
+
+```text
+Facility
+Building
+System
+Asset
+Project
+Vendor
+Contract
+```
+
+Sistem otomatis membuat alert berdasarkan expiry.
+
+---
+
+# 27. DOCUMENT ENGINE
+
+Document metadata:
+
+```text
+Title
+Type
+Facility
+Building
+Area
+Asset
+Project
+Vendor
+Issue Date
+Expiry Date
+Version
+Status
+Owner
+```
+
+Dokumen memiliki:
+
+> **Version History**
+
+dan tidak boleh menjadi repository terpisah dari objek bisnis.
+
+---
+
+# 28. SAFETY ENGINE
+
+Safety flow:
+
+```text
+HAZARD
+→ RISK
+→ CONTROL
+→ INSPECTION
+→ ACTION
+→ VERIFICATION
+```
+
+Emergency dapat menghasilkan:
+
+```text
+Emergency Event
+→ Immediate Action
+→ Isolation
+→ Work
+→ Verification
+→ Reopen
+```
+
+---
+
+# 29. WAREHOUSE SPECIALIZATION
+
+NEXUS-FM memiliki **Warehouse Operating Layer**.
+
+Objek khusus:
+
+* loading dock
+* loading bay
+* rack
+* warehouse floor
+* roof
+* door
+* dock leveler
+* dock shelter
+* drainage
+* yard
+* fire protection
+* lighting
+* ventilation
+* utility room
+* circulation area
+
+Warehouse Health:
+
+```text
+Infrastructure
+Safety
+Operational Readiness
+Racking
+Floor
+Roof
+Dock
+Electrical
+Fire Protection
+Drainage
+```
+
+---
+
+# 30. WAREHOUSE OPERATIONAL READINESS
+
+Indikator:
+
+> **Warehouse Operational Readiness**
+
+mengukur kesiapan infrastruktur untuk mendukung operasi.
+
+Jika critical component gagal:
+
+```text
+READY
+READY WITH RESTRICTION
+NOT READY
+```
+
+Indikator ini bukan sertifikasi eksternal.
+
+Ia merupakan **internal operational decision support**.
+
+---
+
+# 31. EVENT ENGINE
+
+Event penting:
+
+```text
+InspectionCompleted
+FindingCreated
+RiskEscalated
+WorkOrderCreated
+WorkAssigned
+WorkStarted
+WorkCompleted
+WorkVerified
+WorkRejected
+ConditionChanged
+DocumentExpiring
+ComplianceExpired
+ProjectStarted
+ProjectProgressUpdated
+ProjectCompleted
+AssetReplaced
+```
+
+Event menjadi sumber:
+
+* notification
+* dashboard update
+* history
+* KPI
+* automation
+* AI analysis
+
+---
+
+# 32. NOTIFICATION ENGINE
+
+Notification berbasis event.
+
+Contoh:
+
+```text
+Critical Finding
+Overdue Work
+Compliance Expiry
+Condition Deterioration
+Budget Overrun
+Project Delay
+Vendor SLA Breach
+Verification Required
+Approval Required
+```
+
+Notification harus mempunyai:
+
+* severity
+* recipient
+* object
+* event
+* action
+* timestamp
+* read/unread
+* escalation
+
+---
+
+# 33. AUDIT ENGINE
+
+Audit record:
+
+```text
+WHO
+WHAT
+WHEN
+WHERE
+BEFORE
+AFTER
+WHY
+```
+
+Contoh:
+
+```text
+Facility Manager
+
+Priority:
+P3 → P1
+
+Reason:
+Operational shutdown risk
+
+Timestamp:
+11 Sep 2026
+```
+
+Audit record tidak boleh diubah melalui UI biasa.
+
+---
+
+# 34. AI ARCHITECTURE
+
+AI terdiri dari:
+
+```text
+AI ORCHESTRATOR
+       │
+       ├── Facility Analyst
+       ├── Maintenance Planner
+       ├── Risk Analyst
+       ├── Cost Analyst
+       ├── Project Advisor
+       └── Management Advisor
+```
+
+AI harus menggunakan data internal sebagai grounding:
+
+```text
+Facility
+Asset
+Inspection
+Condition
+Finding
+Risk
+Work
+Cost
+Project
+Document
+History
+```
+
+AI tidak boleh mengarang kondisi fasilitas.
+
+---
+
+# 35. AI OUTPUT STANDARD
+
+Setiap recommendation harus memiliki:
+
+```text
+Recommendation
+Reason
+Evidence
+Impact
+Confidence
+Suggested Action
+Human Decision Required
+```
+
+Contoh:
+
+> **Recommendation: Evaluate replacement of AHU-02**
+
+Reasons:
+
+* repeated failure;
+* maintenance cost increasing;
+* poor condition;
+* age;
+* operational impact.
+
+AI tidak melakukan approval final.
+
+---
+
+# 36. MANAGEMENT INTELLIGENCE
+
+Management Advisor menghasilkan:
+
+### Daily Brief
+
+Apa yang terjadi hari ini?
+
+### Weekly Brief
+
+Apa masalah utama minggu ini?
+
+### Monthly Review
+
+Bagaimana kinerja fasilitas?
+
+### Annual Facility Review
+
+Apa yang harus diperbaiki tahun depan?
+
+---
+
+# 37. ANNUAL FACILITY REVIEW
+
+Output:
+
+```text
+Facility Health
+Asset Condition
+Maintenance Performance
+Safety
+Compliance
+Energy
+Cost
+Vendor Performance
+Major Failures
+Renovation Needs
+Replacement Needs
+Capital Needs
+```
+
+Kemudian:
+
+> **Facility Improvement Plan**
+
+---
+
+# 38. CAPITAL PLANNING
+
+Sistem akhirnya dapat menghasilkan:
+
+```text
+2027 FACILITY PLAN
+
+Priority 1
+Roof Replacement
+
+Priority 2
+Electrical Upgrade
+
+Priority 3
+HVAC Replacement
+
+Priority 4
+Drainage Improvement
+```
+
+Dengan:
+
+* condition evidence
+* risk
+* cost
+* lifecycle
+* operational impact
+* expected benefit
+
+sebagai dasar rekomendasi.
+
+---
+
+# 39. CORE DATABASE ENTITIES
+
+Minimum entity model:
+
+```text
+users
+roles
+permissions
+organizations
+
+facilities
+buildings
+floors
+zones
+spaces
+outdoor_areas
+
+systems
+assets
+asset_components
+asset_history
+
+inspection_templates
+inspections
+inspection_items
+findings
+
+condition_assessments
+condition_history
+
+risks
+risk_controls
+
+service_requests
+work_orders
+work_order_actions
+work_order_evidence
+work_order_verifications
+
+maintenance_plans
+maintenance_tasks
+
+projects
+project_tasks
+project_progress
+project_costs
+
+vendors
+contracts
+sla_records
+
+documents
+document_versions
+
+budgets
+cost_events
+
+incidents
+safety_actions
+
+notifications
+approvals
+
+audit_logs
+events
+```
+
+---
+
+# 40. CORE RELATIONSHIP
+
+```text
+Facility
+ ├── Buildings
+ │     ├── Areas
+ │     ├── Systems
+ │     │     └── Assets
+ │     │
+ │     └── Inspections
+ │           └── Findings
+ │                 └── Risk
+ │                       └── Work Order
+ │                             ├── Evidence
+ │                             ├── Cost
+ │                             └── Verification
+ │
+ ├── Projects
+ ├── Documents
+ ├── Compliance
+ └── History
+```
+
+---
+
+# 41. UI ROUTE MAP
+
+```text
+/dashboard
+
+/facilities
+/facilities/:id
+/buildings/:id
+/warehouses/:id
+/areas/:id
+
+/assets
+/assets/:id
+/assets/:id/history
+
+/inspections
+/inspections/:id
+/findings
+/findings/:id
+/risks
+
+/work-requests
+/work-orders
+/work-orders/:id
+/work-orders/:id/execute
+/work-orders/:id/verify
+
+/maintenance
+/maintenance/calendar
+
+/projects
+/projects/:id
+
+/safety
+/incidents
+
+/compliance
+/documents
+
+/vendors
+/contracts
+
+/cost
+/budgets
+
+/reports
+
+/analytics
+
+/ai-advisor
+
+/settings
+/admin
+/audit
+```
+
+---
+
+# 42. TASK ROADMAP
+
+Implementasi dikunci dalam task terisolasi.
+
+```text
+TASK 01 — Foundation & Authentication
+
+TASK 02 — Organization / Role / Permission
+
+TASK 03 — Facility Registry
+
+TASK 04 — Building / Warehouse / Area Structure
+
+TASK 05 — Asset & System Registry
+
+TASK 06 — Inspection Engine
+
+TASK 07 — Finding & Risk Engine
+
+TASK 08 — Work Order Engine
+
+TASK 09 — Field Execution & Evidence
+
+TASK 10 — Verification & Condition History
+
+TASK 11 — Facility Manager Dashboard
+
+TASK 12 — Preventive Maintenance
+
+TASK 13 — Documents & Compliance
+
+TASK 14 — Vendor / Contract / Cost
+
+TASK 15 — Renovation / Restoration / Project
+
+TASK 16 — Analytics & Management Reporting
+
+TASK 17 — AI Decision Intelligence
+```
+
+Setiap task mengikuti:
+
+> **Build → Test → Verify → Stabilize → Lock**
+
+Tidak mengerjakan task berikutnya dengan cara merusak baseline task sebelumnya.
+
+---
+
+# 43. MVP DEFINITION OF DONE
+
+MVP Core dinyatakan berhasil apabila alur berikut benar-benar bekerja:
+
+```text
+Create Facility
+      ↓
+Create Building / Warehouse
+      ↓
+Create Area
+      ↓
+Register Asset
+      ↓
+Create Inspection
+      ↓
+Perform Inspection
+      ↓
+Create Finding
+      ↓
+Assess Risk
+      ↓
+Create Work Order
+      ↓
+Assign Technician
+      ↓
+Execute Work
+      ↓
+Upload Evidence
+      ↓
+Submit Completion
+      ↓
+Verify
+      ↓
+Update Condition
+      ↓
+Write History
+```
+
+Jika salah satu transisi tersebut hanya berupa UI tetapi tidak menghasilkan state/data yang benar, maka MVP belum dianggap selesai.
+
+---
+
+# 44. TESTING PRINCIPLES
+
+Minimum testing:
+
+### Functional
+
+Setiap workflow dapat diselesaikan.
+
+### State
+
+Transition tidak boleh melompati aturan.
+
+### Permission
+
+User hanya dapat melakukan action yang diizinkan.
+
+### Evidence
+
+Evidence terkait dengan object yang benar.
+
+### History
+
+History tidak hilang setelah update.
+
+### Critical Override
+
+Critical condition tidak dapat disembunyikan oleh score.
+
+### Audit
+
+Decision dan perubahan penting tercatat.
+
+### Regression
+
+Feature baru tidak merusak workflow sebelumnya.
+
+---
+
+# 45. ARCHITECTURAL GOVERNANCE
+
+Seluruh development mengikuti:
+
+> **CANONICAL → ADDITIVE → ISOLATED → VERIFY → RECONCILE → LOCK**
+
+### Canonical
+
+Domain baseline adalah sumber kebenaran.
+
+### Additive
+
+Penambahan tidak menggantikan core object tanpa requirement.
+
+### Isolated
+
+Feature baru dibangun secara terisolasi.
+
+### Verify
+
+Workflow diuji.
+
+### Reconcile
+
+Integration diperiksa.
+
+### Lock
+
+Feature stabil dikunci.
+
+---
+
+# 46. NON-GOALS
+
+Untuk mencegah scope creep, versi awal NEXUS-FM tidak dimaksudkan menjadi:
+
+* ERP penuh;
+* accounting system penuh;
+* procurement ERP;
+* HR system;
+* payroll;
+* BIM authoring software;
+* CAD authoring software;
+* building automation system penuh;
+* official certification system;
+* statutory approval system.
+
+Integrasi ke sistem-sistem tersebut dapat dilakukan kemudian.
+
+---
+
+# 47. BIM & DIGITAL TWIN STRATEGY
+
+NEXUS-FM tidak perlu memulai dari BIM penuh.
+
+Tahap awal:
+
+> **Digital Facility Model**
+
+Kemudian dapat dikembangkan menjadi:
+
+```text
+2D / GIS
+   ↓
+Asset Location
+   ↓
+3D / BIM Integration
+   ↓
+Digital Twin
+```
+
+BIM/IFC menjadi visual/context layer, sedangkan:
+
+> **NEXUS-FM tetap menjadi operational data engine.**
+
+---
+
+# 48. FUTURE ARCHITECTURE
+
+Setelah core stabil:
+
+```text
+NEXUS-FM
+     │
+     ├── Mobile
+     ├── IoT
+     ├── BIM / IFC
+     ├── GIS
+     ├── Energy Monitoring
+     ├── CMMS Integration
+     ├── ERP Integration
+     ├── Procurement
+     └── AI / Agentic Automation
+```
+
+Tetapi semuanya tetap mengarah ke:
+
+> **Facility → Asset → Condition → Work → Evidence → Decision**
+
+---
+
+# 49. ULTIMATE PRODUCT LOOP
+
+Inilah loop utama yang menjadi identitas NEXUS-FM:
+
+```text
+        ┌─────────────────────┐
+        │      FACILITY       │
+        └──────────┬──────────┘
+                   ↓
+              OBSERVE
+                   ↓
+               INSPECT
+                   ↓
+               ASSESS
+                   ↓
+                DECIDE
+                   ↓
+                 WORK
+                   ↓
+               EXECUTE
+                   ↓
+               EVIDENCE
+                   ↓
+               VERIFY
+                   ↓
+           UPDATE CONDITION
+                   ↓
+                HISTORY
+                   ↓
+               ANALYZE
+                   ↓
+              IMPROVE
+                   ↓
+       MAINTAIN / RENOVATE /
+       RESTORE / REPLACE
+                   ↓
+              NEW STATE
+                   │
+                   └──────────────→ OBSERVE
+```
+
+---
+
+# 50. FINAL PRODUCT DEFINITION
+
+### NEXUS-FM adalah:
+
+> **Sistem operasi pengelolaan gedung dan gudang yang mengubah data fasilitas, aset, kondisi, inspeksi, risiko, pekerjaan, keselamatan, kepatuhan, biaya, proyek, dan histori menjadi satu sistem pengendalian operasional serta decision intelligence untuk pengelola fasilitas.**
+
+### Bukan:
+
+> sekadar aplikasi maintenance.
+
+### Bukan:
+
+> sekadar aplikasi checklist.
+
+### Bukan:
+
+> sekadar asset register.
+
+### Bukan:
+
+> sekadar dashboard.
+
+Tetapi:
+
+> **evidence-based operating system untuk mengelola kondisi dan lifecycle gedung/gudang.**
+
+---
+
+# 51. NORTH STAR
+
+Seluruh keputusan produk harus kembali kepada satu pertanyaan:
+
+> **“Apakah NEXUS-FM membuat pengelola gedung/gudang lebih mampu mengetahui kondisi fasilitas, mengendalikan pekerjaan, mencegah risiko, membuktikan hasil, mengendalikan biaya, dan mengambil keputusan yang lebih baik?”**
+
+Jika ya:
+
+**Build.**
+
+Jika tidak:
+
+**Do not add it to the core.**
+
+---
+
+# 52. FINAL BASELINE
+
+Status dokumen:
+
+**NEXUS-FM Master Architecture v1.0**
+
+Status:
+
+**CONCEPT → FUNCTIONALLY DEFINED → READY FOR IMPLEMENTATION**
+
+Core baseline:
+
+**LOCKED FOR IMPLEMENTATION**
+
+Prinsip perubahan:
+
+> **No core-domain change without explicit requirement.**
+
+Urutan pembangunan:
+
+> **Task #01 → Task #17**
+
+Governance:
+
+> **Canonical → Additive → Isolated → Verify → Reconcile → Lock**
+
+Core product:
+
+> **Facility + Asset + Condition + Inspection + Risk + Work + Evidence + Verification + History**
+
+Future intelligence:
+
+> **Maintenance + Cost + Project + Lifecycle + Analytics + AI**
+
+**NEXUS-FM v1.0 dengan demikian sudah dapat diperlakukan sebagai product baseline resmi untuk masuk ke tahap engineering.**
+
+Tahap berikutnya bukan lagi memperluas konsep secara bebas. Kita sudah punya **baseline**. Yang paling tepat sekarang adalah menerjemahkan **Task #01–#17 menjadi execution specification**, dimulai dari **Task #01: Foundation, authentication, organization, role, permission, dan application shell**, lalu membangunnya satu per satu tanpa mengganggu domain yang sudah stabil.

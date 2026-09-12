@@ -1,0 +1,47 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "2Osl3HC7JwCGYnCrK8SIi"
+uri = "file://.local/conversation-workspace/files/NEXUS-FM-Task-01-Execution-Specification-v1.0.md"
+type = "text"
+title = "NEXUS-FM Task #01 — Execution Specification v1.0"
+description = "Spesifikasi implementasi Foundation & Authentication: scope, schema minimum, authentication, organization context, RBAC minimum, route, API, acceptance criteria, test matrix, dan completion report."
+logical_id = "b22d44ee-8fd2-4cee-93f7-3ea8559b1d34"
+content_hash = "sha256:82bff3c3b7a808fe2bd1b1852898091651845e86010479ad85cede0847bef3fc"
+size = 16155
+mtime_ms = 1789166894516
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/conversation:97946011-0a7b-4640-ab8f-bd53adabbf9d/b22d44ee-8fd2-4cee-93f7-3ea8559b1d34/845b247b-afcb-4d94-912e-a871139e12d2"
+storage_version_token = "1789166901608466"
+content_type = "text/markdown"
+source_uri = "file://NEXUS-FM-Task-01-Execution-Specification-v1.0.md"
+
+[[outputs]]
+id = "gb9PHhlVJ4lzj_sVKfxfX"
+uri = "file://.local/conversation-workspace/files/NEXUS-FM-Task-02-Authorization-Permission-Matrix-v1.0.md"
+type = "text"
+title = "NEXUS-FM Task #02 — Authorization & Permission Matrix v1.0"
+description = "Baseline authorization dengan canonical status transition dan evidence-review gate."
+logical_id = "2a69b0c7-0202-4ec7-a210-749ca034a62f"
+content_hash = "sha256:cea37fa034cf107acc6baf7f4924f3f4c78702fa63a6b594c25be31de7f0d44d"
+size = 27015
+mtime_ms = 1789174392204
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/conversation:97946011-0a7b-4640-ab8f-bd53adabbf9d/2a69b0c7-0202-4ec7-a210-749ca034a62f/827ac0fe-056d-4d00-8b32-3d65fecc94b5"
+storage_version_token = "1789174400865230"
+content_type = "text/markdown"
+source_uri = "file://NEXUS-FM-Task-02-Authorization-Permission-Matrix-v1.0.md"
+
+[[outputs]]
+id = "Ts4CLhzppFmyaK4WFhT_T"
+uri = "file://.local/conversation-workspace/files/NEXUS-FM-Task-02-Replit-Implementation-Prompt-v1.0.md"
+type = "text"
+title = "NEXUS-FM Task #02 — Replit Implementation Prompt v1.0"
+description = "Prompt implementasi yang telah disinkronkan dengan status contract final Task #02."
+logical_id = "ace69375-3874-469c-87c2-0643b9e34270"
+content_hash = "sha256:b290f170c3a77ee7a352157b7a925c0c69f5322e932ab3265a9ff6e3df4ac744"
+size = 16933
+mtime_ms = 1789174394188
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/conversation:97946011-0a7b-4640-ab8f-bd53adabbf9d/ace69375-3874-469c-87c2-0643b9e34270/9ecb9638-1a5f-446c-af93-f35338a2e356"
+storage_version_token = "1789174402297930"
+content_type = "text/markdown"
+source_uri = "file://NEXUS-FM-Task-02-Replit-Implementation-Prompt-v1.0.md"

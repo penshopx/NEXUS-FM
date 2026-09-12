@@ -1,0 +1,105 @@
+Betul. Dengan cakupan tersebut, **Task #02 belum boleh dinaikkan status menjadi VERIFIED hanya karena implementasi selesai**. Status VERIFIED harus menjadi hasil dari bukti pengujian terhadap seluruh authorization boundary.
+
+Saya akan mengunci prinsip berikut untuk Task #02:
+
+### Task #02 — Authorization & Permission Matrix v1.0
+
+**Status:** `IMPLEMENTATION / VERIFICATION GATE`
+**Belum VERIFIED** sampai seluruh gate berikut terbukti lulus:
+
+1. **Cross-Organization Isolation**
+
+   * User Org A tidak dapat membaca/mengubah object Org B.
+   * Berlaku melalui UI maupun direct API.
+   * Tidak ada kebocoran melalui ID, filter, pagination, search, atau endpoint turunan.
+
+2. **Assignment Scope**
+
+   * Assignment membatasi akses sesuai object/resource yang ditugaskan.
+   * Role permission tidak boleh secara otomatis melewati assignment boundary.
+   * Scope evaluator harus konsisten pada seluruh endpoint.
+
+3. **Direct-API Bypass**
+
+   * Semua protected API diuji tanpa melalui UI.
+   * Request yang tidak berwenang harus ditolak server-side.
+   * Tidak boleh bergantung pada hidden button, frontend route guard, atau client state.
+
+4. **Permission Catalog**
+
+   * `RESOURCE.ACTION` lengkap.
+   * Role → permission mapping terdokumentasi.
+   * Tidak ada permission implicit yang muncul di luar catalog.
+
+5. **Scope Resolver**
+
+   * Organization scope.
+   * Assignment scope.
+   * Object ownership/relationship scope bila berlaku.
+   * Precedence antar-scope terdokumentasi dan deterministik.
+
+6. **Central Authorization Evaluator**
+
+   * Satu evaluator server-side menjadi sumber keputusan authorization.
+   * UI/API tidak membuat keputusan authorization sendiri.
+   * `allow / deny` dapat diaudit dan diuji.
+
+7. **Separation of Duties**
+
+   * Role yang tidak boleh melakukan kombinasi tindakan tertentu harus diblok.
+   * Konflik privilege diuji secara eksplisit.
+
+8. **Audit Events**
+
+   * Authorization-sensitive action menghasilkan event yang benar.
+   * Denied action juga dapat ditelusuri sesuai kontrak audit.
+   * Tidak boleh ada bypass audit melalui endpoint alternatif.
+
+9. **Migration**
+
+   * Migration additive.
+   * Tidak merusak schema/data Task #01.
+   * Migration dapat dijalankan pada environment bersih maupun existing database.
+
+10. **Seed**
+
+    * Permission catalog dan role mapping ter-seed secara deterministik.
+    * Tidak menghasilkan duplicate atau privilege tak terduga.
+
+11. **Build**
+
+    * Production build berhasil.
+    * Tidak ada TypeScript/runtime/schema regression akibat Task #02.
+
+12. **Regression Task #01**
+
+    * Seluruh regression test Task #01 tetap lulus.
+    * Tidak boleh mengubah behavior canonical Task #01 hanya demi memenuhi authorization Task #02.
+
+### Verification Matrix Minimum
+
+| Gate                          | Expected Result           |
+| ----------------------------- | ------------------------- |
+| Same-org authorized access    | `ALLOW`                   |
+| Same-org unauthorized action  | `DENY`                    |
+| Cross-org read                | `DENY`                    |
+| Cross-org mutation            | `DENY`                    |
+| Unassigned object access      | `DENY`                    |
+| Assigned object access        | `ALLOW` sesuai permission |
+| Direct API bypass             | `DENY`                    |
+| Frontend bypass attempt       | `DENY` server-side        |
+| SoD conflict                  | `DENY`                    |
+| Audit event                   | Recorded                  |
+| Migration                     | PASS                      |
+| Seed                          | PASS                      |
+| Build                         | PASS                      |
+| Task #01 regression           | PASS                      |
+| Full authorization regression | PASS                      |
+
+**Aturan status:**
+
+> **Tidak ada partial pass yang cukup untuk VERIFIED.**
+
+Jika satu saja dari **cross-organization isolation, assignment scope, direct-API authorization, migration, seed, build, atau regression** gagal, maka Task #02 tetap **NOT VERIFIED** dan harus masuk remediation/retest.
+
+Dengan demikian, **VERIFIED = implementation + integration + adversarial authorization testing + regression evidence**, bukan sekadar kode sudah ter-merge.

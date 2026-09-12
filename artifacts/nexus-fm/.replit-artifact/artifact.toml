@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "NEXUS-FM"
+description = "Sistem operasi pengelolaan fasilitas dan aset untuk manajer, supervisor, inspector, teknisi, pengawas gudang, dan vendor. Build awal mencakup foundation, authentication, organization context, role identity, dan protected application shell."
+version = "1.0.0"
+id = "artifacts/nexus-fm"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19562
+
+[services.development]
+run = "pnpm --filter @workspace/nexus-fm run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/nexus-fm", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/nexus-fm/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19562"
+BASE_PATH = "/"

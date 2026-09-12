@@ -1,0 +1,935 @@
+Baik. Kita lanjutkan dari **Master Operating Model** ke **Master Module Architecture**, tetapi saya akan mempertahankan prinsip yang Anda tetapkan untuk Task #01: **fondasi dulu, operasional setelah fondasinya dipercaya**.
+
+Dengan demikian, NEXUS-FM kita bangun secara bertahap, bukan langsung membuat seluruh fitur sekaligus.
+
+# NEXUS-FM — MASTER MODULE ARCHITECTURE v1.0
+
+## A. Arsitektur besar
+
+Saya mengusulkan struktur:
+
+```text
+NEXUS-FM
+│
+├── 00 FOUNDATION
+│   ├── Organization
+│   ├── User
+│   ├── Role
+│   ├── Authentication
+│   ├── Session
+│   └── Audit
+│
+├── 01 FACILITY
+│   ├── Facility
+│   ├── Building
+│   ├── Floor
+│   ├── Zone
+│   ├── Space
+│   └── Facility Profile
+│
+├── 02 ASSET
+│   ├── System
+│   ├── Asset
+│   ├── Asset Hierarchy
+│   ├── Criticality
+│   ├── Warranty
+│   └── Asset Documents
+│
+├── 03 INSPECTION
+│   ├── Inspection Plan
+│   ├── Schedule
+│   ├── Checklist
+│   ├── Inspection Session
+│   ├── Observation
+│   └── Finding
+│
+├── 04 ISSUE & INCIDENT
+│   ├── Issue
+│   ├── Complaint
+│   ├── Incident
+│   ├── Emergency
+│   └── Corrective Action
+│
+├── 05 MAINTENANCE
+│   ├── Maintenance Strategy
+│   ├── PM
+│   ├── Work Request
+│   ├── Work Order
+│   ├── Assignment
+│   ├── Execution
+│   └── Verification
+│
+├── 06 SAFETY & COMPLIANCE
+│   ├── Requirement
+│   ├── Permit
+│   ├── JSA
+│   ├── Safety
+│   ├── Competency
+│   ├── Certificate
+│   └── Compliance
+│
+├── 07 UTILITY & SUSTAINABILITY
+│   ├── Electricity
+│   ├── Water
+│   ├── Fuel
+│   ├── HVAC Energy
+│   ├── Waste
+│   └── Sustainability
+│
+├── 08 VENDOR & CONTRACT
+│   ├── Vendor
+│   ├── Contract
+│   ├── SLA
+│   ├── Assignment
+│   └── Performance
+│
+├── 09 PROJECT & LIFECYCLE
+│   ├── Project
+│   ├── Renovation
+│   ├── Restoration
+│   ├── Retrofit
+│   ├── Replacement
+│   ├── Capital Planning
+│   └── Handover
+│
+├── 10 FINANCE
+│   ├── Budget
+│   ├── RAB
+│   ├── Cost
+│   ├── Cashflow
+│   └── Variance
+│
+├── 11 DOCUMENT
+│   ├── Document
+│   ├── Revision
+│   ├── Evidence
+│   └── Digital Passport
+│
+├── 12 MANAGEMENT
+│   ├── KPI
+│   ├── Condition Index
+│   ├── Performance
+│   ├── Risk
+│   ├── Decision
+│   └── Reports
+│
+└── 13 NEXUS COPILOT
+    ├── Insight
+    ├── Recommendation
+    ├── Analysis
+    ├── Draft
+    └── AI Knowledge
+```
+
+---
+
+# B. Namun tidak semuanya dibuat sekaligus
+
+Ini sangat penting.
+
+Saya menyarankan roadmap engineering berikut.
+
+## PHASE 0 — FOUNDATION
+
+**Task #01**
+
+Authentication & Foundation.
+
+Sudah Anda definisikan:
+
+* Organization
+* User
+* Role
+* User Role
+* Session
+* Audit
+* secure authentication
+* organization context
+* minimum RBAC
+* application shell.
+
+### Status:
+
+> **FOUNDATION BASELINE**
+
+Belum ada operational data.
+
+---
+
+# C. PHASE 1 — OPERATIONAL CORE
+
+Setelah Task #01 stabil, kita membangun **core yang benar-benar membuat NEXUS-FM bekerja**.
+
+Urutannya:
+
+### Task #02
+
+**Authorization & Permission Matrix**
+
+Menentukan secara rinci:
+
+> siapa boleh melihat apa, membuat apa, mengubah apa, menyetujui apa, memverifikasi apa.
+
+Ini sengaja dipisahkan dari Task #01.
+
+---
+
+### Task #03
+
+**Facility & Space**
+
+```text
+Organization
+ ↓
+Facility
+ ↓
+Building
+ ↓
+Floor
+ ↓
+Zone
+ ↓
+Space
+```
+
+Ini menjadi konteks seluruh data.
+
+---
+
+### Task #04
+
+**Asset & System**
+
+```text
+Facility
+ ↓
+System
+ ↓
+Asset
+```
+
+Termasuk:
+
+* asset identity
+* hierarchy
+* location
+* criticality
+* warranty
+* lifecycle.
+
+---
+
+### Task #05
+
+**Inspection & Condition**
+
+Membangun:
+
+> Inspection → Observation → Finding → Condition
+
+Ini merupakan awal **condition intelligence**.
+
+---
+
+### Task #06
+
+**Issue & Incident**
+
+Menangani:
+
+* issue
+* complaint
+* incident
+* emergency.
+
+---
+
+### Task #07
+
+**Work Order**
+
+Core execution engine:
+
+> Request → Triage → Assignment → Execution → Completion
+
+---
+
+### Task #08
+
+**Evidence & Verification**
+
+Kemudian kita tegakkan:
+
+> **Completed ≠ Closed**
+
+Workflow:
+
+> Completed → Pending Verification → PASS/FAIL.
+
+Jika FAIL:
+
+> Rework → Reverification.
+
+---
+
+# D. Setelah Task #08, NEXUS-FM SUDAH MENJADI PRODUK OPERASIONAL
+
+Minimal lifecycle sudah berjalan:
+
+```text
+FACILITY
+   ↓
+ASSET
+   ↓
+INSPECTION
+   ↓
+FINDING
+   ↓
+ISSUE
+   ↓
+WORK ORDER
+   ↓
+EXECUTION
+   ↓
+EVIDENCE
+   ↓
+VERIFICATION
+   ↓
+CLOSED
+```
+
+Ini adalah **MVP sesungguhnya**.
+
+Bukan dashboard kosong.
+
+---
+
+# E. PHASE 2 — MANAGEMENT CONTROL
+
+Setelah core stabil:
+
+### Task #09
+
+Preventive Maintenance
+
+### Task #10
+
+SLA & Escalation
+
+### Task #11
+
+Vendor & Contract
+
+### Task #12
+
+Safety & Compliance
+
+### Task #13
+
+Incident Management
+
+### Task #14
+
+Utility & Energy
+
+### Task #15
+
+Cost Management
+
+### Task #16
+
+Management Dashboard
+
+Baru pada fase ini kita mulai menghasilkan:
+
+> **Facility Control Center**
+
+---
+
+# F. PHASE 3 — LIFECYCLE MANAGEMENT
+
+Kemudian:
+
+### Task #17
+
+Condition Assessment
+
+### Task #18
+
+Asset Lifecycle
+
+### Task #19
+
+Failure Intelligence
+
+### Task #20
+
+Capital Planning
+
+### Task #21
+
+Renovation Project
+
+### Task #22
+
+Restoration Project
+
+### Task #23
+
+Retrofit
+
+### Task #24
+
+Replacement
+
+### Task #25
+
+Facility Digital Passport
+
+---
+
+# G. PHASE 4 — GUSTAFTA INTEGRATION
+
+Baru setelah model internal NEXUS stabil:
+
+### Task #26
+
+Gustafta Identity / Organization Mapping
+
+### Task #27
+
+Project Request API
+
+### Task #28
+
+Project Handover API
+
+### Task #29
+
+Asset Handover
+
+### Task #30
+
+Document Exchange
+
+### Task #31
+
+Vendor/Tender Integration
+
+### Task #32
+
+Project Status Synchronization
+
+Sehingga:
+
+```text
+GUSTAFTA
+Construction
+    ↓
+Project
+    ↓
+Handover
+    ↓
+NEXUS-FM
+Operations
+    ↓
+Maintenance
+    ↓
+Condition
+    ↓
+Improvement
+    ↓
+Project Request
+    ↓
+GUSTAFTA
+```
+
+---
+
+# H. PHASE 5 — DIGITAL TWIN
+
+Setelah data operasional cukup matang:
+
+### Task #33
+
+Digital Facility Model
+
+### Task #34
+
+3D Space Mapping
+
+### Task #35
+
+Asset-to-Model Mapping
+
+### Task #36
+
+Sensor/IoT Integration
+
+### Task #37
+
+Operational Digital Twin
+
+### Task #38
+
+Project Digital Twin
+
+Tidak perlu memaksa BIM 7D sejak Task #01.
+
+---
+
+# I. PHASE 6 — NEXUS FACILITY COPILOT
+
+AI dibangun **di atas data yang benar**, bukan sebagai kosmetik.
+
+### Task #39
+
+Facility Knowledge Layer
+
+### Task #40
+
+Document Intelligence
+
+### Task #41
+
+Operational Copilot
+
+### Task #42
+
+Failure Intelligence
+
+### Task #43
+
+Cost Intelligence
+
+### Task #44
+
+Compliance Intelligence
+
+### Task #45
+
+Project Recommendation
+
+### Task #46
+
+Management Copilot
+
+---
+
+# J. ROLE ARCHITECTURE
+
+Untuk foundation kita tetap menggunakan role minimum.
+
+Tetapi target role ecosystem:
+
+| Role                | Fokus                    |
+| ------------------- | ------------------------ |
+| Owner / Management  | Keputusan                |
+| Facility Manager    | Pengendalian keseluruhan |
+| Engineering Manager | Technical                |
+| Supervisor          | Execution control        |
+| Technician          | Field work               |
+| Safety/Compliance   | Risk/compliance          |
+| Finance             | Budget/cost              |
+| Vendor Manager      | Vendor                   |
+| Vendor/Contractor   | External work            |
+| Tenant/User         | Issue/request            |
+| Administrator       | System                   |
+| Auditor             | Evidence/audit           |
+
+Tidak semua role harus aktif pada Task #01.
+
+---
+
+# K. PRINSIP RBAC
+
+Kita jangan membuat RBAC hanya:
+
+> Admin / User.
+
+Karena nanti akan menyulitkan.
+
+Model target:
+
+```text
+User
+ ↓
+Organization
+ ↓
+Role
+ ↓
+Permission
+ ↓
+Scope
+ ↓
+Action
+```
+
+Contoh:
+
+Technician:
+
+> melihat asset yang menjadi tanggung jawabnya.
+
+Supervisor:
+
+> melihat team + area.
+
+Facility Manager:
+
+> facility-wide.
+
+Owner:
+
+> management-wide.
+
+Vendor:
+
+> hanya pekerjaan yang diberikan.
+
+Tenant:
+
+> hanya request miliknya.
+
+Ini yang nanti dikunci pada Task #02.
+
+---
+
+# L. APPLICATION NAVIGATION
+
+Setelah operational core selesai, navigation sebaiknya bukan mengikuti struktur database.
+
+Saya mengusulkan:
+
+```text
+NEXUS-FM
+
+Dashboard
+│
+├── Operations
+│   ├── Today's Operations
+│   ├── Issues
+│   ├── Incidents
+│   └── Work Orders
+│
+├── Facilities
+│   ├── Facilities
+│   ├── Buildings
+│   ├── Spaces
+│   └── Systems
+│
+├── Assets
+│   ├── Asset Register
+│   ├── Critical Assets
+│   ├── Maintenance
+│   └── Lifecycle
+│
+├── Inspection
+│   ├── Plans
+│   ├── Schedule
+│   ├── Sessions
+│   └── Findings
+│
+├── Projects
+│   ├── Projects
+│   ├── Renovation
+│   ├── Restoration
+│   └── Replacement
+│
+├── Compliance
+│
+├── Vendors
+│
+├── Utilities
+│
+├── Finance
+│
+├── Documents
+│
+├── Reports
+│
+└── Copilot
+```
+
+---
+
+# M. DASHBOARD BERDASARKAN PERAN
+
+Ini juga harus dikunci dari awal.
+
+## Owner
+
+Melihat:
+
+> Condition
+> Risk
+> Cost
+> Performance
+> Capital Needs.
+
+---
+
+## Facility Manager
+
+Melihat:
+
+> **What needs attention?**
+
+---
+
+## Supervisor
+
+Melihat:
+
+> **What must my team execute?**
+
+---
+
+## Technician
+
+Melihat:
+
+> **What is my work today?**
+
+---
+
+## Vendor
+
+Melihat:
+
+> **What work is assigned to me?**
+
+---
+
+## Tenant/User
+
+Melihat:
+
+> **What happened to my request?**
+
+---
+
+## Finance
+
+Melihat:
+
+> **Where is facility money going?**
+
+---
+
+## Safety
+
+Melihat:
+
+> **Where is operational risk?**
+
+---
+
+# N. SATU DATA, BANYAK VIEW
+
+Ini prinsip arsitektur yang sangat penting.
+
+Misalnya:
+
+**Chiller-01**
+
+Tidak dibuat ulang untuk setiap modul.
+
+Satu asset yang sama dibaca oleh:
+
+* Asset
+* Inspection
+* Maintenance
+* Issue
+* Vendor
+* Cost
+* Energy
+* Condition
+* Project
+* Document
+* AI.
+
+Jadi:
+
+> **Single Source of Truth.**
+
+---
+
+# O. EVENT-DRIVEN ARCHITECTURE
+
+Nanti setiap perubahan penting menghasilkan event.
+
+Contoh:
+
+```text
+INSPECTION_FAILED
+       ↓
+FINDING_CREATED
+       ↓
+ISSUE_CREATED
+       ↓
+WORK_ORDER_CREATED
+       ↓
+WORK_COMPLETED
+       ↓
+VERIFICATION_PASSED
+       ↓
+ASSET_CONDITION_UPDATED
+```
+
+Untuk project:
+
+```text
+PROJECT_COMPLETED
+       ↓
+HANDOVER_STARTED
+       ↓
+ASSET_IMPORTED
+       ↓
+DOCUMENT_IMPORTED
+       ↓
+WARRANTY_REGISTERED
+       ↓
+PM_PLAN_CREATED
+```
+
+Ini akan sangat membantu integrasi Gustafta dan AI nantinya.
+
+---
+
+# P. AUDIT TRAIL
+
+Semua perubahan penting harus dapat dijawab:
+
+> siapa?
+
+> kapan?
+
+> apa yang dilakukan?
+
+> data sebelum/sesudah?
+
+> mengapa?
+
+> evidence apa?
+
+> siapa yang menyetujui?
+
+Jangan menunggu aplikasi besar baru memasang audit.
+
+**Task #01 sudah tepat menyiapkan fondasinya.**
+
+---
+
+# Q. DEFINITION OF DONE UNTUK MVP
+
+Saya menyarankan MVP NEXUS-FM **bukan**:
+
+> "semua modul sudah ada."
+
+Tetapi:
+
+### User dapat:
+
+1. Login.
+2. Masuk ke organization yang benar.
+3. Melihat facility.
+4. Melihat space.
+5. Melihat asset.
+6. Melakukan inspection.
+7. Membuat finding.
+8. Membuat issue.
+9. Membuat work order.
+10. Menugaskan pekerjaan.
+11. Technician melakukan pekerjaan.
+12. Upload evidence.
+13. Supervisor melakukan verification.
+14. Reject/rework jika gagal.
+15. Close pekerjaan jika verified.
+16. Melihat history.
+17. Melihat audit trail.
+
+Jika seluruh alur tersebut bekerja:
+
+> **NEXUS-FM sudah memiliki operational engine.**
+
+---
+
+# R. ATURAN ANTI-OVERBUILD
+
+Saya sarankan kita mengunci aturan ini:
+
+### Jangan dahulu:
+
+* BIM 7D
+* IoT real-time
+* AI predictive maintenance
+* blockchain
+* complex ERP
+* automated government integration
+* massive reporting engine
+* full accounting.
+
+Sebelum:
+
+> **Facility → Asset → Condition → Work → Evidence → Verification**
+
+benar-benar stabil.
+
+---
+
+# S. PRIORITAS PRODUK
+
+Dengan seluruh konsep yang sudah kita integrasikan, prioritasnya menjadi:
+
+```text
+                    NEXUS-FM
+                       │
+                 FOUNDATION
+                       │
+                FACILITY MODEL
+                       │
+                  ASSET MODEL
+                       │
+               CONDITION ENGINE
+                       │
+                WORK ENGINE
+                       │
+              EVIDENCE / VERIFY
+                       │
+              MANAGEMENT CONTROL
+                       │
+             LIFECYCLE MANAGEMENT
+                       │
+              GUSTAFTA INTEGRATION
+                       │
+                 DIGITAL TWIN
+                       │
+              NEXUS COPILOT
+```
+
+**Jangan dibalik.**
+
+AI bukan fondasi.
+
+BIM bukan fondasi.
+
+Dashboard bukan fondasi.
+
+Fondasinya adalah:
+
+> **data fasilitas yang benar + kondisi yang benar + pekerjaan yang benar + evidence yang benar + verification yang benar.**
+
+---
+
+# TAHAP BERIKUTNYA: TASK #01
+
+Karena Anda sudah menyatakan **Task #01 — Foundation & Authentication v1.0** telah difinalkan, maka saya menyarankan kita sekarang **tidak mengubah spesifikasinya**.
+
+Kita masuk ke pola governance:
+
+> **Audit → Implement → Test → Verify → Stable → Lock → Next Task**
+
+Dan setelah Task #01 stabil, **Task #02 — Authorization & Permission Matrix v1.0** menjadi langkah berikutnya.
+
+Task #02 nanti akan mengunci **siapa dapat melakukan apa terhadap Facility, Asset, Inspection, Issue, Work Order, Project, Finance, Compliance, Document, dan organisasi mana**, sehingga ketika modul operasional mulai dibangun, kita tidak perlu membongkar authorization di belakang.

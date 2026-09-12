@@ -1,22 +1,20 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: NEXUS-FM foundation API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
-    description: Health operations
+  - name: foundation
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +22,110 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /session:
+    get:
+      operationId: getSession
+      tags: [foundation]
+      summary: Get the authenticated user's NEXUS-FM session
+      responses:
+        "200":
+          description: Current application session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppSession"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: User has no active NEXUS-FM membership
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /organizations:
+    get:
+      operationId: listOrganizations
+      tags: [foundation]
+      summary: List organizations available to the authenticated user
+      responses:
+        "200":
+          description: Accessible organizations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OrganizationAccess"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /session/organization:
+    put:
+      operationId: selectOrganization
+      tags: [foundation]
+      summary: Select the active organization context
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationSelection"
+      responses:
+        "200":
+          description: Updated application session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppSession"
+        "400":
+          description: Invalid organization selection
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Organization access denied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /foundation/summary:
+    get:
+      operationId: getFoundationSummary
+      tags: [foundation]
+      summary: Get foundation readiness for the active organization
+      responses:
+        "200":
+          description: Foundation readiness summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FoundationSummary"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Active organization context required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   schemas:
     HealthStatus:
@@ -31,6 +133,109 @@ components:
       properties:
         status:
           type: string
+      required: [status]
+    CanonicalRole:
+      type: string
+      enum:
+        - PLATFORM_ADMIN
+        - FACILITY_MANAGER
+        - FACILITY_SUPERVISOR
+        - INSPECTOR
+        - MAINTENANCE_TECHNICIAN
+        - WAREHOUSE_SUPERVISOR
+        - VENDOR
+    Organization:
+      type: object
+      required: [id, name, slug]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+    OrganizationAccess:
+      type: object
+      required: [organization, role]
+      properties:
+        organization:
+          $ref: "#/components/schemas/Organization"
+        role:
+          $ref: "#/components/schemas/CanonicalRole"
+    AppUser:
+      type: object
+      required: [id, externalAuthId, displayName, email]
+      properties:
+        id:
+          type: string
+          format: uuid
+        externalAuthId:
+          type: string
+        displayName:
+          type: string
+        email:
+          type: string
+          format: email
+    AppSession:
+      type: object
+      required: [user, memberships]
+      properties:
+        user:
+          $ref: "#/components/schemas/AppUser"
+        activeOrganization:
+          oneOf:
+            - $ref: "#/components/schemas/OrganizationAccess"
+            - type: "null"
+        memberships:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrganizationAccess"
+    OrganizationSelection:
+      type: object
+      additionalProperties: false
+      required: [organizationId]
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+    FoundationSummary:
+      type: object
       required:
-        - status
-
+        - organization
+        - currentRole
+        - memberCount
+        - canonicalRoleCount
+        - authenticationStatus
+        - organizationContextStatus
+        - authorizationStatus
+        - auditStatus
+      properties:
+        organization:
+          $ref: "#/components/schemas/Organization"
+        currentRole:
+          $ref: "#/components/schemas/CanonicalRole"
+        memberCount:
+          type: integer
+          minimum: 0
+        canonicalRoleCount:
+          type: integer
+          minimum: 0
+        authenticationStatus:
+          type: string
+          enum: [READY]
+        organizationContextStatus:
+          type: string
+          enum: [READY]
+        authorizationStatus:
+          type: string
+          enum: [MINIMUM_RBAC]
+        auditStatus:
+          type: string
+          enum: [ACTIVE]
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string

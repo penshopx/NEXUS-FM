@@ -1,0 +1,1162 @@
+Baik. Kita lanjutkan dari konsep besar menjadi **blueprint produk yang implementable**. Saya akan membuatnya cukup konkret agar tahap berikutnya bisa langsung diterjemahkan menjadi **prompt pembangunan di Replit**, tetapi tetap menjaga arsitektur agar tidak terlalu cepat terkunci.
+
+# NEXUS-FM
+
+## Integrated Building & Warehouse Management Operating System
+
+### Core Principle
+
+> **Know the Facility → Know the Condition → Know the Risk → Control the Work → Verify the Result → Make the Next Decision**
+
+---
+
+# 1. STRUKTUR ROLE PENGGUNA
+
+Saya sarankan sistem tidak menggunakan satu dashboard untuk semua orang.
+
+Ada **7 role utama**.
+
+| Role                      | Fokus                             |
+| ------------------------- | --------------------------------- |
+| Platform Admin            | konfigurasi sistem                |
+| Facility Manager          | keputusan dan kontrol keseluruhan |
+| Facility Supervisor       | operasional harian                |
+| Maintenance Team          | pelaksanaan pekerjaan teknis      |
+| Inspector                 | inspeksi & condition assessment   |
+| Warehouse/Area Supervisor | operasional area/gudang           |
+| Vendor/Contractor         | pekerjaan yang ditugaskan         |
+
+Kemudian role pendukung:
+
+* Finance
+* Procurement
+* Safety Officer
+* Document Controller
+* Management/Owner
+* Auditor
+
+Role tersebut dapat diberikan sebagai **permission bundle**, bukan harus membuat terlalu banyak tipe akun.
+
+---
+
+# 2. FACILITY MANAGER DASHBOARD
+
+Ini harus menjadi **pusat pengambilan keputusan**.
+
+### Header
+
+```text
+NEXUS-FM
+Facility Manager
+
+Portfolio: All Facilities
+Period: September 2026
+```
+
+### KPI utama
+
+```text
+┌────────────────┐
+│ FACILITY HEALTH│
+│      79%       │
+│ Needs Attention│
+└────────────────┘
+
+┌───────────────┐
+│ CRITICAL RISK │
+│       7       │
+└───────────────┘
+
+┌───────────────┐
+│ OPEN WORK     │
+│      38       │
+└───────────────┘
+
+┌───────────────┐
+│ OVERDUE       │
+│      12       │
+└───────────────┘
+
+┌───────────────┐
+│ COMPLIANCE    │
+│      94%      │
+└───────────────┘
+
+┌───────────────┐
+│ MTN COST      │
+│ Rp xxx       │
+└───────────────┘
+```
+
+Tetapi bagian paling penting bukan KPI.
+
+---
+
+# 3. MANAGER ACTION CENTER
+
+Di bawah KPI:
+
+## 🔴 Requires Immediate Decision
+
+```text
+1. Fire Pump FP-02 — Critical
+   Recommendation: Immediate intervention
+
+2. Warehouse Roof — Severe leakage
+   Operational impact: High
+
+3. Electrical Panel EP-04
+   Thermal anomaly detected
+```
+
+## 🟠 Requires Approval
+
+```text
+Emergency Repair — Rp 18.500.000
+Roof Repair — Rp 74.000.000
+HVAC Replacement — Rp 126.000.000
+```
+
+## 🟢 Upcoming
+
+```text
+Fire System Inspection — 4 days
+Generator PM — 7 days
+Roof Inspection — 12 days
+Contract Expiry — 21 days
+```
+
+Dengan ini manager tidak perlu mencari masalah.
+
+**Sistem yang membawa masalah kepada manager.**
+
+---
+
+# 4. SIDEBAR UTAMA
+
+Saya menyarankan sidebar:
+
+```text
+OVERVIEW
+
+Facility
+├── Portfolio
+├── Buildings
+├── Warehouses
+├── Areas / Spaces
+└── Facility Map
+
+ASSETS
+├── Asset Register
+├── Systems
+├── Critical Assets
+└── Asset Lifecycle
+
+CONDITION
+├── Inspections
+├── Findings
+├── Condition Assessment
+├── Risk
+└── Facility Health
+
+WORK
+├── Requests
+├── Work Orders
+├── Preventive Maintenance
+├── Corrective Maintenance
+├── Emergency Work
+└── Work Calendar
+
+PROJECTS
+├── Renovation
+├── Restoration
+├── Replacement
+├── Improvement
+└── Project Monitoring
+
+SAFETY
+├── Hazards
+├── Risk Register
+├── Safety Actions
+├── Emergency
+└── Incident
+
+COMPLIANCE
+├── Requirements
+├── Documents
+├── Certificates
+├── Inspections
+└── Expiry Monitor
+
+VENDOR
+├── Vendors
+├── Contracts
+├── SLA
+└── Performance
+
+COST
+├── Budget
+├── Work Cost
+├── Maintenance Cost
+├── Project Cost
+└── Lifecycle Cost
+
+REPORTS
+├── Facility Report
+├── Maintenance Report
+├── Condition Report
+├── Safety Report
+├── Compliance Report
+└── Management Report
+```
+
+---
+
+# 5. FACILITY MODULE
+
+Ketika user masuk:
+
+**Facility → Building A**
+
+sistem tidak hanya menampilkan data master.
+
+Tetapi:
+
+```text
+BUILDING A
+────────────────────────
+
+Health              82%
+Risk                 Low
+Open Issues            8
+Open Work Orders      13
+Overdue                3
+
+Construction Year   2019
+Area               8,500 m²
+Floors                    3
+```
+
+Kemudian tab:
+
+**Overview | Areas | Systems | Assets | Condition | Work | Documents | Cost | History**
+
+Ini menjadi **single source of truth** gedung.
+
+---
+
+# 6. FACILITY HEALTH MODEL
+
+Kita perlu membedakan:
+
+### Health
+
+Kondisi keseluruhan fasilitas.
+
+### Risk
+
+Ancaman terhadap keselamatan/operasi.
+
+### Performance
+
+Seberapa baik fasilitas bekerja.
+
+### Compliance
+
+Seberapa baik persyaratan dipenuhi.
+
+Contoh:
+
+```text
+FACILITY HEALTH
+
+Physical       84%
+Functional     79%
+Safety         92%
+Compliance     95%
+Reliability    74%
+Energy         68%
+```
+
+Lalu:
+
+> **Overall Facility Health: 79%**
+
+Tetapi algoritma tidak boleh membuat satu skor menutupi kondisi kritis.
+
+Misalnya:
+
+```text
+Overall = 88%
+
+BUT
+
+Critical Safety Finding = TRUE
+```
+
+Maka status tetap:
+
+> 🔴 **CRITICAL ATTENTION REQUIRED**
+
+Ini prinsip penting untuk sistem pengelolaan fasilitas.
+
+---
+
+# 7. ASSET REGISTER
+
+Asset register menjadi salah satu database terbesar.
+
+Contoh:
+
+```text
+Asset
+────────────────────────
+Asset ID: HVAC-0023
+Name: AHU-02
+System: HVAC
+Location: Floor 2
+Criticality: High
+
+Installed: 2020
+Age: 6 years
+
+Condition: Fair
+Health: 68%
+
+Failure Count: 4
+Last PM: 02/09/2026
+Next PM: 02/10/2026
+
+Warranty: Expired
+
+Replacement Estimate:
+Rp 185.000.000
+```
+
+Tetapi tambahkan:
+
+### Asset Decision
+
+```text
+Maintain
+Repair
+Refurbish
+Replace
+Upgrade
+Retire
+```
+
+---
+
+# 8. INSPECTION ENGINE
+
+Inspector membuka:
+
+**Inspection → New Inspection**
+
+Sistem menampilkan:
+
+```text
+Inspection Template
+
+☑ Roof
+☑ Structure
+☑ Electrical
+☑ Plumbing
+☑ HVAC
+☑ Fire Protection
+☑ Emergency Exit
+☑ Loading Dock
+```
+
+Untuk setiap item:
+
+```text
+Condition
+○ Good
+○ Fair
+○ Poor
+○ Critical
+
+Finding
+[........................]
+
+Photo
+[ Upload ]
+
+Risk
+[ Low / Medium / High / Critical ]
+
+Recommendation
+[........................]
+```
+
+---
+
+# 9. TEMUAN OTOMATIS MENJADI ACTION
+
+Misalnya inspector menemukan:
+
+> Retak pada lantai loading dock.
+
+Sistem membuat:
+
+```text
+Finding #FD-2026-00231
+
+Severity: Medium
+Risk: Operational
+
+Recommendation:
+Repair floor surface.
+
+Action:
+Create Work Order
+```
+
+Inspector tidak perlu mengetik ulang data.
+
+---
+
+# 10. WORK ORDER ENGINE
+
+Work Order:
+
+```text
+WO-2026-00192
+
+Problem:
+Loading dock floor damage
+
+Origin:
+Inspection FD-2026-00231
+
+Priority:
+P2
+
+Assigned:
+Maintenance Team A
+
+Target:
+15 Sep 2026
+
+Estimated Cost:
+Rp 8.500.000
+```
+
+Status:
+
+```text
+DRAFT
+↓
+APPROVED
+↓
+ASSIGNED
+↓
+IN PROGRESS
+↓
+WAITING
+↓
+COMPLETED
+↓
+VERIFICATION
+↓
+CLOSED
+```
+
+**Completed ≠ Closed.**
+
+Ini harus menjadi aturan sistem.
+
+---
+
+# 11. FIELD WORK MOBILE EXPERIENCE
+
+Teknisi tidak membutuhkan dashboard rumit.
+
+Saat membuka HP:
+
+```text
+MY WORK
+
+Today
+──────────────
+
+🔴 WO-00192
+Loading Dock
+
+🟠 WO-00187
+Pump Room
+
+🟢 WO-00180
+Lighting
+```
+
+Klik WO:
+
+```text
+JOB
+
+Location
+Asset
+Problem
+Safety instruction
+
+[ START WORK ]
+
+Before Photo
+[ Camera ]
+
+Work Performed
+[............]
+
+Parts Used
+[............]
+
+After Photo
+[ Camera ]
+
+[ SUBMIT COMPLETION ]
+```
+
+Sistem mencatat:
+
+* waktu
+* user
+* lokasi
+* evidence
+* action
+* material
+* cost
+
+---
+
+# 12. VERIFICATION CENTER
+
+Supervisor melihat:
+
+```text
+Completed Work
+────────────────────────
+
+WO-00192
+Loading Dock Repair
+
+Before
+[photo]
+
+After
+[photo]
+
+Technician:
+Team A
+
+Cost:
+Rp 8.200.000
+
+Result:
+Functional
+
+[ VERIFY ]
+
+[ RETURN ]
+```
+
+Jika dikembalikan:
+
+```text
+Reason:
+Repair incomplete
+
+Required:
+Fix remaining crack
+```
+
+Maka WO kembali ke:
+
+> **REWORK**
+
+Bukan langsung closed.
+
+---
+
+# 13. PREVENTIVE MAINTENANCE ENGINE
+
+Setiap asset kritis dapat memiliki:
+
+```text
+Maintenance Strategy
+
+Preventive
+Condition Based
+Corrective
+Predictive
+Run-to-Failure
+Replacement
+```
+
+Contoh:
+
+### Genset
+
+```text
+Daily Inspection
+Weekly Check
+Monthly Test
+Quarterly Service
+Annual Major Service
+```
+
+Sistem menghasilkan Work Order secara otomatis.
+
+---
+
+# 14. PROJECT ENGINE
+
+Renovasi/restorasi jangan masuk ke Work Order biasa.
+
+Gunakan:
+
+> **Project**
+
+Contoh:
+
+### Project PRJ-2026-004
+
+**Warehouse Roof Renovation**
+
+```text
+Scope
+Planning
+Budget
+Procurement
+Contractor
+Execution
+Progress
+Quality
+Safety
+Variation
+Payment
+Completion
+Handover
+```
+
+Progress:
+
+```text
+Planning       100%
+Procurement     80%
+Execution       45%
+Quality         40%
+```
+
+---
+
+# 15. PROJECT → ASSET HISTORY
+
+Setelah renovasi selesai:
+
+```text
+Warehouse Roof
+
+Before:
+Condition = Poor
+
+Project:
+PRJ-2026-004
+
+After:
+Condition = Good
+
+Investment:
+Rp 740.000.000
+
+Expected Life:
+15 years
+```
+
+Ini penting.
+
+Renovasi bukan hanya transaksi biaya.
+
+Ia mengubah **lifecycle state** fasilitas.
+
+---
+
+# 16. DOCUMENT MANAGEMENT
+
+Dokumen tidak boleh hanya:
+
+> upload PDF.
+
+Metadata wajib:
+
+```text
+Document
+Title
+Type
+Facility
+Building
+Area
+Asset
+Project
+Vendor
+Issue Date
+Expiry Date
+Version
+Status
+Owner
+```
+
+Dengan demikian sistem dapat memberi:
+
+> ⚠️ **5 documents expiring within 30 days**
+
+---
+
+# 17. COMPLIANCE MONITOR
+
+Dashboard:
+
+```text
+COMPLIANCE
+
+Valid              84
+Expiring <30d       5
+Expired             2
+Missing              4
+```
+
+Klik:
+
+**Expired**
+
+langsung melihat objek yang terdampak.
+
+---
+
+# 18. RISK REGISTER
+
+Risk bukan hanya daftar.
+
+Setiap risk mempunyai:
+
+```text
+Risk
+Cause
+Impact
+Likelihood
+Severity
+Existing Control
+Required Action
+Owner
+Due Date
+Residual Risk
+```
+
+Kemudian:
+
+```text
+INHERENT RISK
+      ↓
+CONTROL
+      ↓
+RESIDUAL RISK
+```
+
+Ini jauh lebih berguna untuk manager.
+
+---
+
+# 19. COST ENGINE
+
+Setiap aktivitas menghasilkan cost event:
+
+```text
+Cost Event
+ ├── Labor
+ ├── Material
+ ├── Spare Part
+ ├── Vendor
+ ├── Equipment
+ ├── Emergency
+ └── Other
+```
+
+Kemudian:
+
+### Asset Lifecycle Cost
+
+```text
+Purchase
++ Installation
++ Maintenance
++ Repair
++ Energy
++ Downtime
++ Replacement
+```
+
+Sehingga manager dapat mengetahui:
+
+> “Aset ini murah dibeli tetapi mahal dipelihara.”
+
+Ini dasar keputusan replacement.
+
+---
+
+# 20. AI LAYER
+
+AI jangan dijadikan gimmick chatbot.
+
+AI harus berada di atas data operasional.
+
+Saya membaginya menjadi 6 Agent.
+
+### Agent 1 — Facility Analyst
+
+Menganalisis kondisi gedung.
+
+### Agent 2 — Maintenance Planner
+
+Menganalisis maintenance due/overdue dan menyusun prioritas.
+
+### Agent 3 — Risk Analyst
+
+Menganalisis finding, risk, recurrence.
+
+### Agent 4 — Cost Analyst
+
+Menganalisis biaya maintenance dan lifecycle.
+
+### Agent 5 — Project Advisor
+
+Menganalisis renovasi/replacement/improvement.
+
+### Agent 6 — Management Advisor
+
+Menggabungkan semuanya.
+
+Contoh pertanyaan:
+
+> “Apa 5 masalah terbesar di gudang bulan ini?”
+
+AI tidak menjawab dari pengetahuan umum.
+
+Ia membaca:
+
+**Finding + Work Order + Condition + Cost + Risk + History.**
+
+---
+
+# 21. MANAGEMENT ADVISOR
+
+Contoh output:
+
+> **Executive Facility Brief — Warehouse A**
+>
+> Facility health turun dari 84% menjadi 78% dalam 3 bulan terakhir.
+>
+> Penyebab utama:
+>
+> 1. roof leakage
+> 2. loading dock deterioration
+> 3. HVAC failure frequency
+> 4. drainage issue
+>
+> Tiga pekerjaan memiliki risiko operasional tinggi.
+>
+> Rekomendasi:
+>
+> * selesaikan roof repair sebagai prioritas P1;
+> * evaluasi replacement AHU-02;
+> * lakukan drainage assessment sebelum musim hujan.
+>
+> Estimasi immediate intervention: Rp XXX.
+
+Ini baru **AI yang bernilai secara manajemen**.
+
+---
+
+# 22. DATABASE CORE
+
+Secara konseptual, database kita mulai seperti ini:
+
+```text
+users
+roles
+permissions
+
+facilities
+buildings
+floors
+zones
+spaces
+
+systems
+assets
+asset_components
+
+inspection_templates
+inspections
+inspection_items
+findings
+
+risks
+risk_controls
+
+maintenance_plans
+maintenance_tasks
+work_requests
+work_orders
+work_order_actions
+work_order_evidence
+work_order_verifications
+
+projects
+project_tasks
+project_progress
+project_costs
+
+vendors
+contracts
+sla_records
+
+documents
+document_versions
+
+budgets
+cost_events
+purchase_requests
+
+incidents
+safety_actions
+
+notifications
+approvals
+
+condition_assessments
+condition_history
+
+asset_history
+facility_history
+
+audit_logs
+```
+
+---
+
+# 23. ENTITY YANG PALING PENTING
+
+Saya ingin kita menjaga satu prinsip arsitektur:
+
+> **Semua kejadian penting harus memiliki history.**
+
+Jangan overwrite:
+
+```text
+Condition = Good
+```
+
+menjadi:
+
+```text
+Condition = Poor
+```
+
+tanpa menyimpan sejarah.
+
+Harus:
+
+```text
+Condition History
+
+2024 → Good
+2025 → Fair
+2026 → Poor
+2026 → Good
+```
+
+Setelah repair.
+
+Ini akan sangat berharga untuk analitik AI dan lifecycle management.
+
+---
+
+# 24. EVENT-BASED ARCHITECTURE
+
+Kita bahkan dapat membuat event:
+
+```text
+InspectionCompleted
+FindingCreated
+RiskEscalated
+WorkOrderCreated
+WorkAssigned
+WorkStarted
+WorkCompleted
+WorkVerified
+WorkRejected
+ConditionChanged
+DocumentExpiring
+ProjectStarted
+ProjectProgressUpdated
+ProjectCompleted
+AssetReplaced
+ComplianceExpired
+```
+
+Kemudian event tersebut menggerakkan:
+
+**notification → dashboard → KPI → history → AI analysis.**
+
+---
+
+# 25. IMPLEMENTATION ROADMAP
+
+Saya tidak menyarankan membangun semuanya sekaligus.
+
+### PHASE 1 — CORE FOUNDATION
+
+```text
+Authentication
+Role
+Facility
+Building
+Area
+Asset
+Dashboard
+```
+
+### PHASE 2 — CONDITION
+
+```text
+Inspection
+Finding
+Condition
+Risk
+Evidence
+```
+
+### PHASE 3 — WORK
+
+```text
+Work Request
+Work Order
+Maintenance
+Assignment
+Execution
+Verification
+```
+
+### PHASE 4 — MANAGEMENT
+
+```text
+Cost
+Vendor
+Contract
+Compliance
+Documents
+Approval
+```
+
+### PHASE 5 — PROJECT
+
+```text
+Renovation
+Restoration
+Replacement
+Improvement
+Project Control
+```
+
+### PHASE 6 — INTELLIGENCE
+
+```text
+Facility Analytics
+Lifecycle Analytics
+AI Advisor
+Predictive Maintenance
+Decision Support
+```
+
+---
+
+# 26. MVP YANG PALING TEPAT
+
+Walaupun konsepnya besar, **MVP tidak boleh besar secara implementasi**.
+
+Saya sarankan MVP pertama hanya:
+
+> **Facility + Asset + Inspection + Finding + Work Order + Verification + Dashboard**
+
+Dengan satu golden workflow:
+
+```text
+REGISTER ASSET
+      ↓
+INSPECT
+      ↓
+FIND PROBLEM
+      ↓
+ASSESS RISK
+      ↓
+CREATE WORK
+      ↓
+ASSIGN
+      ↓
+EXECUTE
+      ↓
+UPLOAD EVIDENCE
+      ↓
+VERIFY
+      ↓
+UPDATE CONDITION
+      ↓
+HISTORY
+```
+
+Kalau workflow ini benar-benar bekerja end-to-end, kita sudah mempunyai **jantung NEXUS-FM**.
+
+Setelah itu baru:
+
+**maintenance → compliance → cost → project → AI.**
+
+---
+
+## 27. Prinsip desain yang saya ingin kita kunci
+
+Ada **10 guardrail**:
+
+1. **Data tidak boleh berdiri sendiri.**
+2. **Inspection tidak sama dengan maintenance.**
+3. **Finding tidak sama dengan Work Order.**
+4. **Completed tidak sama dengan Verified.**
+5. **Renovation tidak sama dengan maintenance.**
+6. **Condition harus memiliki history.**
+7. **Risk kritis tidak boleh tertutup oleh average score.**
+8. **Manager mengambil keputusan berdasarkan evidence.**
+9. **AI memberi rekomendasi, bukan mengambil alih accountability manager.**
+10. **Setiap tindakan penting memiliki audit trail.**
+
+Dan saya tambahkan prinsip ke-11:
+
+> **UI tidak boleh menjadi pemilik business logic.**
+
+Semua transisi penting harus dikendalikan oleh domain/service layer.
+
+Ini akan membuat aplikasi jauh lebih mudah dikembangkan tanpa merusak data historis.
+
+---
+
+### Target akhir
+
+Jika seluruh arsitektur ini diwujudkan, produk akhirnya bukan sekadar:
+
+**“aplikasi maintenance gedung.”**
+
+Tetapi:
+
+> **platform yang membangun satu sumber kebenaran tentang kondisi, aset, pekerjaan, risiko, biaya, kepatuhan, dan lifecycle gedung/gudang — lalu mengubah data tersebut menjadi keputusan operasional dan investasi.**
+
+**Langkah berikut yang paling tepat adalah menyusun *Master Product Architecture v1.0* NEXUS-FM**: struktur halaman lengkap, role-per-role dashboard, menu, entity relationship, workflow/state machine, permission matrix, notification engine, KPI, dan **Replit implementation prompt bertahap**. Ini akan menjadi dokumen acuan sebelum kita mulai membangun aplikasinya.

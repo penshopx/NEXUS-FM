@@ -1,0 +1,1013 @@
+Ya. Dengan kontrak yang Anda berikan, **Task #02 sudah cukup matang untuk dijadikan baseline engineering**. Saya sarankan kita sekarang menguncinya lebih formal agar tidak terjadi interpretasi berbeda saat masuk Replit.
+
+# NEXUS-FM — TASK #02
+
+## Authorization & Permission Matrix v1.0
+
+**Status:** READY FOR IMPLEMENTATION
+**Dependency:** Task #01 — Foundation & Authentication v1.0 **LOCKED**
+**Integration mode:** Additive → Isolated → Verify → Reconcile → Lock
+
+### 1. Objective
+
+Task #02 membangun **authorization engine** di atas fondasi authentication Task #01.
+
+Tujuan utamanya:
+
+> Sistem harus dapat menentukan secara konsisten **siapa boleh melakukan apa, terhadap objek apa, dalam organisasi/scope apa, dan dalam kondisi apa**.
+
+Task #02 **tidak mengubah mekanisme authentication, session, organization, atau baseline schema Task #01**.
+
+---
+
+# 2. Authorization Model
+
+Model canonical:
+
+```text
+USER
+ ↓
+ROLE
+ ↓
+PERMISSION
+ ↓
+RESOURCE
+ ↓
+ACTION
+ ↓
+OBJECT
+ ↓
+SCOPE
+ ↓
+DECISION
+```
+
+Contoh:
+
+```text
+TECHNICIAN
+    ↓
+WORK_ORDER.UPDATE
+    ↓
+Work Order #WO-001
+    ↓
+Assigned Work Order
+    ↓
+ALLOW
+```
+
+Sedangkan:
+
+```text
+TECHNICIAN
+    ↓
+WORK_ORDER.UPDATE
+    ↓
+Work Order milik Facility lain
+    ↓
+DENY
+```
+
+---
+
+# 3. Permission Format
+
+Gunakan format:
+
+```text
+RESOURCE.ACTION
+```
+
+Contoh:
+
+```text
+FACILITY.VIEW
+FACILITY.CREATE
+
+ASSET.VIEW
+ASSET.UPDATE
+
+INSPECTION.VIEW
+INSPECTION.CREATE
+INSPECTION.EXECUTE
+
+ISSUE.VIEW
+ISSUE.CREATE
+ISSUE.ASSIGN
+
+WORK_ORDER.VIEW
+WORK_ORDER.CREATE
+WORK_ORDER.ASSIGN
+WORK_ORDER.EXECUTE
+WORK_ORDER.VERIFY
+WORK_ORDER.CLOSE
+
+EVIDENCE.VIEW
+EVIDENCE.CREATE
+
+PROJECT.VIEW
+PROJECT.CREATE
+PROJECT.APPROVE
+```
+
+Permission harus berupa **machine-readable identifier**, bukan label UI.
+
+---
+
+# 4. Canonical Roles
+
+Task #02 mempertahankan tujuh canonical role dari Task #01.
+
+| Role                  | Fungsi utama                                           |
+| --------------------- | ------------------------------------------------------ |
+| `OWNER_MANAGEMENT`    | melihat kinerja, risiko, biaya dan keputusan strategis |
+| `FACILITY_MANAGER`    | mengendalikan operasi facility                         |
+| `ENGINEERING_MANAGER` | mengendalikan aspek teknis                             |
+| `SUPERVISOR`          | mengendalikan pekerjaan tim                            |
+| `TECHNICIAN`          | menjalankan pekerjaan operasional                      |
+| `VENDOR_CONTRACTOR`   | menjalankan pekerjaan yang ditugaskan                  |
+| `TENANT_USER`         | melaporkan kebutuhan/masalah dan melihat statusnya     |
+
+Role berikut **tidak boleh otomatis dimasukkan ke operational permission matrix**:
+
+```text
+PLATFORM_ADMIN
+SYSTEM_ADMIN
+AUDITOR
+FINANCE
+SAFETY
+```
+
+Jika sudah ada di foundation, statusnya:
+
+> **Reserved / Future Extension**
+
+---
+
+# 5. Critical Rule — PLATFORM_ADMIN
+
+Ini harus dikunci.
+
+```text
+PLATFORM_ADMIN ≠ SUPER USER OPERASIONAL
+```
+
+`PLATFORM_ADMIN` tidak otomatis memperoleh:
+
+```text
+WORK_ORDER.EXECUTE
+WORK_ORDER.VERIFY
+WORK_ORDER.CLOSE
+ASSET.UPDATE
+FACILITY.UPDATE
+PROJECT.APPROVE
+```
+
+Platform administration dan operational authority adalah dua hal berbeda.
+
+Ini mencegah privilege escalation tersembunyi.
+
+---
+
+# 6. Scope Model
+
+Permission saja tidak cukup.
+
+Evaluator harus mempertimbangkan:
+
+```text
+Permission + Object + Scope
+```
+
+Canonical scope:
+
+### ORGANIZATION
+
+Semua objek dalam organization yang sama.
+
+```text
+ORG_SCOPE
+```
+
+### FACILITY
+
+Objek yang berada pada facility yang diizinkan.
+
+```text
+FACILITY_SCOPE
+```
+
+### BUILDING
+
+Objek dalam building yang diizinkan.
+
+```text
+BUILDING_SCOPE
+```
+
+### SPACE
+
+Objek dalam space/area tertentu.
+
+```text
+SPACE_SCOPE
+```
+
+### ASSET
+
+Asset tertentu atau hierarchy asset tertentu.
+
+```text
+ASSET_SCOPE
+```
+
+### ASSIGNED
+
+Hanya objek yang ditugaskan kepada user.
+
+```text
+ASSIGNED_SCOPE
+```
+
+### TEAM
+
+Objek yang menjadi tanggung jawab team.
+
+```text
+TEAM_SCOPE
+```
+
+### VENDOR_ASSIGNMENT
+
+Hanya pekerjaan yang secara eksplisit diberikan kepada vendor.
+
+```text
+VENDOR_ASSIGNMENT_SCOPE
+```
+
+### OWN
+
+Objek yang dibuat/dimiliki oleh user.
+
+```text
+OWN_SCOPE
+```
+
+---
+
+# 7. Scope Inheritance
+
+Inheritance harus dilakukan **server-side**.
+
+Contoh:
+
+```text
+Facility
+ └── Building
+      └── Floor
+           └── Space
+                └── Asset
+                     └── Work Order
+```
+
+Jika user memiliki:
+
+```text
+FACILITY_SCOPE
+Facility A
+```
+
+maka evaluator dapat memberikan akses terhadap child object:
+
+```text
+Building A
+Space A
+Asset A
+Work Order A
+```
+
+**hanya jika hubungan tersebut benar-benar terverifikasi di database.**
+
+Tidak boleh:
+
+```text
+objectId cocok
+→ langsung ALLOW
+```
+
+Harus:
+
+```text
+object
+→ parent relation
+→ facility
+→ organization
+→ scope validation
+→ permission
+→ decision
+```
+
+---
+
+# 8. Deny by Default
+
+Ini merupakan security invariant.
+
+Jika evaluator tidak menemukan kombinasi:
+
+```text
+ROLE
++
+PERMISSION
++
+VALID SCOPE
+```
+
+maka:
+
+```text
+DENY
+```
+
+Bukan:
+
+```text
+ALLOW
+```
+
+Tidak boleh ada fallback:
+
+```text
+if permission missing
+   allow()
+```
+
+---
+
+# 9. Precedence Rule
+
+Urutan evaluasi harus konsisten:
+
+```text
+1. Authentication
+2. Organization isolation
+3. Role binding
+4. Permission
+5. Object existence
+6. Object ownership/scope
+7. Explicit deny
+8. Explicit allow
+9. Final decision
+```
+
+Recommended final rule:
+
+```text
+Explicit DENY
+    >
+Explicit ALLOW
+    >
+Inherited ALLOW
+    >
+No Rule = DENY
+```
+
+Namun untuk v1.0, **jangan membuat permission policy terlalu kompleks**.
+
+Prioritasnya adalah deterministic behavior.
+
+---
+
+# 10. Central Authorization Evaluator
+
+Authorization tidak boleh tersebar di masing-masing route.
+
+Gunakan satu service konseptual:
+
+```ts
+authorize({
+  userId,
+  organizationId,
+  resource,
+  action,
+  resourceId,
+  context
+})
+```
+
+Output:
+
+```ts
+{
+  allowed: boolean,
+  reasonCode: string,
+  permission?: string,
+  scope?: string
+}
+```
+
+Contoh:
+
+```json
+{
+  "allowed": true,
+  "reasonCode": "PERMISSION_GRANTED",
+  "permission": "WORK_ORDER.UPDATE",
+  "scope": "ASSIGNED"
+}
+```
+
+Contoh deny:
+
+```json
+{
+  "allowed": false,
+  "reasonCode": "SCOPE_DENIED",
+  "permission": "WORK_ORDER.UPDATE",
+  "scope": "ASSIGNED"
+}
+```
+
+---
+
+# 11. Canonical Reason Codes
+
+Minimal:
+
+```text
+AUTH_REQUIRED
+ROLE_NOT_ASSIGNED
+PERMISSION_NOT_GRANTED
+ORGANIZATION_MISMATCH
+RESOURCE_NOT_FOUND
+SCOPE_DENIED
+ASSIGNMENT_REQUIRED
+OWNERSHIP_REQUIRED
+VENDOR_SCOPE_DENIED
+EXPLICIT_DENY
+POLICY_DENIED
+PERMISSION_GRANTED
+```
+
+Reason code digunakan untuk:
+
+* debugging;
+* testing;
+* audit;
+* security investigation;
+* developer diagnostics.
+
+Jangan membocorkan informasi sensitif kepada client hanya karena reason code.
+
+---
+
+# 12. Resource Catalog
+
+Task #02 mendefinisikan authorization contract untuk:
+
+```text
+ORGANIZATION
+USER
+ROLE
+
+FACILITY
+BUILDING
+SPACE
+
+SYSTEM
+ASSET
+
+INSPECTION
+FINDING
+
+ISSUE
+INCIDENT
+
+WORK_ORDER
+EVIDENCE
+VERIFICATION
+
+PROJECT
+
+VENDOR
+CONTRACT
+
+COMPLIANCE
+
+UTILITY
+COST
+
+DOCUMENT
+REPORT
+```
+
+**Penting:**
+
+Definisi permission ≠ implementasi domain.
+
+Jika `PROJECT.APPROVE` didefinisikan tetapi Project Engine belum dibangun, permission tersebut hanya:
+
+> CONTRACT / RESERVED
+
+bukan fitur yang dianggap sudah tersedia.
+
+---
+
+# 13. Role Matrix — Prinsip
+
+Matrix harus menjawab:
+
+```text
+Role
+ ×
+Resource
+ ×
+Action
+ ×
+Scope
+```
+
+Contoh:
+
+| Resource   | Action  | Facility Manager | Supervisor | Technician |   Vendor |  Tenant |
+| ---------- | ------- | ---------------: | ---------: | ---------: | -------: | ------: |
+| Facility   | VIEW    |                ✓ |          ✓ |          ✓ | assigned | limited |
+| Asset      | VIEW    |                ✓ |          ✓ |          ✓ | assigned | limited |
+| Asset      | UPDATE  |                ✓ |    limited |    limited |        ✕ |       ✕ |
+| Inspection | VIEW    |                ✓ |          ✓ |          ✓ | assigned |       ✕ |
+| Inspection | EXECUTE |                ✓ |          ✓ |          ✓ | assigned |       ✕ |
+| Issue      | CREATE  |                ✓ |          ✓ |          ✓ |        ✓ |       ✓ |
+| Issue      | ASSIGN  |                ✓ |          ✓ |          ✕ |        ✕ |       ✕ |
+| Work Order | VIEW    |                ✓ |          ✓ |   assigned | assigned |     own |
+| Work Order | CREATE  |                ✓ |          ✓ |    limited |        ✕ | request |
+| Work Order | EXECUTE |                ✓ |          ✓ |          ✓ |        ✓ |       ✕ |
+| Work Order | VERIFY  |                ✓ |          ✓ |          ✕ |        ✕ |       ✕ |
+| Work Order | CLOSE   |                ✓ |          ✓ |          ✕ |        ✕ |       ✕ |
+| Evidence   | CREATE  |                ✓ |          ✓ |          ✓ |        ✓ | limited |
+| Evidence   | VERIFY  |                ✓ |          ✓ |          ✕ |        ✕ |       ✕ |
+| Project    | VIEW    |                ✓ |          ✓ |    limited | assigned |       ✕ |
+| Project    | APPROVE |                ✓ |          ✕ |          ✕ |        ✕ |       ✕ |
+
+Ini merupakan **authorization contract**, bukan sekadar UI permission.
+
+---
+
+# 14. Separation of Duties
+
+Beberapa action tidak boleh otomatis diberikan kepada role yang sama.
+
+Terutama:
+
+```text
+EXECUTE
+VERIFY
+CLOSE
+```
+
+Contoh:
+
+```text
+Technician
+    → EXECUTE ✓
+    → VERIFY ✕
+    → CLOSE ✕
+```
+
+Supervisor:
+
+```text
+Supervisor
+    → EXECUTE ✓
+    → VERIFY ✓
+    → CLOSE ✓
+```
+
+Namun nanti dapat ditambah policy:
+
+```text
+executor != verifier
+```
+
+sebagai kontrol tambahan pada Task domain terkait.
+
+Task #02 cukup menyediakan **authorization capability**, bukan seluruh business workflow.
+
+---
+
+# 15. API Contract
+
+Minimal endpoint authorization:
+
+```text
+GET /api/auth/permissions
+GET /api/auth/roles
+GET /api/auth/authorization
+```
+
+Administrasi:
+
+```text
+POST   /api/admin/role-bindings
+DELETE /api/admin/role-bindings/:id
+```
+
+Permission introspection:
+
+```text
+GET /api/auth/me
+GET /api/auth/me/permissions
+```
+
+Semua endpoint harus:
+
+```text
+authenticated
++
+organization scoped
++
+server authorized
+```
+
+---
+
+# 16. HTTP Behavior
+
+### 401
+
+User belum authenticated:
+
+```http
+401 Unauthorized
+```
+
+### 403
+
+Authenticated tetapi tidak memiliki authorization:
+
+```http
+403 Forbidden
+```
+
+### 404
+
+Resource memang tidak ada.
+
+Untuk resource yang ada tetapi berada di organization/scope yang tidak boleh diketahui, implementasi dapat menggunakan `404` untuk mencegah resource enumeration.
+
+Yang penting:
+
+> **Tidak boleh ada cross-organization data leakage.**
+
+---
+
+# 17. Audit
+
+Authorization-sensitive events harus dapat diaudit.
+
+Minimal:
+
+```text
+ROLE_ASSIGNED
+ROLE_REVOKED
+PERMISSION_CHANGED
+AUTHORIZATION_DENIED
+SENSITIVE_ACTION_EXECUTED
+```
+
+Audit mencatat minimal:
+
+```text
+timestamp
+user
+organization
+role
+resource
+action
+resource_id
+decision
+reason_code
+request/context identifier
+```
+
+Audit harus append-oriented.
+
+Jangan membuat mekanisme yang memungkinkan user biasa menghapus histori authorization.
+
+---
+
+# 18. Security Invariants
+
+Task #02 dianggap gagal jika salah satu berikut terjadi:
+
+### Cross organization
+
+```text
+User Organization A
+→ Resource Organization B
+→ ALLOW
+```
+
+**FAIL**
+
+### Missing permission
+
+```text
+Role
+→ permission tidak ada
+→ ALLOW
+```
+
+**FAIL**
+
+### Missing scope
+
+```text
+Permission ada
+→ object di luar scope
+→ ALLOW
+```
+
+**FAIL**
+
+### UI bypass
+
+```text
+button disembunyikan
+tetapi API langsung dipanggil
+→ ALLOW
+```
+
+**FAIL**
+
+### Platform admin escalation
+
+```text
+PLATFORM_ADMIN
+→ otomatis operational superuser
+```
+
+**FAIL**
+
+### Direct object access
+
+```text
+GET /api/work-orders/:id
+```
+
+tidak boleh menjadi bypass terhadap scope.
+
+---
+
+# 19. Test Matrix
+
+Minimal test suite:
+
+### Authentication
+
+```text
+Unauthenticated → 401
+Authenticated → continue authorization
+```
+
+### Organization
+
+```text
+Same organization → eligible
+Different organization → DENY
+```
+
+### Role
+
+```text
+Role assigned → evaluate
+Role absent → DENY
+```
+
+### Permission
+
+```text
+Permission exists → continue
+Permission absent → DENY
+```
+
+### Scope
+
+```text
+Within scope → ALLOW
+Outside scope → DENY
+```
+
+### Assignment
+
+```text
+Assigned technician → ALLOW
+Unassigned technician → DENY
+```
+
+### Vendor
+
+```text
+Vendor assigned WO → ALLOW
+Vendor unrelated WO → DENY
+```
+
+### Tenant
+
+```text
+Tenant own request → ALLOW
+Tenant other tenant request → DENY
+```
+
+### Admin
+
+```text
+Platform admin
+→ platform administration → ALLOW
+→ operational action without permission → DENY
+```
+
+### API bypass
+
+Semua test harus dilakukan **langsung terhadap API**, bukan hanya melalui UI.
+
+---
+
+# 20. Regression Test Task #01
+
+Setelah Task #02 selesai, wajib memastikan:
+
+```text
+LOGIN
+LOGOUT
+SESSION
+SESSION PERSISTENCE
+ORGANIZATION CONTEXT
+AUTHENTICATION FAILURE
+PASSWORD/credential handling
+AUDIT FOUNDATION
+```
+
+tetap berfungsi sebagaimana baseline Task #01.
+
+Tidak boleh ada perubahan behavior Task #01 hanya karena authorization middleware ditambahkan.
+
+---
+
+# 21. Definition of Done
+
+Task #02 hanya dapat:
+
+> **VERIFIED**
+
+jika seluruh kondisi berikut terpenuhi:
+
+* [ ] Permission catalog tersedia.
+* [ ] Canonical roles tersedia.
+* [ ] Role-permission binding dapat dievaluasi.
+* [ ] Object scope berjalan.
+* [ ] Organization isolation berjalan.
+* [ ] Deny-by-default berjalan.
+* [ ] Server-side enforcement berjalan.
+* [ ] UI tidak menjadi security boundary.
+* [ ] Authorization evaluator terpusat.
+* [ ] Reason code konsisten.
+* [ ] API authorization test lulus.
+* [ ] Cross-organization test lulus.
+* [ ] Role isolation test lulus.
+* [ ] Scope inheritance test lulus.
+* [ ] Vendor isolation test lulus.
+* [ ] Tenant isolation test lulus.
+* [ ] Platform admin tidak memperoleh privilege operasional otomatis.
+* [ ] Audit authorization-sensitive action berjalan.
+* [ ] Task #01 regression test lulus.
+* [ ] Typecheck lulus.
+* [ ] Build lulus.
+* [ ] Migration lulus.
+* [ ] Seed lulus.
+* [ ] Tidak ada perubahan destructive terhadap Task #01.
+
+---
+
+# 22. Status Transition
+
+Governance Task #02:
+
+```text
+READY
+   ↓
+IMPLEMENTING
+   ↓
+VERIFICATION
+   ↓
+VERIFIED
+   ↓
+STABLE
+   ↓
+LOCKED
+```
+
+Jika test gagal:
+
+```text
+VERIFICATION
+      ↓
+FAILED
+      ↓
+ISOLATED FIX
+      ↓
+RETEST
+```
+
+Tidak boleh memperbaiki kegagalan Task #02 dengan mengubah Task #01 kecuali ditemukan **regression nyata** yang memang membutuhkan additive correction.
+
+---
+
+# 23. Engineering Sequence
+
+Urutan implementasi yang saya rekomendasikan:
+
+```text
+01. Audit Task #01
+        ↓
+02. Freeze baseline
+        ↓
+03. Define permission catalog
+        ↓
+04. Seed canonical roles
+        ↓
+05. Define role-permission bindings
+        ↓
+06. Implement authorization evaluator
+        ↓
+07. Implement scope resolver
+        ↓
+08. Add server middleware
+        ↓
+09. Protect API routes
+        ↓
+10. Add role/permission introspection
+        ↓
+11. Add audit events
+        ↓
+12. Add UI guards
+        ↓
+13. Security test
+        ↓
+14. Cross-org test
+        ↓
+15. Task #01 regression
+        ↓
+16. Build/typecheck/migration
+        ↓
+17. Verify
+        ↓
+18. Stable
+        ↓
+19. Lock
+```
+
+### Kesimpulan governance
+
+Dengan kontrak ini, posisi arsitekturnya menjadi jelas:
+
+```text
+TASK #01
+Foundation & Authentication
+        │
+        │ LOCKED
+        ▼
+TASK #02
+Authorization & Permission
+        │
+        ▼
+TASK #03
+Facility & Space
+        │
+        ▼
+TASK #04
+Asset & System
+        │
+        ▼
+TASK #05
+Inspection & Condition
+        │
+        ▼
+TASK #06
+Issue & Incident
+        │
+        ▼
+TASK #07
+Work Order
+        │
+        ▼
+TASK #08
+Evidence & Verification
+```
+
+Jadi **Task #02 bukan membuat dashboard atau domain operasional baru**. Ia membuat *security/control layer* yang nantinya menjadi fondasi seluruh domain NEXUS-FM.
+
+Dan satu prinsip harus tetap menjadi guardrail utama:
+
+> **UI boleh menyembunyikan aksi. Server wajib menentukan apakah aksi boleh dilakukan.**
+
+Langkah berikut yang paling konsisten adalah menurunkan kontrak ini menjadi **NEXUS-FM Task #02 — Replit Implementation Prompt**, sehingga bisa langsung diberikan ke Replit tanpa memberi ruang kepada agent untuk memperluas scope atau menyentuh Task #01.

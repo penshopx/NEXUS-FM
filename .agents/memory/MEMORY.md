@@ -1,0 +1,1 @@
+- [Foundation account bootstrap](foundation-account-bootstrap.md) — first authenticated access creates a minimal organization context, not operational sample data.

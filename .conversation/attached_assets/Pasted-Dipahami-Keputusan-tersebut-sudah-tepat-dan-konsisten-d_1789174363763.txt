@@ -1,0 +1,101 @@
+Dipahami. Keputusan tersebut sudah tepat dan konsisten dengan governance Task #02.
+
+Saya akan memperlakukan **status contract terbaru** sebagai aturan operasional:
+
+> **Task #02 — IMPLEMENTATION / VERIFICATION GATE — NOT VERIFIED**
+
+Dan definisi `VERIFIED` yang dikunci adalah:
+
+```text
+VERIFIED
+=
+Implementation
++ Integration
++ Adversarial Authorization Testing
++ Recorded Regression Evidence
+```
+
+Implikasi pentingnya: **implementasi yang sukses, build yang hijau, atau unit test yang lulus saja tidak cukup**.
+
+### Verification gate final
+
+Sebelum status dapat berubah menjadi `VERIFIED`, harus ada bukti lulus untuk:
+
+* cross-organization isolation pada seluruh attack surface;
+* assignment scope pada seluruh endpoint;
+* direct API bypass;
+* frontend/client bypass;
+* permission catalog dan role reconciliation;
+* scope resolver + precedence;
+* central authorization evaluator;
+* separation of duties;
+* audit events;
+* migration pada **fresh DB dan existing Task #01 DB**;
+* deterministic seed;
+* build;
+* full Task #02 authorization regression;
+* full Task #01 regression.
+
+Khusus isolation, pengujian harus mencakup:
+
+```text
+detail
+list
+filter
+search
+pagination
+export
+nested endpoint
+direct object ID
+mutation
+```
+
+### Status transition
+
+Saya juga akan mempertahankan aturan berikut:
+
+```text
+IMPLEMENTATION
+      ↓
+INTEGRATION
+      ↓
+ADVERSARIAL TESTING
+      ↓
+REGRESSION
+      ↓
+EVIDENCE REVIEW
+      ↓
+VERIFIED
+      ↓
+STABLE
+      ↓
+LOCKED
+```
+
+Jika **satu critical gate gagal**:
+
+```text
+ANY CRITICAL FAILURE
+        ↓
+NOT VERIFIED
+        ↓
+ISOLATED FIX
+        ↓
+RE-RUN TASK #02 REGRESSION
+        ↓
+RE-RUN TASK #01 REGRESSION
+        ↓
+EVIDENCE REVIEW
+```
+
+Tidak boleh ada:
+
+```text
+"mostly passed" → VERIFIED
+"build passed" → VERIFIED
+"unit tests passed" → VERIFIED
+"UI works" → VERIFIED
+"API works" → VERIFIED
+```
+
+Dengan demikian, **dokumen Authorization & Permission Matrix v1.0 dan Replit Implementation Prompt v1.0 sekarang memiliki kontrak status yang sama**, dan implementasi berikutnya harus mengikuti kontrak tersebut tanpa mengendurkan verification gate.
