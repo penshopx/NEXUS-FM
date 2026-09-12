@@ -35,6 +35,10 @@ app.use(
 
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 app.use(cors({ credentials: true, origin: true }));
+// Portfolio import is intentionally a bounded plain-text upload.  Keeping it
+// separate from multipart avoids a file parser and ensures the limit is
+// applied before the facilities route sees the payload.
+app.use(express.text({ type: ["text/csv", "text/plain"], limit: "2mb" }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(
@@ -47,5 +51,22 @@ app.use(
 );
 
 app.use("/api", router);
+
+app.use((
+  error: unknown,
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction,
+) => {
+  const bodyError = error as { type?: string };
+  if (bodyError?.type === "entity.too.large" && req.is(["text/csv", "text/plain"])) {
+    res.status(413)
+      .type("text/csv")
+      .set("Content-Disposition", 'attachment; filename="facility-portfolio-import-errors.csv"')
+      .send('row,error\n1,"CSV exceeds the 2097152-byte limit"\n');
+    return;
+  }
+  next(error);
+});
 
 export default app;

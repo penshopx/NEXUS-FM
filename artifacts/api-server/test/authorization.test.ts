@@ -50,7 +50,13 @@ import {
 } from "../src/services/foundation.ts";
 import { createAuthorizationRouter } from "../src/routes/authorization.ts";
 import { createFacilitiesRouter, waitForCsvDrain } from "../src/routes/facilities.ts";
-import { authorizeRegistryObject, resolveRegistryObject } from "../src/services/facilities.ts";
+import {
+  authorizeRegistryObject,
+  parsePortfolioImport,
+  portfolioImportHeaderLine,
+  PORTFOLIO_IMPORT_MAX_ROWS,
+  resolveRegistryObject,
+} from "../src/services/facilities.ts";
 
 type Fixture = {
   userId: string;
@@ -132,6 +138,185 @@ test("canonical seven roles are unchanged and catalog is idempotent", async () =
   const rolePermissions = await db.select().from(rolePermissionsTable);
   assert.ok(rolePermissions.length >= roleCapabilityRows.length);
   assert.ok(canonicalPermissions.includes("WORK_ORDER.VERIFY"));
+});
+
+test("portfolio CSV parser requires exact headers and preserves stable references", () => {
+  const csv = `${portfolioImportHeaderLine
+    }FACILITY,facility-a,,,,,Main Campus,F-1,,ACTIVE\n`
+    + "BUILDING,building-a,,,facility-a,,Admin Building,B-1,,ACTIVE\n";
+  const result = parsePortfolioImport(csv);
+  assert.deepEqual(result.errors, []);
+  assert.deepEqual(result.records.map((record) => [record.kind, record.clientRef, record.parentRef]), [
+    ["FACILITY", "facility-a", undefined],
+    ["BUILDING", "building-a", "facility-a"],
+  ]);
+});
+
+test("portfolio CSV parser rejects duplicate references, malformed headers, and invalid rows", () => {
+  const csv = `${portfolioImportHeaderLine
+    }FACILITY,duplicate,,,,,One,F-1,,ACTIVE\n`
+    + "FACILITY,duplicate,,,,,Two,F-2,,ACTIVE\n"
+    + "FACILITY,unique,,,,,Three,F-3,,BROKEN\n";
+  const result = parsePortfolioImport(csv);
+  assert.ok(result.errors.some((error) => error.error.includes("Duplicate clientRef")));
+  assert.ok(result.errors.some((error) => error.error.includes("status must be ACTIVE")));
+  const badHeader = parsePortfolioImport("kind,clientRef\n");
+  assert.equal(badHeader.records.length, 0);
+  assert.ok(badHeader.errors.some((error) => error.row === 1 && error.error.includes("Header must be exactly")));
+});
+
+test("portfolio CSV parser bounds physical rows before collecting malformed-row errors", () => {
+  const oversized = portfolioImportHeaderLine + "\n".repeat(PORTFOLIO_IMPORT_MAX_ROWS + 1);
+  const result = parsePortfolioImport(oversized);
+  assert.equal(result.records.length, 0);
+  assert.deepEqual(result.errors, [{
+    row: 1,
+    error: `CSV may contain at most ${PORTFOLIO_IMPORT_MAX_ROWS} data rows`,
+  }]);
+});
+
+test("portfolio import commits the complete hierarchy and audits every mutation atomically", async () => {
+  const manager = await makeFixture("FACILITY_MANAGER", "ORGANIZATION");
+  await db.insert(userContextsTable).values({
+    userId: manager.userId,
+    activeOrganizationId: manager.organizationId,
+  });
+  const app = express();
+  app.use(express.text({ type: "text/csv", limit: "2mb" }));
+  app.use(createFacilitiesRouter({
+    currentUser: async () => (await db.select().from(usersTable).where(eq(usersTable.id, manager.userId)))[0] ?? null,
+  }));
+  const server = createServer(app);
+  await new Promise<void>((resolve) => server.listen(0, resolve));
+  const address = server.address();
+  assert.ok(address && typeof address === "object");
+  const csv = portfolioImportHeaderLine
+    + "ASSET,asset-a,,,space-a,system-a,Air Handler,AHU-IMPORT,,ACTIVE\n"
+    + "SYSTEM,system-a,,,space-a,,HVAC,HVAC-IMPORT,,ACTIVE\n"
+    + "SPACE,space-a,,,building-a,,Mechanical Room,SPACE-IMPORT,,ACTIVE\n"
+    + "BUILDING,building-a,,,facility-a,,Main Building,BUILDING-IMPORT,,ACTIVE\n"
+    + "FACILITY,facility-a,,,,,North Campus,FACILITY-IMPORT,,ACTIVE\n";
+  try {
+    const response = await fetch(`http://127.0.0.1:${address.port}/facilities/import`, {
+      method: "POST",
+      headers: { "content-type": "text/csv" },
+      body: csv,
+    });
+    assert.equal(response.status, 201, await response.text());
+    const [facility] = await db.select().from(facilitiesTable).where(and(
+      eq(facilitiesTable.organizationId, manager.organizationId),
+      eq(facilitiesTable.code, "FACILITY-IMPORT"),
+    ));
+    const [asset] = await db.select().from(assetsTable).where(and(
+      eq(assetsTable.organizationId, manager.organizationId),
+      eq(assetsTable.code, "AHU-IMPORT"),
+    ));
+    assert.ok(facility && asset);
+    const resolved = await resolveRegistryObject(db, "ASSET", asset.id, manager.organizationId);
+    assert.equal(resolved.found, true);
+    if (resolved.found) assert.equal(resolved.value.verifiedContext.facilityId, facility.id);
+    const audits = await db.select().from(authorizationAuditLogsTable).where(and(
+      eq(authorizationAuditLogsTable.actorUserId, manager.userId),
+      eq(authorizationAuditLogsTable.requestId, "undefined"),
+    ));
+    // Each row records both the authorization decision and the resulting
+    // registry mutation, matching the existing single-create route pattern.
+    assert.equal(audits.filter((audit) => audit.action === "CREATE").length, 10);
+    assert.equal(audits.filter((audit) => audit.action === "IMPORT").length, 1);
+  } finally {
+    server.close();
+  }
+});
+
+test("portfolio import rolls back earlier rows when a later binding permission is denied", async () => {
+  const manager = await makeFixture("FACILITY_MANAGER", "ORGANIZATION");
+  const [allowedFacility] = await db.insert(facilitiesTable).values({
+    organizationId: manager.organizationId,
+    name: "Allowed Campus",
+  }).returning();
+  assert.ok(allowedFacility);
+  await db.update(userRoleBindingsTable).set({
+    scopeType: "FACILITY",
+    scopeId: allowedFacility.id,
+  }).where(eq(userRoleBindingsTable.id, manager.bindingId));
+  await db.insert(userContextsTable).values({
+    userId: manager.userId,
+    activeOrganizationId: manager.organizationId,
+  });
+  const app = express();
+  app.use(express.text({ type: "text/csv", limit: "2mb" }));
+  app.use(createFacilitiesRouter({
+    currentUser: async () => (await db.select().from(usersTable).where(eq(usersTable.id, manager.userId)))[0] ?? null,
+  }));
+  const server = createServer(app);
+  await new Promise<void>((resolve) => server.listen(0, resolve));
+  const address = server.address();
+  assert.ok(address && typeof address === "object");
+  const csv = portfolioImportHeaderLine
+    + `BUILDING,allowed-building,,,${allowedFacility.id},,Must Roll Back,ROLLBACK-BUILDING,,ACTIVE\n`
+    + "FACILITY,denied-facility,,,,,Denied Campus,ROLLBACK-FACILITY,,ACTIVE\n";
+  try {
+    const response = await fetch(`http://127.0.0.1:${address.port}/facilities/import`, {
+      method: "POST",
+      headers: { "content-type": "text/csv" },
+      body: csv,
+    });
+    assert.equal(response.status, 403);
+    const buildings = await db.select().from(buildingsTable).where(and(
+      eq(buildingsTable.organizationId, manager.organizationId),
+      eq(buildingsTable.code, "ROLLBACK-BUILDING"),
+    ));
+    const facilities = await db.select().from(facilitiesTable).where(and(
+      eq(facilitiesTable.organizationId, manager.organizationId),
+      eq(facilitiesTable.code, "ROLLBACK-FACILITY"),
+    ));
+    assert.equal(buildings.length, 0);
+    assert.equal(facilities.length, 0);
+    const createAudits = await db.select().from(authorizationAuditLogsTable).where(and(
+      eq(authorizationAuditLogsTable.actorUserId, manager.userId),
+      eq(authorizationAuditLogsTable.action, "CREATE"),
+    ));
+    assert.equal(createAudits.length, 0);
+  } finally {
+    server.close();
+  }
+});
+
+test("concurrent portfolio imports serialize duplicate validation per organization", async () => {
+  const manager = await makeFixture("FACILITY_MANAGER", "ORGANIZATION");
+  await db.insert(userContextsTable).values({
+    userId: manager.userId,
+    activeOrganizationId: manager.organizationId,
+  });
+  const app = express();
+  app.use(express.text({ type: "text/csv", limit: "2mb" }));
+  app.use(createFacilitiesRouter({
+    currentUser: async () => (await db.select().from(usersTable).where(eq(usersTable.id, manager.userId)))[0] ?? null,
+  }));
+  const server = createServer(app);
+  await new Promise<void>((resolve) => server.listen(0, resolve));
+  const address = server.address();
+  assert.ok(address && typeof address === "object");
+  const csv = portfolioImportHeaderLine
+    + "FACILITY,concurrent-facility,,,,,Concurrent Campus,CONCURRENT-IMPORT,,ACTIVE\n";
+  const send = () => fetch(`http://127.0.0.1:${address.port}/facilities/import`, {
+    method: "POST",
+    headers: { "content-type": "text/csv" },
+    body: csv,
+  });
+  try {
+    const responses = await Promise.all([send(), send()]);
+    assert.deepEqual(responses.map((response) => response.status).sort(), [201, 400]);
+    const imported = await db.select().from(facilitiesTable).where(and(
+      eq(facilitiesTable.organizationId, manager.organizationId),
+      eq(facilitiesTable.code, "CONCURRENT-IMPORT"),
+    ));
+    assert.equal(imported.length, 1);
+    const rejected = responses.find((response) => response.status === 400);
+    assert.match(await rejected!.text(), /already exists/);
+  } finally {
+    server.close();
+  }
 });
 
 test("representative matrix decisions cover all seven roles", async () => {

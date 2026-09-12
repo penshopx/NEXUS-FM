@@ -413,6 +413,52 @@ paths:
         "201": {description: Created facility, content: {application/json: {schema: {$ref: "#/components/schemas/Facility"}}}}
         "400": {$ref: "#/components/responses/BadRequest"}
         "403": {$ref: "#/components/responses/Forbidden"}
+  /facilities/import-template:
+    get:
+      operationId: downloadFacilityPortfolioImportTemplate
+      tags: [registry]
+      summary: Download the CSV template for portfolio imports
+      responses:
+        "200":
+          description: Empty CSV template with the exact import header
+          content:
+            text/csv:
+              schema: {type: string}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /facilities/import:
+    post:
+      operationId: importFacilityPortfolio
+      tags: [registry]
+      summary: Validate and atomically import a facility portfolio
+      description: Accepts a bounded CSV containing facilities, buildings, spaces, systems, and assets. Invalid CSV is returned as a downloadable row-level error report and never mutates the portfolio.
+      requestBody:
+        required: true
+        content:
+          text/csv:
+            schema:
+              type: string
+              format: binary
+              maxLength: 2097152
+      responses:
+        "201":
+          description: Portfolio imported in one transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortfolioImportResult"
+        "400":
+          description: CSV validation failed; response is a downloadable error report
+          content:
+            text/csv:
+              schema: {type: string}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "413":
+          description: CSV exceeds the upload byte limit
+          content:
+            text/csv:
+              schema: {type: string}
   /facilities/search:
     get:
       operationId: searchFacilities
@@ -924,6 +970,12 @@ components:
         code: {type: [string, "null"], maxLength: 100}
         description: {type: [string, "null"], maxLength: 4000}
         status: {type: string, enum: [ACTIVE, INACTIVE]}
+    PortfolioImportResult:
+      type: object
+      required: [imported, importId]
+      properties:
+        imported: {type: integer, minimum: 1}
+        importId: {type: string, format: uuid}
     BuildingInput:
       allOf:
         - $ref: "#/components/schemas/RegistryInput"

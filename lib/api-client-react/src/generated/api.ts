@@ -51,6 +51,7 @@ import type {
   OrganizationMemberSearchResult,
   OrganizationSelection,
   Permission,
+  PortfolioImportResult,
   PreconditionRequiredResponse,
   RegistryInput,
   RegistryPage,
@@ -1734,6 +1735,172 @@ export const useCreateFacility = <TError = ErrorType<BadRequestResponse | Forbid
         TContext
       > => {
       return useMutation(getCreateFacilityMutationOptions(options));
+    }
+
+export const getDownloadFacilityPortfolioImportTemplateUrl = () => {
+
+
+
+
+  return `/api/facilities/import-template`
+}
+
+/**
+ * @summary Download the CSV template for portfolio imports
+ */
+export const downloadFacilityPortfolioImportTemplate = async ( options?: Parameters<typeof customFetch>[1]): Promise<string> => {
+
+  return customFetch<string>(getDownloadFacilityPortfolioImportTemplateUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getDownloadFacilityPortfolioImportTemplateQueryKey = () => {
+    return [
+    `/api/facilities/import-template`
+    ] as const;
+    }
+
+
+export const getDownloadFacilityPortfolioImportTemplateQueryOptions = <TData = Awaited<ReturnType<typeof downloadFacilityPortfolioImportTemplate>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadFacilityPortfolioImportTemplate>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getDownloadFacilityPortfolioImportTemplateQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadFacilityPortfolioImportTemplate>>> = ({ signal }) => downloadFacilityPortfolioImportTemplate({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof downloadFacilityPortfolioImportTemplate>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type DownloadFacilityPortfolioImportTemplateQueryResult = NonNullable<Awaited<ReturnType<typeof downloadFacilityPortfolioImportTemplate>>>
+export type DownloadFacilityPortfolioImportTemplateQueryError = ErrorType<UnauthorizedResponse | ForbiddenResponse>
+
+
+/**
+ * @summary Download the CSV template for portfolio imports
+ */
+
+export function useDownloadFacilityPortfolioImportTemplate<TData = Awaited<ReturnType<typeof downloadFacilityPortfolioImportTemplate>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadFacilityPortfolioImportTemplate>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getDownloadFacilityPortfolioImportTemplateQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getImportFacilityPortfolioUrl = () => {
+
+
+
+
+  return `/api/facilities/import`
+}
+
+/**
+ * Accepts a bounded CSV containing facilities, buildings, spaces, systems, and assets. Invalid CSV is returned as a downloadable row-level error report and never mutates the portfolio.
+ * @summary Validate and atomically import a facility portfolio
+ */
+export const importFacilityPortfolio = async (importFacilityPortfolioBody: Blob, options?: Parameters<typeof customFetch>[1]): Promise<PortfolioImportResult> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<PortfolioImportResult>(getImportFacilityPortfolioUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'text/csv', ...getHeaders(options?.headers) },
+    body: importFacilityPortfolioBody
+  }
+);}
+
+
+
+
+
+export const getImportFacilityPortfolioMutationKey = () => ['importFacilityPortfolio'] as const;
+
+export const getImportFacilityPortfolioMutationOptions = <TError = ErrorType<string | UnauthorizedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importFacilityPortfolio>>, TError,ImportFacilityPortfolioMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof importFacilityPortfolio>>, TError,ImportFacilityPortfolioMutationVariables, TContext> => {
+
+const mutationKey = getImportFacilityPortfolioMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof importFacilityPortfolio>>, ImportFacilityPortfolioMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  importFacilityPortfolio(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ImportFacilityPortfolioMutationResult = NonNullable<Awaited<ReturnType<typeof importFacilityPortfolio>>>
+    export type ImportFacilityPortfolioMutationBody = BodyType<Blob>
+    export type ImportFacilityPortfolioMutationError = ErrorType<string | UnauthorizedResponse | ForbiddenResponse>
+    export type ImportFacilityPortfolioMutationVariables = {data: BodyType<Blob>}
+
+    /**
+ * @summary Validate and atomically import a facility portfolio
+ */
+export const useImportFacilityPortfolio = <TError = ErrorType<string | UnauthorizedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importFacilityPortfolio>>, TError,ImportFacilityPortfolioMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof importFacilityPortfolio>>,
+        TError,
+        ImportFacilityPortfolioMutationVariables,
+        TContext
+      > => {
+      return useMutation(getImportFacilityPortfolioMutationOptions(options));
     }
 
 export const getSearchFacilitiesUrl = (params: SearchFacilitiesParams,) => {

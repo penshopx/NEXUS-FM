@@ -32,6 +32,12 @@ export interface RegistryInput {
   status?: RegistryInputStatus;
 }
 
+export interface PortfolioImportResult {
+  /** @minimum 1 */
+  imported: number;
+  importId: string;
+}
+
 export type BuildingInput = RegistryInput & {
   facilityId: string;
 };

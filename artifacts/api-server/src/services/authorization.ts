@@ -33,6 +33,12 @@ export type AuthorizationRequest = {
   requestId?: string;
   /** Trusted transaction connection used by mutation services. */
   database?: any;
+  /**
+   * Trusted bulk-import bootstrap. This only lets an organization binding use
+   * its existing CREATE grant for descendants of a facility that the same
+   * transaction has just been authorized to create.
+   */
+  allowImportedFacilityDescendantBootstrap?: boolean;
 };
 
 export type AuthorizationDecision = {
@@ -330,9 +336,15 @@ export async function authorize(request: AuthorizationRequest): Promise<Authoriz
       request.resourceType === "FACILITY" &&
       permission === "FACILITY.CREATE" &&
       grant.binding.scopeType === "ORGANIZATION";
+    const importedFacilityDescendantBootstrap =
+      request.allowImportedFacilityDescendantBootstrap === true &&
+      request.resourceType !== "FACILITY" &&
+      grant.binding.scopeType === "ORGANIZATION" &&
+      defaultScope === "FACILITY";
     if (grant.binding.scopeType === "ORGANIZATION" &&
       !["ORGANIZATION"].includes(defaultScope) &&
-      !facilityRegistrationBootstrap) continue;
+      !facilityRegistrationBootstrap &&
+      !importedFacilityDescendantBootstrap) continue;
     if (grant.binding.scopeType === "PLATFORM" && defaultScope !== "PLATFORM") continue;
     const bindingScope = grant.binding.scopeType;
     const bindingScopeId = grant.binding.scopeId;
@@ -350,7 +362,9 @@ export async function authorize(request: AuthorizationRequest): Promise<Authoriz
     // performed before a facility binding can exist. An organization binding
     // may therefore create a new facility, but it still cannot view or mutate
     // an existing facility outside an explicit facility binding.
-    if (!facilityRegistrationBootstrap && !isBindingScopeCompatible(defaultScope, bindingScope)) continue;
+    if (!facilityRegistrationBootstrap &&
+      !importedFacilityDescendantBootstrap &&
+      !isBindingScopeCompatible(defaultScope, bindingScope)) continue;
     const evaluateScope = (scope: string, scopeId?: string | null, bindingRestriction = false) => {
       if (scope === "PLATFORM") return restrictedResources.includes(request.resourceType);
       if (scope === "ORGANIZATION") return true;

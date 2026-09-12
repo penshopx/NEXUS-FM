@@ -501,6 +501,25 @@ export const CreateFacilityResponse = zod.object({
 
 
 /**
+ * @summary Download the CSV template for portfolio imports
+ */
+export const DownloadFacilityPortfolioImportTemplateResponse = zod.unknown()
+
+
+/**
+ * Accepts a bounded CSV containing facilities, buildings, spaces, systems, and assets. Invalid CSV is returned as a downloadable row-level error report and never mutates the portfolio.
+ * @summary Validate and atomically import a facility portfolio
+ */
+
+
+
+export const ImportFacilityPortfolioResponse = zod.object({
+  "imported": zod.number().int().min(1),
+  "importId": zod.string().uuid()
+})
+
+
+/**
  * @summary Search facilities in the active organization
  */
 export const SearchFacilitiesQueryParams = zod.object({

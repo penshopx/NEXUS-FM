@@ -3,3 +3,4 @@
 - [Migration journal recovery](migration-journal-recovery.md) — if schema exists but migration history is empty, verify the exact fingerprint before recording applied migrations.
 - [Authorization audit atomicity](authorization-audit-atomicity.md) — access-control mutations and their audit records must commit or fail together.
 - [Drizzle composite unique introspection](drizzle-null-unique.md) — keep the PostgreSQL introspection patch until upstream preserves key order and NULL semantics.
+- [Portfolio import bootstrap](portfolio-import-bootstrap.md) — organization-scoped facility creation may authorize descendants only within the same atomic import.

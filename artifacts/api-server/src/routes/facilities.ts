@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { randomUUID } from "node:crypto";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import {
   assetsTable,
@@ -17,10 +17,13 @@ import {
   authorizeRegistryObject,
   csvForRow,
   listAuthorizedRegistryBatch,
+  portfolioImportHeaderLine,
+  PORTFOLIO_IMPORT_MAX_BYTES,
   queryAuthorizedRegistryRows,
   REGISTRY_KINDS,
   registryCsvHeader,
   resolveRegistryObject,
+  validatePortfolioImport,
   type RegistryKind,
   type RegistryRow,
 } from "../services/facilities";
@@ -339,6 +342,29 @@ function mutationValues(kind: RegistryKind, input: Record<string, unknown>, id: 
   return values;
 }
 
+function csvCell(value: unknown) {
+  return `"${String(value ?? "").replaceAll('"', '""')}"`;
+}
+
+function sendImportErrors(
+  res: import("express").Response,
+  errors: Array<{ row: number; error: string }>,
+) {
+  res.status(400).type("text/csv")
+    .set("Content-Disposition", 'attachment; filename="facility-portfolio-import-errors.csv"');
+  res.send(["row,error", ...errors.map((entry) => `${entry.row},${csvCell(entry.error)}`)].join("\n") + "\n");
+}
+
+class PortfolioImportAuthorizationError extends Error {
+  constructor(
+    public readonly reasonCode: string,
+    public readonly kind: RegistryKind,
+    public readonly row: number,
+  ) {
+    super(`Authorization denied for ${kind} row ${row}`);
+  }
+}
+
 export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies = {}) {
   const router: IRouter = Router();
   const database = dependencies.db ?? db;
@@ -489,6 +515,166 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
     res.status(201).json(decorated);
   }
 
+  async function importPortfolio(req: import("express").Request, res: import("express").Response) {
+    const actor = await actorContext(req, res, resolveCurrentUser, database);
+    if (!actor) return;
+    const text = typeof req.body === "string"
+      ? req.body
+      : Buffer.isBuffer(req.body) ? req.body.toString("utf8") : null;
+    if (text === null) {
+      sendImportErrors(res, [{ row: 1, error: "Request body must be text/csv" }]);
+      return;
+    }
+    if (Buffer.byteLength(text, "utf8") > PORTFOLIO_IMPORT_MAX_BYTES) {
+      sendImportErrors(res, [{ row: 1, error: `CSV exceeds the ${PORTFOLIO_IMPORT_MAX_BYTES}-byte limit` }]);
+      return;
+    }
+    const importId = randomUUID();
+    try {
+      const outcome = await database.transaction(async (tx: any) => {
+        // Duplicate checks and writes must observe prior imports for this
+        // organization. The transaction-scoped lock is acquired before any
+        // validation reads and is released automatically on commit/rollback.
+        await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${actor.organizationId}))`);
+        const validation = await validatePortfolioImport(tx, text, actor.organizationId);
+        if (validation.errors.length) return { validation };
+        const references = new Map<string, {
+          id: string;
+          kind: RegistryKind;
+          context: Record<string, unknown>;
+        }>();
+        const importedFacilityIds = new Set<string>();
+        let createdCount = 0;
+        for (const record of validation.records) {
+          const parentKind = record.kind === "BUILDING" ? "FACILITY"
+            : record.kind === "SPACE" ? "BUILDING"
+              : record.kind === "SYSTEM" || record.kind === "ASSET" ? "SPACE" : undefined;
+          let parentContext: Record<string, unknown> = {
+            organizationId: actor.organizationId,
+            resourceOrganizationId: actor.organizationId,
+            scopeVerified: true,
+          };
+          if (parentKind && record.parentRef) {
+            const inFileParent = references.get(`${parentKind}:${record.parentRef.toLowerCase()}`);
+            if (inFileParent) {
+              parentContext = inFileParent.context;
+            } else {
+              const parent = await resolveRegistryObject(tx, parentKind, record.parentRef, actor.organizationId);
+              if (!parent.found) throw new Error("Validated ancestor changed before import");
+              parentContext = parent.value.verifiedContext;
+            }
+          }
+          let systemId: string | null = null;
+          if (record.kind === "ASSET" && record.systemRef) {
+            const inFileSystem = references.get(`SYSTEM:${record.systemRef.toLowerCase()}`);
+            if (inFileSystem) {
+              systemId = inFileSystem.id;
+              if (inFileSystem.context.spaceId !== parentContext.spaceId) {
+                throw new Error("Validated system ancestry changed before import");
+              }
+            } else {
+              const system = await resolveRegistryObject(tx, "SYSTEM", record.systemRef, actor.organizationId);
+              if (!system.found || system.value.verifiedContext.spaceId !== parentContext.spaceId) {
+                throw new Error("Validated system ancestry changed before import");
+              }
+              systemId = system.value.row.id;
+            }
+          }
+          const id = record.id ?? randomUUID();
+          const values = mutationValues(record.kind, {
+            name: record.name,
+            code: record.code ?? null,
+            description: record.description ?? null,
+            status: record.status,
+            ...(record.kind === "ASSET" ? { systemId } : {}),
+          }, id, actor.organizationId, {
+            facilityId: parentContext.facilityId ?? (record.kind === "FACILITY" ? id : undefined),
+            buildingId: parentContext.buildingId,
+            spaceId: parentContext.spaceId,
+          });
+          const verifiedContext: Record<string, unknown> = record.kind === "FACILITY"
+            ? { organizationId: actor.organizationId, resourceOrganizationId: actor.organizationId, facilityId: id, resourceScopeId: id, scopeVerified: true }
+            : {
+              ...parentContext,
+              ...values,
+              resourceScopeId: id,
+              scopeVerified: true,
+              ...(record.kind === "BUILDING" ? { buildingId: id } : {}),
+              ...(record.kind === "SPACE" ? { spaceId: id } : {}),
+              ...(record.kind === "SYSTEM" ? { systemId: id } : {}),
+              ...(record.kind === "ASSET" ? { assetId: id, ...(systemId ? { systemId } : {}) } : {}),
+            };
+          const decision = await authorize({
+            database: tx,
+            actorUserId: actor.user.id,
+            organizationId: actor.organizationId,
+            permission: `${record.kind}.CREATE`,
+            resourceType: record.kind,
+            resourceId: id,
+            verifiedContext,
+            requestId: String(req.id),
+            allowImportedFacilityDescendantBootstrap:
+              record.kind !== "FACILITY" &&
+              typeof verifiedContext.facilityId === "string" &&
+              importedFacilityIds.has(verifiedContext.facilityId),
+          });
+          if (!decision.allowed) {
+            throw new PortfolioImportAuthorizationError(decision.reasonCode, record.kind, record.rowNumber);
+          }
+          const created = await insertRegistryRow(tx, record.kind, values);
+          if (!created) throw new Error(`Failed to create ${record.kind} row`);
+          await tx.insert(authorizationAuditLogsTable).values({
+            actorUserId: actor.user.id,
+            organizationId: actor.organizationId,
+            action: "CREATE",
+            resource: record.kind,
+            resourceId: created.id,
+            decision: "ALLOW",
+            reasonCode: "ALLOWED",
+            requestId: String(req.id),
+          });
+          references.set(`${record.kind}:${record.clientRef.toLowerCase()}`, {
+            id: created.id,
+            kind: record.kind,
+            context: record.kind === "FACILITY"
+              ? verifiedContext
+              : { ...verifiedContext, [`${record.kind.toLowerCase()}Id`]: created.id },
+          });
+          if (record.kind === "FACILITY") importedFacilityIds.add(created.id);
+          createdCount += 1;
+        }
+        await tx.insert(authorizationAuditLogsTable).values({
+          actorUserId: actor.user.id,
+          organizationId: actor.organizationId,
+          action: "IMPORT",
+          resource: "FACILITY_PORTFOLIO_IMPORT",
+          resourceId: importId,
+          decision: "ALLOW",
+          reasonCode: "ALLOWED",
+          requestId: String(req.id),
+          afterState: { rows: createdCount },
+        });
+        return { imported: createdCount, importId };
+      });
+      if ("validation" in outcome && outcome.validation) {
+        sendImportErrors(res, outcome.validation.errors);
+        return;
+      }
+      res.status(201).json({ imported: outcome.imported, importId: outcome.importId });
+    } catch (error) {
+      if (error instanceof PortfolioImportAuthorizationError) {
+        res.status(403).json({
+          error: "Authorization denied",
+          reasonCode: error.reasonCode,
+          row: error.row,
+          kind: error.kind,
+        });
+        return;
+      }
+      throw error;
+    }
+  }
+
   async function detail(req: import("express").Request, res: import("express").Response, kind: RegistryKind) {
     const actor = await actorContext(req, res, resolveCurrentUser, database);
     if (!actor) return;
@@ -603,6 +789,15 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
     }
     res.status(204).send();
   }
+
+  router.get("/facilities/import-template", async (req, res) => {
+    const actor = await actorContext(req, res, resolveCurrentUser, database);
+    if (!actor) return;
+    res.type("text/csv")
+      .set("Content-Disposition", 'attachment; filename="facility-portfolio-template.csv"')
+      .send(portfolioImportHeaderLine);
+  });
+  router.post("/facilities/import", (req, res) => importPortfolio(req, res));
 
   for (const kind of REGISTRY_KINDS) {
     const path = `/${plural[kind]}`;
