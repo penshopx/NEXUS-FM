@@ -73,3 +73,10 @@ mtime_ms = 1789181795481
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:cbea1875-a294-4d6a-a29c-556784c47bf0/a81dad54-4f60-4942-bd7a-9e9092bdf8c1/a53d3a02-599a-4c3e-be2c-6f2037afd83f"
 storage_version_token = "1789181823717062"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "vkQwTNtkI1xAadpJlWd0H"
+uri = "file://artifacts/nexus-fm-animated-film/public/audio/bg_music.mp3"
+type = "audio"
+title = "NEXUS-FM background music"
+description = "Generated music: Driving cinematic electronic instrumental background music scoring an enterprise facility-management technology explainer. Precise modular synth pulse, restrained low percussion, war…"

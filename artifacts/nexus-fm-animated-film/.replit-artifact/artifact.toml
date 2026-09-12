@@ -1,0 +1,29 @@
+kind = "video"
+previewPath = "/nexus-fm-animated-film/"
+title = "NEXUS-FM Animated Film"
+description = "A cinematic animated explainer introducing NEXUS-FM, its evidence-based facility operating model, secure authorization foundation, and verified project milestones."
+videoAspectRatio = "16:9"
+version = "1.0.0"
+id = "artifacts/nexus-fm-animated-film"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/nexus-fm-animated-film/" ]
+localPort = 21598
+
+[services.development]
+run = "pnpm --filter @workspace/nexus-fm-animated-film run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/nexus-fm-animated-film", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/nexus-fm-animated-film/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21598"
+BASE_PATH = "/nexus-fm-animated-film/"
