@@ -21,23 +21,25 @@ import type {
 
 import type {
   AppSession,
+  AuthorizationAuditLog,
   AuthorizationCheck,
   AuthorizationDecision,
   BadRequestResponse,
-  ConflictResponse,
   ErrorResponse,
   ForbiddenResponse,
   FoundationSummary,
-  GetMyPermissions200,
+  GetAuthorizationAuditLogsParams,
   HealthStatus,
+  MyPermissions,
   NotFoundResponse,
   OrganizationAccess,
   OrganizationSelection,
   Permission,
   PreconditionRequiredResponse,
   Role,
-  RolePermission,
+  RolePermissionConflict,
   RolePermissionUpdate,
+  RolePermissionsResponse,
   UnauthorizedResponse,
   UserRoleBinding,
   UserRoleBindingInput,
@@ -632,9 +634,9 @@ export const getGetRolePermissionsUrl = (roleId: string,) => {
 /**
  * @summary Read role permissions
  */
-export const getRolePermissions = async (roleId: string, options?: Parameters<typeof customFetch>[1]): Promise<RolePermission[]> => {
+export const getRolePermissions = async (roleId: string, options?: Parameters<typeof customFetch>[1]): Promise<RolePermissionsResponse> => {
 
-  return customFetch<RolePermission[]>(getGetRolePermissionsUrl(roleId),
+  return customFetch<RolePermissionsResponse>(getGetRolePermissionsUrl(roleId),
   {
     ...options,
     method: 'GET'
@@ -654,7 +656,7 @@ export const getGetRolePermissionsQueryKey = (roleId: string,) => {
     }
 
 
-export const getGetRolePermissionsQueryOptions = <TData = Awaited<ReturnType<typeof getRolePermissions>>, TError = ErrorType<ForbiddenResponse>>(roleId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRolePermissions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetRolePermissionsQueryOptions = <TData = Awaited<ReturnType<typeof getRolePermissions>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse | NotFoundResponse>>(roleId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRolePermissions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -673,14 +675,14 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetRolePermissionsQueryResult = NonNullable<Awaited<ReturnType<typeof getRolePermissions>>>
-export type GetRolePermissionsQueryError = ErrorType<ForbiddenResponse>
+export type GetRolePermissionsQueryError = ErrorType<UnauthorizedResponse | ForbiddenResponse | NotFoundResponse>
 
 
 /**
  * @summary Read role permissions
  */
 
-export function useGetRolePermissions<TData = Awaited<ReturnType<typeof getRolePermissions>>, TError = ErrorType<ForbiddenResponse>>(
+export function useGetRolePermissions<TData = Awaited<ReturnType<typeof getRolePermissions>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse | NotFoundResponse>>(
  roleId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRolePermissions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
@@ -707,11 +709,11 @@ export const getUpdateRolePermissionsUrl = (roleId: string,) => {
 }
 
 /**
- * The If-Match header is the role policy version. Stale versions are rejected to prevent lost concurrent updates; omitted canonical capabilities are persisted as explicit DENY entries.
+ * The If-Match header or body policyVersion is the exact role policy version. Stale versions are rejected to prevent lost concurrent updates; omitted canonical capabilities are persisted as explicit DENY entries.
  * @summary Replace role permissions
  */
 export const updateRolePermissions = async (roleId: string,
-    rolePermissionUpdate: RolePermissionUpdate, options?: Parameters<typeof customFetch>[1]): Promise<RolePermission[]> => {
+    rolePermissionUpdate: RolePermissionUpdate, options?: Parameters<typeof customFetch>[1]): Promise<RolePermissionsResponse> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -727,7 +729,7 @@ export const updateRolePermissions = async (roleId: string,
     }
     return headers;
   };
-return customFetch<RolePermission[]>(getUpdateRolePermissionsUrl(roleId),
+return customFetch<RolePermissionsResponse>(getUpdateRolePermissionsUrl(roleId),
   {
     ...options,
     method: 'PUT',
@@ -742,7 +744,7 @@ return customFetch<RolePermission[]>(getUpdateRolePermissionsUrl(roleId),
 
 export const getUpdateRolePermissionsMutationKey = () => ['updateRolePermissions'] as const;
 
-export const getUpdateRolePermissionsMutationOptions = <TError = ErrorType<BadRequestResponse | ForbiddenResponse | ConflictResponse | PreconditionRequiredResponse>,
+export const getUpdateRolePermissionsMutationOptions = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | RolePermissionConflict | PreconditionRequiredResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateRolePermissions>>, TError,UpdateRolePermissionsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof updateRolePermissions>>, TError,UpdateRolePermissionsMutationVariables, TContext> => {
 
@@ -771,13 +773,13 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UpdateRolePermissionsMutationResult = NonNullable<Awaited<ReturnType<typeof updateRolePermissions>>>
     export type UpdateRolePermissionsMutationBody = BodyType<RolePermissionUpdate>
-    export type UpdateRolePermissionsMutationError = ErrorType<BadRequestResponse | ForbiddenResponse | ConflictResponse | PreconditionRequiredResponse>
+    export type UpdateRolePermissionsMutationError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | RolePermissionConflict | PreconditionRequiredResponse>
     export type UpdateRolePermissionsMutationVariables = {roleId: string;data: BodyType<RolePermissionUpdate>}
 
     /**
  * @summary Replace role permissions
  */
-export const useUpdateRolePermissions = <TError = ErrorType<BadRequestResponse | ForbiddenResponse | ConflictResponse | PreconditionRequiredResponse>,
+export const useUpdateRolePermissions = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | RolePermissionConflict | PreconditionRequiredResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateRolePermissions>>, TError,UpdateRolePermissionsMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof updateRolePermissions>>,
@@ -787,6 +789,91 @@ export const useUpdateRolePermissions = <TError = ErrorType<BadRequestResponse |
       > => {
       return useMutation(getUpdateRolePermissionsMutationOptions(options));
     }
+
+export const getGetAuthorizationAuditLogsUrl = (params?: GetAuthorizationAuditLogsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/audit-logs?${stringifiedParams}` : `/api/audit-logs`
+}
+
+/**
+ * Returns immutable authorization audit records. Non-platform administrators are restricted to the active organization; platform administrators may read all organizations. Results can be filtered by resource and resourceId.
+ * @summary Read authorization audit history
+ */
+export const getAuthorizationAuditLogs = async (params?: GetAuthorizationAuditLogsParams, options?: Parameters<typeof customFetch>[1]): Promise<AuthorizationAuditLog[]> => {
+
+  return customFetch<AuthorizationAuditLog[]>(getGetAuthorizationAuditLogsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAuthorizationAuditLogsQueryKey = (params?: GetAuthorizationAuditLogsParams,) => {
+    return [
+    `/api/audit-logs`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetAuthorizationAuditLogsQueryOptions = <TData = Awaited<ReturnType<typeof getAuthorizationAuditLogs>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>(params?: GetAuthorizationAuditLogsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAuthorizationAuditLogs>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAuthorizationAuditLogsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAuthorizationAuditLogs>>> = ({ signal }) => getAuthorizationAuditLogs(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAuthorizationAuditLogs>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAuthorizationAuditLogsQueryResult = NonNullable<Awaited<ReturnType<typeof getAuthorizationAuditLogs>>>
+export type GetAuthorizationAuditLogsQueryError = ErrorType<UnauthorizedResponse | ForbiddenResponse>
+
+
+/**
+ * @summary Read authorization audit history
+ */
+
+export function useGetAuthorizationAuditLogs<TData = Awaited<ReturnType<typeof getAuthorizationAuditLogs>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>(
+ params?: GetAuthorizationAuditLogsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAuthorizationAuditLogs>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAuthorizationAuditLogsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetUserRoleBindingsUrl = (userId: string,) => {
 
@@ -1132,9 +1219,9 @@ export const getGetMyPermissionsUrl = () => {
 /**
  * @summary Introspect current permissions
  */
-export const getMyPermissions = async ( options?: Parameters<typeof customFetch>[1]): Promise<GetMyPermissions200> => {
+export const getMyPermissions = async ( options?: Parameters<typeof customFetch>[1]): Promise<MyPermissions> => {
 
-  return customFetch<GetMyPermissions200>(getGetMyPermissionsUrl(),
+  return customFetch<MyPermissions>(getGetMyPermissionsUrl(),
   {
     ...options,
     method: 'GET'
@@ -1154,7 +1241,7 @@ export const getGetMyPermissionsQueryKey = () => {
     }
 
 
-export const getGetMyPermissionsQueryOptions = <TData = Awaited<ReturnType<typeof getMyPermissions>>, TError = ErrorType<UnauthorizedResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyPermissions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetMyPermissionsQueryOptions = <TData = Awaited<ReturnType<typeof getMyPermissions>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyPermissions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -1173,14 +1260,14 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetMyPermissionsQueryResult = NonNullable<Awaited<ReturnType<typeof getMyPermissions>>>
-export type GetMyPermissionsQueryError = ErrorType<UnauthorizedResponse>
+export type GetMyPermissionsQueryError = ErrorType<UnauthorizedResponse | ForbiddenResponse>
 
 
 /**
  * @summary Introspect current permissions
  */
 
-export function useGetMyPermissions<TData = Awaited<ReturnType<typeof getMyPermissions>>, TError = ErrorType<UnauthorizedResponse>>(
+export function useGetMyPermissions<TData = Awaited<ReturnType<typeof getMyPermissions>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>(
   options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyPermissions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {

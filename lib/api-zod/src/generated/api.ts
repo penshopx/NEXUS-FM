@@ -155,18 +155,20 @@ export const GetRolePermissionsParams = zod.object({
   "roleId": zod.coerce.string().uuid()
 })
 
-export const GetRolePermissionsResponseItem = zod.object({
+export const GetRolePermissionsResponse = zod.object({
+  "permissions": zod.array(zod.object({
   "id": zod.string().uuid().optional(),
   "permissionId": zod.string().uuid(),
   "code": zod.string().optional(),
   "defaultScopeType": zod.enum(['PLATFORM', 'ORGANIZATION', 'PORTFOLIO', 'FACILITY', 'BUILDING', 'SPACE', 'ASSET', 'ASSIGNED', 'TEAM', 'VENDOR_ASSIGNMENT', 'OWNED_REQUEST']),
   "effect": zod.enum(['ALLOW', 'DENY'])
+})),
+  "policyVersion": zod.string().uuid()
 })
-export const GetRolePermissionsResponse = zod.array(GetRolePermissionsResponseItem)
 
 
 /**
- * The If-Match header is the role policy version. Stale versions are rejected to prevent lost concurrent updates; omitted canonical capabilities are persisted as explicit DENY entries.
+ * The If-Match header or body policyVersion is the exact role policy version. Stale versions are rejected to prevent lost concurrent updates; omitted canonical capabilities are persisted as explicit DENY entries.
  * @summary Replace role permissions
  */
 export const UpdateRolePermissionsParams = zod.object({
@@ -174,7 +176,7 @@ export const UpdateRolePermissionsParams = zod.object({
 })
 
 export const UpdateRolePermissionsHeader = zod.object({
-  "If-Match": zod.string().describe('Exact role policyVersion token returned as the ETag header.')
+  "If-Match": zod.string().optional().describe('Exact role policyVersion token returned as the ETag header. If omitted, the request body policyVersion is used.')
 })
 
 export const UpdateRolePermissionsBody = zod.object({
@@ -184,17 +186,47 @@ export const UpdateRolePermissionsBody = zod.object({
   "code": zod.string().optional(),
   "defaultScopeType": zod.enum(['PLATFORM', 'ORGANIZATION', 'PORTFOLIO', 'FACILITY', 'BUILDING', 'SPACE', 'ASSET', 'ASSIGNED', 'TEAM', 'VENDOR_ASSIGNMENT', 'OWNED_REQUEST']),
   "effect": zod.enum(['ALLOW', 'DENY'])
-}))
+})),
+  "policyVersion": zod.string().uuid()
 })
 
-export const UpdateRolePermissionsResponseItem = zod.object({
+export const UpdateRolePermissionsResponse = zod.object({
+  "permissions": zod.array(zod.object({
   "id": zod.string().uuid().optional(),
   "permissionId": zod.string().uuid(),
   "code": zod.string().optional(),
   "defaultScopeType": zod.enum(['PLATFORM', 'ORGANIZATION', 'PORTFOLIO', 'FACILITY', 'BUILDING', 'SPACE', 'ASSET', 'ASSIGNED', 'TEAM', 'VENDOR_ASSIGNMENT', 'OWNED_REQUEST']),
   "effect": zod.enum(['ALLOW', 'DENY'])
+})),
+  "policyVersion": zod.string().uuid()
 })
-export const UpdateRolePermissionsResponse = zod.array(UpdateRolePermissionsResponseItem)
+
+
+/**
+ * Returns immutable authorization audit records. Non-platform administrators are restricted to the active organization; platform administrators may read all organizations. Results can be filtered by resource and resourceId.
+ * @summary Read authorization audit history
+ */
+export const GetAuthorizationAuditLogsQueryParams = zod.object({
+  "resource": zod.coerce.string().optional(),
+  "resourceId": zod.coerce.string().optional()
+})
+
+export const GetAuthorizationAuditLogsResponseItem = zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid().nullable(),
+  "actorUserId": zod.string().uuid().nullable(),
+  "action": zod.string(),
+  "resource": zod.string(),
+  "resourceId": zod.string().nullable(),
+  "decision": zod.enum(['ALLOW', 'DENY']),
+  "reasonCode": zod.string(),
+  "scopeEvaluated": zod.string().nullable(),
+  "requestId": zod.string().nullable(),
+  "beforeState": zod.string().nullable(),
+  "afterState": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
+})
+export const GetAuthorizationAuditLogsResponse = zod.array(GetAuthorizationAuditLogsResponseItem)
 
 
 /**
@@ -304,8 +336,13 @@ export const RevokeUserRoleBindingResponse = zod.object({
  * @summary Introspect current permissions
  */
 export const GetMyPermissionsResponse = zod.object({
-
-}).passthrough()
+  "organizationId": zod.string().uuid(),
+  "permissions": zod.array(zod.object({
+  "code": zod.string(),
+  "scopeType": zod.enum(['PLATFORM', 'ORGANIZATION', 'PORTFOLIO', 'FACILITY', 'BUILDING', 'SPACE', 'ASSET', 'ASSIGNED', 'TEAM', 'VENDOR_ASSIGNMENT', 'OWNED_REQUEST']),
+  "effect": zod.enum(['ALLOW', 'DENY'])
+}))
+})
 
 
 /**

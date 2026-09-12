@@ -176,15 +176,15 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/RolePermission"
+                $ref: "#/components/schemas/RolePermissionsResponse"
+        "401": {$ref: "#/components/responses/Unauthorized"}
         "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
     put:
       operationId: updateRolePermissions
       tags: [authorization]
       summary: Replace role permissions
-      description: The If-Match header is the role policy version. Stale versions are rejected to prevent lost concurrent updates; omitted canonical capabilities are persisted as explicit DENY entries.
+      description: The If-Match header or body policyVersion is the exact role policy version. Stale versions are rejected to prevent lost concurrent updates; omitted canonical capabilities are persisted as explicit DENY entries.
       parameters:
         - $ref: "#/components/parameters/IfMatch"
       requestBody:
@@ -203,13 +203,43 @@ paths:
           content:
             application/json:
               schema:
+                $ref: "#/components/schemas/RolePermissionsResponse"
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "409":
+          description: Stale role policy version
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RolePermissionConflict"
+        "428": {$ref: "#/components/responses/PreconditionRequired"}
+  /audit-logs:
+    get:
+      operationId: getAuthorizationAuditLogs
+      tags: [authorization]
+      summary: Read authorization audit history
+      description: Returns immutable authorization audit records. Non-platform administrators are restricted to the active organization; platform administrators may read all organizations. Results can be filtered by resource and resourceId.
+      parameters:
+        - name: resource
+          in: query
+          required: false
+          schema: {type: string}
+        - name: resourceId
+          in: query
+          required: false
+          schema: {type: string}
+      responses:
+        "200":
+          description: Authorization audit history
+          content:
+            application/json:
+              schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/RolePermission"
-        "400": {$ref: "#/components/responses/BadRequest"}
+                  $ref: "#/components/schemas/AuthorizationAuditLog"
+        "401": {$ref: "#/components/responses/Unauthorized"}
         "403": {$ref: "#/components/responses/Forbidden"}
-        "409": {$ref: "#/components/responses/Conflict"}
-        "428": {$ref: "#/components/responses/PreconditionRequired"}
   /users/{userId}/role-bindings:
     parameters:
       - {$ref: "#/components/parameters/UserId"}
@@ -293,8 +323,9 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: "#/components/schemas/MyPermissions"
         "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
   /me/scope:
     get:
       operationId: getMyScope
@@ -340,8 +371,8 @@ components:
     IfMatch:
       name: If-Match
       in: header
-      required: true
-      description: Exact role policyVersion token returned as the ETag header.
+      required: false
+      description: Exact role policyVersion token returned as the ETag header. If omitted, the request body policyVersion is used.
       schema: {type: string}
   responses:
     Unauthorized:
@@ -500,14 +531,30 @@ components:
         code: {type: string}
         defaultScopeType: {$ref: "#/components/schemas/ScopeType"}
         effect: {type: string, enum: [ALLOW, DENY]}
-    RolePermissionUpdate:
+    RolePermissionsResponse:
       type: object
-      required: [permissions]
+      required: [permissions, policyVersion]
       properties:
         permissions:
           type: array
           items:
             $ref: "#/components/schemas/RolePermission"
+        policyVersion: {type: string, format: uuid}
+    RolePermissionUpdate:
+      type: object
+      required: [permissions, policyVersion]
+      properties:
+        permissions:
+          type: array
+          items:
+            $ref: "#/components/schemas/RolePermission"
+        policyVersion: {type: string, format: uuid}
+    RolePermissionConflict:
+      type: object
+      required: [error, policyVersion]
+      properties:
+        error: {type: string}
+        policyVersion: {type: string, format: uuid}
     UserRoleBinding:
       type: object
       required: [id, userId, organizationId, roleId, version, scopeType, status]
@@ -555,6 +602,39 @@ components:
         reasonCode: {type: string}
         permission: {type: string}
         scopeType: {type: string}
+    PermissionGrant:
+      type: object
+      required: [code, scopeType, effect]
+      properties:
+        code: {type: string}
+        scopeType: {$ref: "#/components/schemas/ScopeType"}
+        effect: {type: string, enum: [ALLOW, DENY]}
+    MyPermissions:
+      type: object
+      required: [organizationId, permissions]
+      properties:
+        organizationId: {type: string, format: uuid}
+        permissions:
+          type: array
+          items:
+            $ref: "#/components/schemas/PermissionGrant"
+    AuthorizationAuditLog:
+      type: object
+      required: [id, organizationId, actorUserId, action, resource, resourceId, decision, reasonCode, scopeEvaluated, requestId, beforeState, afterState, createdAt]
+      properties:
+        id: {type: string, format: uuid}
+        organizationId: {type: ["string", "null"], format: uuid}
+        actorUserId: {type: ["string", "null"], format: uuid}
+        action: {type: string}
+        resource: {type: string}
+        resourceId: {type: ["string", "null"]}
+        decision: {type: string, enum: [ALLOW, DENY]}
+        reasonCode: {type: string}
+        scopeEvaluated: {type: ["string", "null"]}
+        requestId: {type: ["string", "null"]}
+        beforeState: {type: ["string", "null"]}
+        afterState: {type: ["string", "null"]}
+        createdAt: {type: string, format: date-time}
     ErrorResponse:
       type: object
       required: [error]

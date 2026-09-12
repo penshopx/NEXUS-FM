@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { randomUUID } from "node:crypto";
-import { and, eq, gt, isNull, lte, or } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, lte, or } from "drizzle-orm";
 import {
   authorizationAuditLogsTable,
   canonicalRoleValues,
@@ -116,7 +116,7 @@ router.get("/roles/:roleId/permissions", async (req, res): Promise<void> => {
     .innerJoin(permissionsTable, eq(rolePermissionsTable.permissionId, permissionsTable.id))
     .where(eq(rolePermissionsTable.roleId, req.params.roleId));
   res.set("ETag", role.policyVersion);
-  res.json(rows);
+  res.json({ permissions: rows, policyVersion: role.policyVersion });
 });
 
 router.put("/roles/:roleId/permissions", async (req, res): Promise<void> => {
@@ -224,13 +224,48 @@ router.put("/roles/:roleId/permissions", async (req, res): Promise<void> => {
   });
   } catch (error) {
     if (error instanceof Error && error.message === "STALE_POLICY_VERSION") {
-      res.status(409).json({ error: "Stale policy version" });
+      const [currentRole] = await database.select({ policyVersion: rolesTable.policyVersion })
+        .from(rolesTable)
+        .where(eq(rolesTable.id, req.params.roleId));
+      res.status(409).json({
+        error: "Stale policy version",
+        ...(currentRole ? { policyVersion: currentRole.policyVersion } : {}),
+      });
       return;
     }
     throw error;
   }
   const rows = await database.select().from(rolePermissionsTable).where(eq(rolePermissionsTable.roleId, req.params.roleId));
   res.set("ETag", updatedRole!.policyVersion);
+  res.json({ permissions: rows, policyVersion: updatedRole!.policyVersion });
+});
+
+router.get("/audit-logs", async (req, res): Promise<void> => {
+  const admin = await requireAdmin(req, res, "AUDIT_LOG.VIEW_AUDIT", resolveCurrentUser, database);
+  if (!admin) return;
+
+  const resource = req.query.resource;
+  const resourceId = req.query.resourceId;
+  if ((resource !== undefined && typeof resource !== "string") ||
+      (resourceId !== undefined && typeof resourceId !== "string")) {
+    res.status(400).json({ error: "resource and resourceId filters must be strings" });
+    return;
+  }
+
+  const filters = [];
+  if (admin.scopeType !== "PLATFORM") {
+    if (!admin.organizationId) {
+      res.status(403).json({ error: "Active organization context required" });
+      return;
+    }
+    filters.push(eq(authorizationAuditLogsTable.organizationId, admin.organizationId));
+  }
+  if (typeof resource === "string") filters.push(eq(authorizationAuditLogsTable.resource, resource));
+  if (typeof resourceId === "string") filters.push(eq(authorizationAuditLogsTable.resourceId, resourceId));
+
+  const rows = await database.select().from(authorizationAuditLogsTable)
+    .where(filters.length ? and(...filters) : undefined)
+    .orderBy(desc(authorizationAuditLogsTable.createdAt), desc(authorizationAuditLogsTable.id));
   res.json(rows);
 });
 
@@ -267,6 +302,8 @@ router.post("/users/:userId/role-bindings", async (req, res): Promise<void> => {
     res.status(400).json({ error: "organizationId, roleId and valid scopeType are required" });
     return;
   }
+  const targetOrganizationId = body.organizationId;
+  const targetRoleId = body.roleId;
   if (!canCrossOrganizationFoundation(admin.scopeType, admin.organizationId, body.organizationId)) {
     res.status(403).json({ error: "Target organization is outside active organization scope" });
     return;
@@ -300,17 +337,32 @@ router.post("/users/:userId/role-bindings", async (req, res): Promise<void> => {
   }
   let binding: typeof userRoleBindingsTable.$inferSelect | undefined;
   try {
-    [binding] = await database.insert(userRoleBindingsTable).values({
-      userId: req.params.userId,
-      organizationId: body.organizationId,
-      roleId: body.roleId,
-      scopeType: state.state.scopeType as "ORGANIZATION",
-      scopeId,
-      status: state.state.status as "ACTIVE",
-      startsAt: state.state.startsAt,
-      endsAt: state.state.endsAt,
-      grantedBy: admin.user.id,
-    }).returning();
+    await database.transaction(async (tx) => {
+      [binding] = await tx.insert(userRoleBindingsTable).values({
+        userId: req.params.userId,
+        organizationId: targetOrganizationId,
+        roleId: targetRoleId,
+        scopeType: state.state.scopeType as "ORGANIZATION",
+        scopeId,
+        status: state.state.status as "ACTIVE",
+        startsAt: state.state.startsAt,
+        endsAt: state.state.endsAt,
+        grantedBy: admin.user.id,
+      }).returning();
+      if (!binding) return;
+      await tx.insert(authorizationAuditLogsTable).values({
+        actorUserId: admin.user.id,
+        organizationId: targetOrganizationId,
+        action: "ROLE_ASSIGNED",
+        resource: "USER_ROLE_BINDING",
+        resourceId: binding.id,
+        decision: "ALLOW",
+        reasonCode: "ALLOWED",
+        beforeState: null,
+        afterState: JSON.stringify(bindingAuditState({ ...body, userId: req.params.userId })),
+        requestId: String(req.id),
+      });
+    });
   } catch (error) {
     const databaseError = error as { code?: string; cause?: { code?: string } };
     if (databaseError.code === "23505" || databaseError.cause?.code === "23505") {
@@ -323,18 +375,6 @@ router.post("/users/:userId/role-bindings", async (req, res): Promise<void> => {
     res.status(409).json({ error: "Role binding already exists" });
     return;
   }
-  await database.insert(authorizationAuditLogsTable).values({
-    actorUserId: admin.user.id,
-    organizationId: body.organizationId,
-    action: "ROLE_ASSIGNED",
-    resource: "USER_ROLE_BINDING",
-    resourceId: binding?.id ?? null,
-    decision: "ALLOW",
-    reasonCode: "ALLOWED",
-    beforeState: null,
-    afterState: JSON.stringify(bindingAuditState({ ...body, userId: req.params.userId })),
-    requestId: String(req.id),
-  });
   res.status(201).json(binding);
 });
 
@@ -373,33 +413,44 @@ router.patch("/users/:userId/role-bindings/:bindingId", async (req, res): Promis
     res.status(409).json({ error: "Expired bindings cannot be reactivated" });
     return;
   }
-  const [after] = await database.update(userRoleBindingsTable).set({
-    scopeType: state.state.scopeType as "ORGANIZATION",
-    scopeId: state.state.scopeId,
-    status: state.state.status as "ACTIVE",
-    startsAt: state.state.startsAt,
-    endsAt: state.state.endsAt,
-    version: randomUUID(),
-  }).where(and(
-    eq(userRoleBindingsTable.id, before.id),
-    eq(userRoleBindingsTable.version, before.version),
-  )).returning();
+  let after: typeof userRoleBindingsTable.$inferSelect | undefined;
+  await database.transaction(async (tx) => {
+    [after] = await tx.update(userRoleBindingsTable).set({
+      scopeType: state.state.scopeType as "ORGANIZATION",
+      scopeId: state.state.scopeId,
+      status: state.state.status as "ACTIVE",
+      startsAt: state.state.startsAt,
+      endsAt: state.state.endsAt,
+      version: randomUUID(),
+    }).where(and(
+      eq(userRoleBindingsTable.id, before.id),
+      eq(userRoleBindingsTable.version, before.version),
+    )).returning();
+    if (!after) return;
+    const action = state.state.status === "SUSPENDED" && before.status !== "SUSPENDED"
+      ? "ROLE_SUSPENDED"
+      : state.state.status === "ACTIVE" && before.status !== "ACTIVE"
+        ? "ROLE_REACTIVATED"
+        : state.state.status === "EXPIRED" && before.status !== "EXPIRED"
+          ? "ROLE_EXPIRED"
+          : "ROLE_BINDING_UPDATED";
+    await tx.insert(authorizationAuditLogsTable).values({
+      actorUserId: admin.user.id,
+      organizationId: before.organizationId,
+      action,
+      resource: "USER_ROLE_BINDING",
+      resourceId: before.id,
+      decision: "ALLOW",
+      reasonCode: "ALLOWED",
+      beforeState: JSON.stringify(before),
+      afterState: JSON.stringify(after),
+      requestId: String(req.id),
+    });
+  });
   if (!after) {
     res.status(409).json({ error: "Role binding changed concurrently" });
     return;
   }
-  await database.insert(authorizationAuditLogsTable).values({
-    actorUserId: admin.user.id,
-    organizationId: before.organizationId,
-    action: "ROLE_REVOKED",
-    resource: "USER_ROLE_BINDING",
-    resourceId: before.id,
-    decision: "ALLOW",
-    reasonCode: "ALLOWED",
-    beforeState: JSON.stringify(before),
-    afterState: JSON.stringify(after),
-    requestId: String(req.id),
-  });
   res.json(after);
 });
 
@@ -422,29 +473,33 @@ router.delete("/users/:userId/role-bindings/:bindingId", async (req, res): Promi
     res.status(403).json({ error: "Self role escalation is denied" });
     return;
   }
-  const [after] = await database.update(userRoleBindingsTable)
-    .set({ status: "EXPIRED", endsAt: new Date(), version: randomUUID() })
-    .where(and(
-      eq(userRoleBindingsTable.id, before.id),
-      eq(userRoleBindingsTable.version, before.version),
-    ))
-    .returning();
+  let after: typeof userRoleBindingsTable.$inferSelect | undefined;
+  await database.transaction(async (tx) => {
+    [after] = await tx.update(userRoleBindingsTable)
+      .set({ status: "EXPIRED", endsAt: new Date(), version: randomUUID() })
+      .where(and(
+        eq(userRoleBindingsTable.id, before.id),
+        eq(userRoleBindingsTable.version, before.version),
+      ))
+      .returning();
+    if (!after) return;
+    await tx.insert(authorizationAuditLogsTable).values({
+      actorUserId: admin.user.id,
+      organizationId: before.organizationId,
+      action: "ROLE_REVOKED",
+      resource: "USER_ROLE_BINDING",
+      resourceId: before.id,
+      decision: "ALLOW",
+      reasonCode: "ALLOWED",
+      beforeState: JSON.stringify(before),
+      afterState: JSON.stringify(after),
+      requestId: String(req.id),
+    });
+  });
   if (!after) {
     res.status(409).json({ error: "Role binding changed concurrently" });
     return;
   }
-  await database.insert(authorizationAuditLogsTable).values({
-    actorUserId: admin.user.id,
-    organizationId: before.organizationId,
-    action: "ROLE_REVOKED",
-    resource: "USER_ROLE_BINDING",
-    resourceId: before.id,
-    decision: "ALLOW",
-    reasonCode: "ALLOWED",
-    beforeState: JSON.stringify(before),
-    afterState: JSON.stringify(after),
-    requestId: String(req.id),
-  });
   res.json(after);
 });
 

@@ -398,6 +398,8 @@ test("authorization routes run through a real HTTP app with injected currentUser
     assert.equal(rolePermissions.response.status, 200);
     const version = rolePermissions.response.headers.get("etag");
     assert.ok(version);
+    assert.equal((rolePermissions.body as { policyVersion: string }).policyVersion, version);
+    assert.ok(Array.isArray((rolePermissions.body as { permissions: unknown[] }).permissions));
     const missingPrecondition = await request(`/roles/${manager.roleId}/permissions`, {
       method: "PUT",
       body: JSON.stringify({ permissions: [] }),
@@ -410,8 +412,16 @@ test("authorization routes run through a real HTTP app with injected currentUser
       body: JSON.stringify({ permissions: [] }),
     });
     assert.equal(revoked.response.status, 200, JSON.stringify(revoked.body));
-    assert.ok(Array.isArray(revoked.body));
-    assert.ok((revoked.body as Array<{ effect: string }>).every((row) => row.effect === "DENY"));
+    assert.ok(Array.isArray((revoked.body as { permissions: unknown[] }).permissions));
+    assert.ok((revoked.body as { permissions: Array<{ effect: string }> }).permissions.every((row) => row.effect === "DENY"));
+    const revokedVersion = (revoked.body as { policyVersion: string }).policyVersion;
+    assert.equal(revoked.response.headers.get("etag"), revokedVersion);
+    const bodyVersionUpdate = await request(`/roles/${manager.roleId}/permissions`, {
+      method: "PUT",
+      body: JSON.stringify({ permissions: [], policyVersion: revokedVersion }),
+    });
+    assert.equal(bodyVersionUpdate.response.status, 200, JSON.stringify(bodyVersionUpdate.body));
+    assert.notEqual((bodyVersionUpdate.body as { policyVersion: string }).policyVersion, revokedVersion);
     await seedAuthorizationCatalog({ force: true });
     const durable = await authorize({
       actorUserId: manager.userId,
@@ -427,9 +437,18 @@ test("authorization routes run through a real HTTP app with injected currentUser
       body: JSON.stringify({ permissions: [] }),
     });
     assert.equal(stale.response.status, 409);
+    assert.equal((stale.body as { error: string }).error, "Stale policy version");
+    assert.equal(typeof (stale.body as { policyVersion: string }).policyVersion, "string");
     const reflected = await request(`/roles/${manager.roleId}/permissions`);
     assert.equal(reflected.response.status, 200);
-    assert.ok((reflected.body as Array<{ effect: string }>).some((row) => row.effect === "DENY"));
+    assert.ok((reflected.body as { permissions: Array<{ effect: string }> }).permissions.some((row) => row.effect === "DENY"));
+
+    const platformAudit = await request(`/audit-logs?resource=ROLE&resourceId=${manager.roleId}`);
+    assert.equal(platformAudit.response.status, 200);
+    assert.ok(Array.isArray(platformAudit.body));
+    assert.ok((platformAudit.body as Array<{ resource: string; resourceId: string | null }>).length > 0);
+    assert.ok((platformAudit.body as Array<{ resource: string; resourceId: string | null }>)
+      .every((row) => row.resource === "ROLE" && row.resourceId === manager.roleId));
 
     const created = await request(`/users/${target.userId}/role-bindings`, {
       method: "POST",
@@ -441,6 +460,23 @@ test("authorization routes run through a real HTTP app with injected currentUser
     });
     assert.equal(created.response.status, 201, JSON.stringify(created.body));
     const createdBindingId = (created.body as { id: string }).id;
+    const assignmentAudits = await db.select().from(authorizationAuditLogsTable).where(and(
+      eq(authorizationAuditLogsTable.resource, "USER_ROLE_BINDING"),
+      eq(authorizationAuditLogsTable.resourceId, createdBindingId),
+      eq(authorizationAuditLogsTable.action, "ROLE_ASSIGNED"),
+    ));
+    assert.ok(assignmentAudits.length > 0);
+    const generalPatch = await request(`/users/${target.userId}/role-bindings/${createdBindingId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ scopeType: "ORGANIZATION" }),
+    });
+    assert.equal(generalPatch.response.status, 200, JSON.stringify(generalPatch.body));
+    const generalUpdateAudits = await db.select().from(authorizationAuditLogsTable).where(and(
+      eq(authorizationAuditLogsTable.resource, "USER_ROLE_BINDING"),
+      eq(authorizationAuditLogsTable.resourceId, createdBindingId),
+      eq(authorizationAuditLogsTable.action, "ROLE_BINDING_UPDATED"),
+    ));
+    assert.ok(generalUpdateAudits.length > 0);
     const [createdBeforeValidation] = await db.select().from(userRoleBindingsTable).where(eq(userRoleBindingsTable.id, createdBindingId));
     assert.ok(createdBeforeValidation);
     const auditsBeforeRejectedBindingPatches = await db.select().from(authorizationAuditLogsTable)
@@ -496,6 +532,12 @@ test("authorization routes run through a real HTTP app with injected currentUser
       body: JSON.stringify({ status: "SUSPENDED" }),
     });
     assert.equal(patched.response.status, 200, JSON.stringify(patched.body));
+    const suspensionAudits = await db.select().from(authorizationAuditLogsTable).where(and(
+      eq(authorizationAuditLogsTable.resource, "USER_ROLE_BINDING"),
+      eq(authorizationAuditLogsTable.resourceId, createdBindingId),
+      eq(authorizationAuditLogsTable.action, "ROLE_SUSPENDED"),
+    ));
+    assert.ok(suspensionAudits.length > 0);
     const [freshBinding] = await db.select().from(userRoleBindingsTable).where(eq(userRoleBindingsTable.id, createdBindingId));
     assert.ok(freshBinding);
     const concurrent = await Promise.all([
@@ -507,6 +549,26 @@ test("authorization routes run through a real HTTP app with injected currentUser
     ]);
     assert.equal(concurrent.filter(({ response }) => response.status === 200).length, 1);
     assert.equal(concurrent.filter(({ response }) => response.status === 409).length, 1);
+    const successfulConcurrent = concurrent.find(({ response }) => response.status === 200);
+    assert.ok(successfulConcurrent);
+    const concurrentAction = (successfulConcurrent.body as { status: string }).status === "ACTIVE"
+      ? "ROLE_REACTIVATED"
+      : "ROLE_EXPIRED";
+    const transitionAudits = await db.select().from(authorizationAuditLogsTable).where(and(
+      eq(authorizationAuditLogsTable.resource, "USER_ROLE_BINDING"),
+      eq(authorizationAuditLogsTable.resourceId, createdBindingId),
+      eq(authorizationAuditLogsTable.action, concurrentAction),
+    ));
+    assert.ok(transitionAudits.length > 0);
+
+    const deleted = await request(`/users/${target.userId}/role-bindings/${createdBindingId}`, { method: "DELETE" });
+    assert.equal(deleted.response.status, 200, JSON.stringify(deleted.body));
+    const revocationAudits = await db.select().from(authorizationAuditLogsTable).where(and(
+      eq(authorizationAuditLogsTable.resource, "USER_ROLE_BINDING"),
+      eq(authorizationAuditLogsTable.resourceId, createdBindingId),
+      eq(authorizationAuditLogsTable.action, "ROLE_REVOKED"),
+    ));
+    assert.ok(revocationAudits.length > 0);
 
     const selfPatch = await request(`/users/${platform.userId}/role-bindings/${platform.bindingId}`, {
       method: "PATCH",
@@ -516,6 +578,10 @@ test("authorization routes run through a real HTTP app with injected currentUser
     const selfDelete = await request(`/users/${platform.userId}/role-bindings/${platform.bindingId}`, { method: "DELETE" });
     assert.equal(selfDelete.response.status, 403);
     actorId = manager.userId;
+    const organizationAudit = await request("/audit-logs");
+    assert.equal(organizationAudit.response.status, 200);
+    assert.ok((organizationAudit.body as Array<{ organizationId: string | null }>)
+      .every((row) => row.organizationId === manager.organizationId));
     const crossOrgList = await request(`/users/${target.userId}/role-bindings`);
     assert.equal(crossOrgList.response.status, 403);
     const crossOrgCreate = await request(`/users/${target.userId}/role-bindings`, {

@@ -7,6 +7,6 @@
  */
 
 /**
- * Exact role policyVersion token returned as the ETag header.
+ * Exact role policyVersion token returned as the ETag header. If omitted, the request body policyVersion is used.
  */
 export type IfMatchParameter = string;

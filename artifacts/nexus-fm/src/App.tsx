@@ -11,6 +11,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { Toaster } from '@/components/ui/toaster';
 import { SignInPage, SignUpPage } from '@/pages/auth';
 import { Dashboard } from '@/pages/dashboard';
+import { AuthorizationPage } from '@/pages/authorization';
 import Landing from '@/pages/landing';
 import NotFound from '@/pages/not-found';
 import { Profile } from '@/pages/profile';
@@ -56,6 +57,9 @@ function Routes() {
         <Route path="/sign-up/*?" component={SignUpPage} />
         <Route path="/app">
           <ProtectedPage><AppShell><Dashboard /></AppShell></ProtectedPage>
+        </Route>
+        <Route path="/authorization">
+          <ProtectedPage><AppShell><AuthorizationPage /></AppShell></ProtectedPage>
         </Route>
         <Route path="/profile">
           <ProtectedPage><AppShell><Profile /></AppShell></ProtectedPage>

@@ -159,8 +159,19 @@ export interface RolePermission {
   effect: RolePermissionEffect;
 }
 
+export interface RolePermissionsResponse {
+  permissions: RolePermission[];
+  policyVersion: string;
+}
+
 export interface RolePermissionUpdate {
   permissions: RolePermission[];
+  policyVersion: string;
+}
+
+export interface RolePermissionConflict {
+  error: string;
+  policyVersion: string;
 }
 
 export type UserRoleBindingStatus = typeof UserRoleBindingStatus[keyof typeof UserRoleBindingStatus];
@@ -226,6 +237,56 @@ export interface AuthorizationDecision {
   scopeType?: string;
 }
 
+export type PermissionGrantEffect = typeof PermissionGrantEffect[keyof typeof PermissionGrantEffect];
+
+
+export const PermissionGrantEffect = {
+  ALLOW: 'ALLOW',
+  DENY: 'DENY',
+} as const;
+
+export interface PermissionGrant {
+  code: string;
+  scopeType: ScopeType;
+  effect: PermissionGrantEffect;
+}
+
+export interface MyPermissions {
+  organizationId: string;
+  permissions: PermissionGrant[];
+}
+
+export type AuthorizationAuditLogDecision = typeof AuthorizationAuditLogDecision[keyof typeof AuthorizationAuditLogDecision];
+
+
+export const AuthorizationAuditLogDecision = {
+  ALLOW: 'ALLOW',
+  DENY: 'DENY',
+} as const;
+
+export interface AuthorizationAuditLog {
+  id: string;
+  /** @nullable */
+  organizationId: string | null;
+  /** @nullable */
+  actorUserId: string | null;
+  action: string;
+  resource: string;
+  /** @nullable */
+  resourceId: string | null;
+  decision: AuthorizationAuditLogDecision;
+  reasonCode: string;
+  /** @nullable */
+  scopeEvaluated: string | null;
+  /** @nullable */
+  requestId: string | null;
+  /** @nullable */
+  beforeState: string | null;
+  /** @nullable */
+  afterState: string | null;
+  createdAt: string;
+}
+
 export interface ErrorResponse {
   error: string;
 }
@@ -261,9 +322,12 @@ export type ConflictResponse = ErrorResponse;
 export type PreconditionRequiredResponse = ErrorResponse;
 
 /**
- * Exact role policyVersion token returned as the ETag header.
+ * Exact role policyVersion token returned as the ETag header. If omitted, the request body policyVersion is used.
  */
 export type IfMatchParameter = string;
 
-export type GetMyPermissions200 = { [key: string]: unknown };
+export type GetAuthorizationAuditLogsParams = {
+resource?: string;
+resourceId?: string;
+};
 

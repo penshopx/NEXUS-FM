@@ -8,8 +8,11 @@ import {
   useGetSession,
   useListOrganizations,
   useSelectOrganization,
+  useGetMyPermissions,
+  getGetMyPermissionsQueryKey,
+  getGetAuthorizationAuditLogsQueryKey,
 } from '@workspace/api-client-react';
-import { Building2, LayoutDashboard, Shield, ChevronDown, Check, LogOut } from 'lucide-react';
+import { Building2, LayoutDashboard, Shield, ChevronDown, Check, LogOut, KeyRound } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,18 +32,39 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { data: session, isLoading: sessionLoading } = useGetSession();
   const { data: orgs, isLoading: orgsLoading } = useListOrganizations();
   const selectOrg = useSelectOrganization();
+  const { data: myPermissions } = useGetMyPermissions();
 
   const handleSelectOrg = (organizationId: string) => {
     selectOrg.mutate({ data: { organizationId } }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getGetSessionQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetFoundationSummaryQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetMyPermissionsQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetAuthorizationAuditLogsQueryKey() });
+        // Can't reliably invalidate all role bindings or specific role permissions without ID,
+        // but invalidating the entire query array base will force refetch.
+        queryClient.invalidateQueries({ queryKey: ['/api/users'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/roles'] });
       }
     });
   };
 
+  const hasAuthAccess = (() => {
+    if (!myPermissions) return false;
+    const required = ['ROLE.MANAGE', 'USER.MANAGE', 'AUDIT_LOG.VIEW_AUDIT'];
+    for (const permCode of required) {
+      const grants = myPermissions.permissions.filter(p => p.code === permCode);
+      const isDenied = grants.some(g => g.effect === 'DENY');
+      const isAllowed = grants.some(g => g.effect === 'ALLOW');
+      if (isDenied) continue;
+      if (isAllowed) return true;
+    }
+    return false;
+  })();
+
   const navItems = [
     { href: '/app', label: 'Dashboard', icon: LayoutDashboard },
+    ...(hasAuthAccess ? [{ href: '/authorization', label: 'Authorization', icon: KeyRound }] : []),
     { href: '/profile', label: 'Identity & Access', icon: Shield },
   ];
 

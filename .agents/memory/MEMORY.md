@@ -1,3 +1,4 @@
 - [Foundation account bootstrap](foundation-account-bootstrap.md) — first authenticated access creates a minimal organization context, not operational sample data.
 - [Authorization object resolvers](authorization-object-resolvers.md) — reserved object permissions stay denied until server resolvers prove scope and relationship.
 - [Migration journal recovery](migration-journal-recovery.md) — if schema exists but migration history is empty, verify the exact fingerprint before recording applied migrations.
+- [Authorization audit atomicity](authorization-audit-atomicity.md) — access-control mutations and their audit records must commit or fail together.

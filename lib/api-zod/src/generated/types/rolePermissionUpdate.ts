@@ -9,4 +9,5 @@ import type { RolePermission } from './rolePermission';
 
 export interface RolePermissionUpdate {
   permissions: RolePermission[];
+  policyVersion: string;
 }

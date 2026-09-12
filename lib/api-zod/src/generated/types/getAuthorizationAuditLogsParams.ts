@@ -6,4 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type GetMyPermissions200 = { [key: string]: unknown };
+export type GetAuthorizationAuditLogsParams = {
+resource?: string;
+resourceId?: string;
+};
