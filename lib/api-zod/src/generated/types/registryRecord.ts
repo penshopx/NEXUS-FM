@@ -5,6 +5,7 @@
  * NEXUS-FM foundation API
  * OpenAPI spec version: 0.1.0
  */
+import type { RegistryCapabilities } from './registryCapabilities';
 
 export interface RegistryRecord {
   id: string;
@@ -17,4 +18,5 @@ export interface RegistryRecord {
   status: string;
   createdAt?: Date;
   updatedAt?: Date;
+  capabilities: RegistryCapabilities;
 }

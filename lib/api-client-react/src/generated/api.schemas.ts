@@ -50,6 +50,24 @@ export type AssetInput = RegistryInput & ({
   systemId?: string | null;
 });
 
+export type RegistryCapabilitiesCreateChildren = {
+  BUILDING?: boolean;
+  SPACE?: boolean;
+  SYSTEM?: boolean;
+  ASSET?: boolean;
+};
+
+/**
+ * Server-evaluated UI actions for this object. create is the permission to create another object of this kind in its verified scope. The createChildren entries are the safe child-kind semantics for detail surfaces; an entry is present only for a valid child kind and is never inferred from request input.
+ */
+export interface RegistryCapabilities {
+  view: boolean;
+  create: boolean;
+  update: boolean;
+  delete: boolean;
+  createChildren: RegistryCapabilitiesCreateChildren;
+}
+
 export interface RegistryRecord {
   id: string;
   organizationId: string;
@@ -61,6 +79,7 @@ export interface RegistryRecord {
   status: string;
   createdAt?: string;
   updatedAt?: string;
+  capabilities: RegistryCapabilities;
 }
 
 export type Facility = RegistryRecord;
@@ -88,11 +107,20 @@ export type Asset = RegistryRecord & ({
   systemId?: string | null;
 });
 
+/**
+ * Server-evaluated actions for the current authorized collection context.
+ */
+export interface RegistryCollectionCapabilities {
+  /** Whether the server permits creating the collection's resource kind in this verified context. */
+  create: boolean;
+}
+
 export interface RegistryPage {
   items: RegistryRecord[];
   page: number;
   limit: number;
   total: number;
+  collectionCapabilities: RegistryCollectionCapabilities;
 }
 
 export interface HealthStatus {
@@ -466,12 +494,64 @@ export type SearchFacilitiesParams = {
 q: string;
 };
 
+export type ListFacilityBuildingsParams = {
+q?: SearchParameter;
+/**
+ * @minimum 1
+ */
+page?: PageParameter;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: LimitParameter;
+};
+
 export type SearchBuildingsParams = {
 q: string;
 };
 
+export type ListBuildingSpacesParams = {
+q?: SearchParameter;
+/**
+ * @minimum 1
+ */
+page?: PageParameter;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: LimitParameter;
+};
+
 export type SearchSpacesParams = {
 q: string;
+};
+
+export type ListSpaceSystemsParams = {
+q?: SearchParameter;
+/**
+ * @minimum 1
+ */
+page?: PageParameter;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: LimitParameter;
+};
+
+export type ListSpaceAssetsParams = {
+q?: SearchParameter;
+/**
+ * @minimum 1
+ */
+page?: PageParameter;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: LimitParameter;
 };
 
 export type SearchSystemsParams = {
@@ -480,6 +560,19 @@ q: string;
 
 export type SearchAssetsParams = {
 q: string;
+};
+
+export type ListSystemAssetsParams = {
+q?: SearchParameter;
+/**
+ * @minimum 1
+ */
+page?: PageParameter;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: LimitParameter;
 };
 
 export type ListBuildingsParams = {

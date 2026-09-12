@@ -15,6 +15,12 @@ import { AuthorizationPage } from '@/pages/authorization';
 import Landing from '@/pages/landing';
 import NotFound from '@/pages/not-found';
 import { Profile } from '@/pages/profile';
+import { FacilitiesPage } from '@/pages/facilities';
+import { FacilityDetailPage } from '@/pages/facilities/facility-detail';
+import { BuildingDetailPage } from '@/pages/buildings/building-detail';
+import { SpaceDetailPage } from '@/pages/spaces/space-detail';
+import { SystemDetailPage } from '@/pages/systems/system-detail';
+import { AssetDetailPage } from '@/pages/assets/asset-detail';
 
 const queryClient = new QueryClient();
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
@@ -57,6 +63,24 @@ function Routes() {
         <Route path="/sign-up/*?" component={SignUpPage} />
         <Route path="/app">
           <ProtectedPage><AppShell><Dashboard /></AppShell></ProtectedPage>
+        </Route>
+        <Route path="/app/facilities">
+          <ProtectedPage><AppShell><FacilitiesPage /></AppShell></ProtectedPage>
+        </Route>
+        <Route path="/app/facilities/:id">
+          <ProtectedPage><AppShell><FacilityDetailPage /></AppShell></ProtectedPage>
+        </Route>
+        <Route path="/app/buildings/:id">
+          <ProtectedPage><AppShell><BuildingDetailPage /></AppShell></ProtectedPage>
+        </Route>
+        <Route path="/app/spaces/:id">
+          <ProtectedPage><AppShell><SpaceDetailPage /></AppShell></ProtectedPage>
+        </Route>
+        <Route path="/app/systems/:id">
+          <ProtectedPage><AppShell><SystemDetailPage /></AppShell></ProtectedPage>
+        </Route>
+        <Route path="/app/assets/:id">
+          <ProtectedPage><AppShell><AssetDetailPage /></AppShell></ProtectedPage>
         </Route>
         <Route path="/authorization">
           <ProtectedPage><AppShell><AuthorizationPage /></AppShell></ProtectedPage>

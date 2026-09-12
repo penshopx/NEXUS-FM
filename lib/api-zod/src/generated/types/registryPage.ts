@@ -5,6 +5,7 @@
  * NEXUS-FM foundation API
  * OpenAPI spec version: 0.1.0
  */
+import type { RegistryCollectionCapabilities } from './registryCollectionCapabilities';
 import type { RegistryRecord } from './registryRecord';
 
 export interface RegistryPage {
@@ -12,4 +13,5 @@ export interface RegistryPage {
   page: number;
   limit: number;
   total: number;
+  collectionCapabilities: RegistryCollectionCapabilities;
 }

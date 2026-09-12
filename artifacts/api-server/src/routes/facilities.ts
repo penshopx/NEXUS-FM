@@ -26,6 +26,15 @@ import { getActiveOrganizationId } from "./authorization";
 
 type Database = typeof db;
 type CurrentUser = typeof defaultCurrentUser;
+type RegistryCapabilities = {
+  view: boolean;
+  create: boolean;
+  update: boolean;
+  delete: boolean;
+  createChildren: Partial<Record<RegistryKind, boolean>>;
+};
+type RegistryCollectionCapabilities = { create: boolean };
+type AuthorizedRegistryRow = RegistryRow & { capabilities: RegistryCapabilities };
 
 export type FacilitiesRouteDependencies = {
   currentUser?: CurrentUser;
@@ -82,6 +91,108 @@ function resourceTypeFor(kind: RegistryKind) {
   return kind;
 }
 
+const childKinds: Record<RegistryKind, RegistryKind[]> = {
+  FACILITY: ["BUILDING"],
+  BUILDING: ["SPACE"],
+  SPACE: ["SYSTEM", "ASSET"],
+  SYSTEM: ["ASSET"],
+  ASSET: [],
+};
+
+async function collectionCreateCapability(
+  database: Database,
+  kind: RegistryKind,
+  actorUserId: string,
+  organizationId: string,
+  verifiedContext: Record<string, unknown>,
+  resourceId: string,
+  requestId: string,
+): Promise<RegistryCollectionCapabilities> {
+  const decision = await authorize({
+    database,
+    actorUserId,
+    organizationId,
+    permission: `${kind}.CREATE`,
+    resourceType: kind,
+    resourceId,
+    verifiedContext,
+    requestId,
+  });
+  return { create: decision.allowed };
+}
+
+async function registryCapabilities(
+  database: Database,
+  kind: RegistryKind,
+  resolved: Extract<Awaited<ReturnType<typeof resolveRegistryObject>>, { found: true }>,
+  actorUserId: string,
+  organizationId: string,
+  requestId: string,
+  viewDecision?: Awaited<ReturnType<typeof authorize>>,
+): Promise<RegistryCapabilities> {
+  const evaluate = (action: "CREATE" | "UPDATE" | "MANAGE", capabilityKind = kind) =>
+    authorize({
+      database,
+      actorUserId,
+      organizationId,
+      permission: `${capabilityKind}.${action}`,
+      resourceType: capabilityKind,
+      resourceId: resolved.value.row.id,
+      verifiedContext: resolved.value.verifiedContext,
+      requestId,
+    });
+  const view = viewDecision ?? await authorize({
+    database,
+    actorUserId,
+    organizationId,
+    permission: `${kind}.VIEW`,
+    resourceType: kind,
+    resourceId: resolved.value.row.id,
+    verifiedContext: resolved.value.verifiedContext,
+    requestId,
+  });
+  const [create, update, remove] = await Promise.all([
+    evaluate("CREATE"),
+    evaluate("UPDATE"),
+    // Registry DELETE is intentionally evaluated through the existing MANAGE
+    // permission; the UI only receives the resulting boolean.
+    evaluate("MANAGE"),
+  ]);
+  const createChildren = Object.fromEntries(await Promise.all(
+    childKinds[kind].map(async (childKind) => [
+      childKind,
+      (await evaluate("CREATE", childKind)).allowed,
+    ] as const),
+  ));
+  return {
+    view: view.allowed,
+    create: create.allowed,
+    update: update.allowed,
+    delete: remove.allowed,
+    createChildren,
+  };
+}
+
+async function decorateRow(
+  database: Database,
+  kind: RegistryKind,
+  row: RegistryRow,
+  actorUserId: string,
+  organizationId: string,
+  requestId: string,
+): Promise<AuthorizedRegistryRow | null> {
+  const resolved = await resolveRegistryObject(database, kind, row.id, organizationId);
+  if (!resolved.found) {
+    // A concurrent deletion or invalid ancestry must never result in an
+    // inferred capability or an exposed record.
+    return null;
+  }
+  return {
+    ...row,
+    capabilities: await registryCapabilities(database, kind, resolved, actorUserId, organizationId, requestId),
+  };
+}
+
 async function authorizedRows(
   database: Database,
   kind: RegistryKind,
@@ -91,11 +202,12 @@ async function authorizedRows(
   requestId: string,
 ) {
   const candidates = await listRegistryRows(database, kind, organizationId, query);
-  const rows: RegistryRow[] = [];
+  const rows: AuthorizedRegistryRow[] = [];
   for (const candidate of candidates) {
     const resolved = await resolveRegistryObject(database, kind, candidate.id, organizationId);
     if (!resolved.found) continue;
     const decision = await authorize({
+      database,
       actorUserId,
       organizationId,
       permission: `${resourceTypeFor(kind)}.VIEW`,
@@ -104,7 +216,14 @@ async function authorizedRows(
       verifiedContext: resolved.value.verifiedContext,
       requestId,
     });
-    if (decision.allowed) rows.push(candidate);
+    if (decision.allowed) {
+      rows.push({
+        ...candidate,
+        capabilities: await registryCapabilities(
+          database, kind, resolved, actorUserId, organizationId, requestId, decision,
+        ),
+      });
+    }
   }
   return rows;
 }
@@ -196,11 +315,31 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
   async function list(req: import("express").Request, res: import("express").Response, kind: RegistryKind) {
     const actor = await actorContext(req, res, resolveCurrentUser, database);
     if (!actor) return;
+    const bootstrapResourceId = randomUUID();
+    const collectionCapabilities = kind === "FACILITY"
+      ? await collectionCreateCapability(
+        database,
+        "FACILITY",
+        actor.user.id,
+        actor.organizationId,
+        // This is the same verified organization bootstrap context used by
+        // POST /facilities; the generated ID is server-only.
+        { organizationId: actor.organizationId, scopeVerified: true, resourceScopeId: bootstrapResourceId },
+        bootstrapResourceId,
+        String(req.id),
+      )
+      : { create: false };
     const all = await authorizedRows(database, kind, actor.organizationId, actor.user.id,
       typeof req.query.q === "string" ? req.query.q : undefined, String(req.id));
     const page = parsePage(req.query.page, 1, 1_000_000);
     const limit = parsePage(req.query.limit, 50, 100);
-    res.json({ items: all.slice((page - 1) * limit, page * limit), page, limit, total: all.length });
+    res.json({
+      items: all.slice((page - 1) * limit, page * limit),
+      page,
+      limit,
+      total: all.length,
+      collectionCapabilities,
+    });
   }
 
   async function exportRows(req: import("express").Request, res: import("express").Response, kind: RegistryKind) {
@@ -287,7 +426,14 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
       });
       return;
     }
-    res.status(201).json(outcome.row);
+    const decorated = await decorateRow(
+      database, kind, outcome.row, actor.user.id, actor.organizationId, String(req.id),
+    );
+    if (!decorated) {
+      res.status(409).json({ error: "Resource changed concurrently" });
+      return;
+    }
+    res.status(201).json(decorated);
   }
 
   async function detail(req: import("express").Request, res: import("express").Response, kind: RegistryKind) {
@@ -305,7 +451,18 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
       res.status(403).json({ error: "Authorization denied", reasonCode: result.decision.reasonCode });
       return;
     }
-    res.json(result.resolved.value.row);
+    res.json({
+      ...result.resolved.value.row,
+      capabilities: await registryCapabilities(
+        database,
+        kind,
+        result.resolved,
+        actor.user.id,
+        actor.organizationId,
+        String(req.id),
+        result.decision,
+      ),
+    });
   }
 
   async function update(req: import("express").Request, res: import("express").Response, kind: RegistryKind) {
@@ -347,7 +504,14 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
       });
       return;
     }
-    res.json(outcome.row);
+    const decorated = await decorateRow(
+      database, kind, outcome.row, actor.user.id, actor.organizationId, String(req.id),
+    );
+    if (!decorated) {
+      res.status(409).json({ error: "Resource changed concurrently" });
+      return;
+    }
+    res.json(decorated);
   }
 
   async function remove(req: import("express").Request, res: import("express").Response, kind: RegistryKind) {
@@ -446,10 +610,34 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
         res.status(403).json({ error: "Authorization denied", reasonCode: parent.decision.reasonCode });
         return;
       }
-      const rows = await authorizedRows(database, childKind, actor.organizationId, actor.user.id, undefined, String(req.id));
+      const rows = await authorizedRows(
+        database,
+        childKind,
+        actor.organizationId,
+        actor.user.id,
+        typeof req.query.q === "string" ? req.query.q : undefined,
+        String(req.id),
+      );
       const key = parentKind === "FACILITY" ? "facilityId" : parentKind === "BUILDING" ? "buildingId" : parentKind === "SPACE" ? "spaceId" : "systemId";
       const filtered = rows.filter((row) => (row as unknown as Record<string, unknown>)[key] === req.params.parentId);
-      res.json({ items: filtered, page: 1, limit: filtered.length, total: filtered.length });
+      const page = parsePage(req.query.page, 1, 1_000_000);
+      const limit = parsePage(req.query.limit, 50, 100);
+      const collectionCapabilities = await collectionCreateCapability(
+        database,
+        childKind,
+        actor.user.id,
+        actor.organizationId,
+        parent.resolved.value.verifiedContext,
+        String(req.params.parentId),
+        String(req.id),
+      );
+      res.json({
+        items: filtered.slice((page - 1) * limit, page * limit),
+        page,
+        limit,
+        total: filtered.length,
+        collectionCapabilities,
+      });
     });
   }
   return router;

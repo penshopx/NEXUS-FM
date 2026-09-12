@@ -488,6 +488,9 @@ paths:
       summary: List buildings nested under a facility
       parameters:
         - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+        - {$ref: "#/components/parameters/Search"}
+        - {$ref: "#/components/parameters/Page"}
+        - {$ref: "#/components/parameters/Limit"}
       responses:
         "200": {description: Buildings, content: {application/json: {schema: {$ref: "#/components/schemas/RegistryPage"}}}}
         "403": {$ref: "#/components/responses/Forbidden"}
@@ -552,7 +555,11 @@ paths:
       operationId: listBuildingSpaces
       tags: [registry]
       summary: List spaces nested under a building
-      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+        - {$ref: "#/components/parameters/Search"}
+        - {$ref: "#/components/parameters/Page"}
+        - {$ref: "#/components/parameters/Limit"}
       responses:
         "200": {description: Spaces, content: {application/json: {schema: {$ref: "#/components/schemas/RegistryPage"}}}}
         "403": {$ref: "#/components/responses/Forbidden"}
@@ -625,7 +632,11 @@ paths:
       operationId: listSpaceSystems
       tags: [registry]
       summary: List systems nested under a space
-      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+        - {$ref: "#/components/parameters/Search"}
+        - {$ref: "#/components/parameters/Page"}
+        - {$ref: "#/components/parameters/Limit"}
       responses:
         "200": {description: Systems, content: {application/json: {schema: {$ref: "#/components/schemas/RegistryPage"}}}}
         "403": {$ref: "#/components/responses/Forbidden"}
@@ -645,7 +656,11 @@ paths:
       operationId: listSpaceAssets
       tags: [registry]
       summary: List assets nested under a space
-      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+        - {$ref: "#/components/parameters/Search"}
+        - {$ref: "#/components/parameters/Page"}
+        - {$ref: "#/components/parameters/Limit"}
       responses:
         "200": {description: Assets, content: {application/json: {schema: {$ref: "#/components/schemas/RegistryPage"}}}}
         "403": {$ref: "#/components/responses/Forbidden"}
@@ -771,7 +786,11 @@ paths:
       operationId: listSystemAssets
       tags: [registry]
       summary: List assets nested under a system
-      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+        - {$ref: "#/components/parameters/Search"}
+        - {$ref: "#/components/parameters/Page"}
+        - {$ref: "#/components/parameters/Limit"}
       responses:
         "200": {description: Assets, content: {application/json: {schema: {$ref: "#/components/schemas/RegistryPage"}}}}
         "403": {$ref: "#/components/responses/Forbidden"}
@@ -969,7 +988,7 @@ components:
             systemId: {type: [string, "null"], format: uuid}
     RegistryRecord:
       type: object
-      required: [id, organizationId, name, status]
+      required: [id, organizationId, name, status, capabilities]
       properties:
         id: {type: string, format: uuid}
         organizationId: {type: string, format: uuid}
@@ -979,9 +998,33 @@ components:
         status: {type: string}
         createdAt: {type: string, format: date-time}
         updatedAt: {type: string, format: date-time}
+        capabilities:
+          $ref: "#/components/schemas/RegistryCapabilities"
+    RegistryCapabilities:
+      type: object
+      description: >-
+        Server-evaluated UI actions for this object. create is the permission
+        to create another object of this kind in its verified scope. The
+        createChildren entries are the safe child-kind semantics for detail
+        surfaces; an entry is present only for a valid child kind and is
+        never inferred from request input.
+      required: [view, create, update, delete, createChildren]
+      properties:
+        view: {type: boolean}
+        create: {type: boolean}
+        update: {type: boolean}
+        delete: {type: boolean}
+        createChildren:
+          type: object
+          additionalProperties: false
+          properties:
+            BUILDING: {type: boolean}
+            SPACE: {type: boolean}
+            SYSTEM: {type: boolean}
+            ASSET: {type: boolean}
     RegistryPage:
       type: object
-      required: [items, page, limit, total]
+      required: [items, page, limit, total, collectionCapabilities]
       properties:
         items:
           type: array
@@ -989,6 +1032,16 @@ components:
         page: {type: integer}
         limit: {type: integer}
         total: {type: integer}
+        collectionCapabilities:
+          $ref: "#/components/schemas/RegistryCollectionCapabilities"
+    RegistryCollectionCapabilities:
+      type: object
+      description: Server-evaluated actions for the current authorized collection context.
+      required: [create]
+      properties:
+        create:
+          type: boolean
+          description: Whether the server permits creating the collection's resource kind in this verified context.
     HealthStatus:
       type: object
       properties:

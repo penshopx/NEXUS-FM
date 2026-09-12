@@ -36,9 +36,14 @@ import type {
   GetAuthorizationAuditLogsParams,
   HealthStatus,
   ListAssetsParams,
+  ListBuildingSpacesParams,
   ListBuildingsParams,
   ListFacilitiesParams,
+  ListFacilityBuildingsParams,
+  ListSpaceAssetsParams,
+  ListSpaceSystemsParams,
   ListSpacesParams,
+  ListSystemAssetsParams,
   ListSystemsParams,
   MyPermissions,
   NotFoundResponse,
@@ -2310,20 +2315,29 @@ export const useCreateFacilityBuilding = <TError = ErrorType<BadRequestResponse 
       return useMutation(getCreateFacilityBuildingMutationOptions(options));
     }
 
-export const getListFacilityBuildingsUrl = (id: string,) => {
+export const getListFacilityBuildingsUrl = (id: string,
+    params?: ListFacilityBuildingsParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/facilities/${id}/buildings`
+  return stringifiedParams.length > 0 ? `/api/facilities/${id}/buildings?${stringifiedParams}` : `/api/facilities/${id}/buildings`
 }
 
 /**
  * @summary List buildings nested under a facility
  */
-export const listFacilityBuildings = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<RegistryPage> => {
+export const listFacilityBuildings = async (id: string,
+    params?: ListFacilityBuildingsParams, options?: Parameters<typeof customFetch>[1]): Promise<RegistryPage> => {
 
-  return customFetch<RegistryPage>(getListFacilityBuildingsUrl(id),
+  return customFetch<RegistryPage>(getListFacilityBuildingsUrl(id,params),
   {
     ...options,
     method: 'GET'
@@ -2336,23 +2350,25 @@ export const listFacilityBuildings = async (id: string, options?: Parameters<typ
 
 
 
-export const getListFacilityBuildingsQueryKey = (id: string,) => {
+export const getListFacilityBuildingsQueryKey = (id: string,
+    params?: ListFacilityBuildingsParams,) => {
     return [
-    `/api/facilities/${id}/buildings`
+    `/api/facilities/${id}/buildings`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListFacilityBuildingsQueryOptions = <TData = Awaited<ReturnType<typeof listFacilityBuildings>>, TError = ErrorType<ForbiddenResponse | NotFoundResponse>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFacilityBuildings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListFacilityBuildingsQueryOptions = <TData = Awaited<ReturnType<typeof listFacilityBuildings>>, TError = ErrorType<ForbiddenResponse | NotFoundResponse>>(id: string,
+    params?: ListFacilityBuildingsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFacilityBuildings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListFacilityBuildingsQueryKey(id);
+  const queryKey =  queryOptions?.queryKey ?? getListFacilityBuildingsQueryKey(id,params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listFacilityBuildings>>> = ({ signal }) => listFacilityBuildings(id, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listFacilityBuildings>>> = ({ signal }) => listFacilityBuildings(id,params, { signal, ...requestOptions });
 
 
 
@@ -2370,11 +2386,12 @@ export type ListFacilityBuildingsQueryError = ErrorType<ForbiddenResponse | NotF
  */
 
 export function useListFacilityBuildings<TData = Awaited<ReturnType<typeof listFacilityBuildings>>, TError = ErrorType<ForbiddenResponse | NotFoundResponse>>(
- id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFacilityBuildings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ id: string,
+    params?: ListFacilityBuildingsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFacilityBuildings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListFacilityBuildingsQueryOptions(id,options)
+  const queryOptions = getListFacilityBuildingsQueryOptions(id,params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -2877,20 +2894,29 @@ export const useDeleteBuilding = <TError = ErrorType<ForbiddenResponse | NotFoun
       return useMutation(getDeleteBuildingMutationOptions(options));
     }
 
-export const getListBuildingSpacesUrl = (id: string,) => {
+export const getListBuildingSpacesUrl = (id: string,
+    params?: ListBuildingSpacesParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/buildings/${id}/spaces`
+  return stringifiedParams.length > 0 ? `/api/buildings/${id}/spaces?${stringifiedParams}` : `/api/buildings/${id}/spaces`
 }
 
 /**
  * @summary List spaces nested under a building
  */
-export const listBuildingSpaces = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<RegistryPage> => {
+export const listBuildingSpaces = async (id: string,
+    params?: ListBuildingSpacesParams, options?: Parameters<typeof customFetch>[1]): Promise<RegistryPage> => {
 
-  return customFetch<RegistryPage>(getListBuildingSpacesUrl(id),
+  return customFetch<RegistryPage>(getListBuildingSpacesUrl(id,params),
   {
     ...options,
     method: 'GET'
@@ -2903,23 +2929,25 @@ export const listBuildingSpaces = async (id: string, options?: Parameters<typeof
 
 
 
-export const getListBuildingSpacesQueryKey = (id: string,) => {
+export const getListBuildingSpacesQueryKey = (id: string,
+    params?: ListBuildingSpacesParams,) => {
     return [
-    `/api/buildings/${id}/spaces`
+    `/api/buildings/${id}/spaces`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListBuildingSpacesQueryOptions = <TData = Awaited<ReturnType<typeof listBuildingSpaces>>, TError = ErrorType<ForbiddenResponse | NotFoundResponse>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBuildingSpaces>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListBuildingSpacesQueryOptions = <TData = Awaited<ReturnType<typeof listBuildingSpaces>>, TError = ErrorType<ForbiddenResponse | NotFoundResponse>>(id: string,
+    params?: ListBuildingSpacesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBuildingSpaces>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListBuildingSpacesQueryKey(id);
+  const queryKey =  queryOptions?.queryKey ?? getListBuildingSpacesQueryKey(id,params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listBuildingSpaces>>> = ({ signal }) => listBuildingSpaces(id, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listBuildingSpaces>>> = ({ signal }) => listBuildingSpaces(id,params, { signal, ...requestOptions });
 
 
 
@@ -2937,11 +2965,12 @@ export type ListBuildingSpacesQueryError = ErrorType<ForbiddenResponse | NotFoun
  */
 
 export function useListBuildingSpaces<TData = Awaited<ReturnType<typeof listBuildingSpaces>>, TError = ErrorType<ForbiddenResponse | NotFoundResponse>>(
- id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBuildingSpaces>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ id: string,
+    params?: ListBuildingSpacesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBuildingSpaces>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListBuildingSpacesQueryOptions(id,options)
+  const queryOptions = getListBuildingSpacesQueryOptions(id,params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -3533,20 +3562,29 @@ export const useDeleteSpace = <TError = ErrorType<ForbiddenResponse | NotFoundRe
       return useMutation(getDeleteSpaceMutationOptions(options));
     }
 
-export const getListSpaceSystemsUrl = (id: string,) => {
+export const getListSpaceSystemsUrl = (id: string,
+    params?: ListSpaceSystemsParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/spaces/${id}/systems`
+  return stringifiedParams.length > 0 ? `/api/spaces/${id}/systems?${stringifiedParams}` : `/api/spaces/${id}/systems`
 }
 
 /**
  * @summary List systems nested under a space
  */
-export const listSpaceSystems = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<RegistryPage> => {
+export const listSpaceSystems = async (id: string,
+    params?: ListSpaceSystemsParams, options?: Parameters<typeof customFetch>[1]): Promise<RegistryPage> => {
 
-  return customFetch<RegistryPage>(getListSpaceSystemsUrl(id),
+  return customFetch<RegistryPage>(getListSpaceSystemsUrl(id,params),
   {
     ...options,
     method: 'GET'
@@ -3559,23 +3597,25 @@ export const listSpaceSystems = async (id: string, options?: Parameters<typeof c
 
 
 
-export const getListSpaceSystemsQueryKey = (id: string,) => {
+export const getListSpaceSystemsQueryKey = (id: string,
+    params?: ListSpaceSystemsParams,) => {
     return [
-    `/api/spaces/${id}/systems`
+    `/api/spaces/${id}/systems`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListSpaceSystemsQueryOptions = <TData = Awaited<ReturnType<typeof listSpaceSystems>>, TError = ErrorType<ForbiddenResponse | NotFoundResponse>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSpaceSystems>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListSpaceSystemsQueryOptions = <TData = Awaited<ReturnType<typeof listSpaceSystems>>, TError = ErrorType<ForbiddenResponse | NotFoundResponse>>(id: string,
+    params?: ListSpaceSystemsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSpaceSystems>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListSpaceSystemsQueryKey(id);
+  const queryKey =  queryOptions?.queryKey ?? getListSpaceSystemsQueryKey(id,params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSpaceSystems>>> = ({ signal }) => listSpaceSystems(id, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSpaceSystems>>> = ({ signal }) => listSpaceSystems(id,params, { signal, ...requestOptions });
 
 
 
@@ -3593,11 +3633,12 @@ export type ListSpaceSystemsQueryError = ErrorType<ForbiddenResponse | NotFoundR
  */
 
 export function useListSpaceSystems<TData = Awaited<ReturnType<typeof listSpaceSystems>>, TError = ErrorType<ForbiddenResponse | NotFoundResponse>>(
- id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSpaceSystems>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ id: string,
+    params?: ListSpaceSystemsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSpaceSystems>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListSpaceSystemsQueryOptions(id,options)
+  const queryOptions = getListSpaceSystemsQueryOptions(id,params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -3699,20 +3740,29 @@ export const useCreateSpaceSystem = <TError = ErrorType<ForbiddenResponse | NotF
       return useMutation(getCreateSpaceSystemMutationOptions(options));
     }
 
-export const getListSpaceAssetsUrl = (id: string,) => {
+export const getListSpaceAssetsUrl = (id: string,
+    params?: ListSpaceAssetsParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/spaces/${id}/assets`
+  return stringifiedParams.length > 0 ? `/api/spaces/${id}/assets?${stringifiedParams}` : `/api/spaces/${id}/assets`
 }
 
 /**
  * @summary List assets nested under a space
  */
-export const listSpaceAssets = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<RegistryPage> => {
+export const listSpaceAssets = async (id: string,
+    params?: ListSpaceAssetsParams, options?: Parameters<typeof customFetch>[1]): Promise<RegistryPage> => {
 
-  return customFetch<RegistryPage>(getListSpaceAssetsUrl(id),
+  return customFetch<RegistryPage>(getListSpaceAssetsUrl(id,params),
   {
     ...options,
     method: 'GET'
@@ -3725,23 +3775,25 @@ export const listSpaceAssets = async (id: string, options?: Parameters<typeof cu
 
 
 
-export const getListSpaceAssetsQueryKey = (id: string,) => {
+export const getListSpaceAssetsQueryKey = (id: string,
+    params?: ListSpaceAssetsParams,) => {
     return [
-    `/api/spaces/${id}/assets`
+    `/api/spaces/${id}/assets`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListSpaceAssetsQueryOptions = <TData = Awaited<ReturnType<typeof listSpaceAssets>>, TError = ErrorType<ForbiddenResponse | NotFoundResponse>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSpaceAssets>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListSpaceAssetsQueryOptions = <TData = Awaited<ReturnType<typeof listSpaceAssets>>, TError = ErrorType<ForbiddenResponse | NotFoundResponse>>(id: string,
+    params?: ListSpaceAssetsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSpaceAssets>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListSpaceAssetsQueryKey(id);
+  const queryKey =  queryOptions?.queryKey ?? getListSpaceAssetsQueryKey(id,params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSpaceAssets>>> = ({ signal }) => listSpaceAssets(id, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSpaceAssets>>> = ({ signal }) => listSpaceAssets(id,params, { signal, ...requestOptions });
 
 
 
@@ -3759,11 +3811,12 @@ export type ListSpaceAssetsQueryError = ErrorType<ForbiddenResponse | NotFoundRe
  */
 
 export function useListSpaceAssets<TData = Awaited<ReturnType<typeof listSpaceAssets>>, TError = ErrorType<ForbiddenResponse | NotFoundResponse>>(
- id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSpaceAssets>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ id: string,
+    params?: ListSpaceAssetsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSpaceAssets>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListSpaceAssetsQueryOptions(id,options)
+  const queryOptions = getListSpaceAssetsQueryOptions(id,params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -4845,20 +4898,29 @@ export const useDeleteAsset = <TError = ErrorType<ForbiddenResponse | NotFoundRe
       return useMutation(getDeleteAssetMutationOptions(options));
     }
 
-export const getListSystemAssetsUrl = (id: string,) => {
+export const getListSystemAssetsUrl = (id: string,
+    params?: ListSystemAssetsParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/systems/${id}/assets`
+  return stringifiedParams.length > 0 ? `/api/systems/${id}/assets?${stringifiedParams}` : `/api/systems/${id}/assets`
 }
 
 /**
  * @summary List assets nested under a system
  */
-export const listSystemAssets = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<RegistryPage> => {
+export const listSystemAssets = async (id: string,
+    params?: ListSystemAssetsParams, options?: Parameters<typeof customFetch>[1]): Promise<RegistryPage> => {
 
-  return customFetch<RegistryPage>(getListSystemAssetsUrl(id),
+  return customFetch<RegistryPage>(getListSystemAssetsUrl(id,params),
   {
     ...options,
     method: 'GET'
@@ -4871,23 +4933,25 @@ export const listSystemAssets = async (id: string, options?: Parameters<typeof c
 
 
 
-export const getListSystemAssetsQueryKey = (id: string,) => {
+export const getListSystemAssetsQueryKey = (id: string,
+    params?: ListSystemAssetsParams,) => {
     return [
-    `/api/systems/${id}/assets`
+    `/api/systems/${id}/assets`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListSystemAssetsQueryOptions = <TData = Awaited<ReturnType<typeof listSystemAssets>>, TError = ErrorType<ForbiddenResponse | NotFoundResponse>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSystemAssets>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListSystemAssetsQueryOptions = <TData = Awaited<ReturnType<typeof listSystemAssets>>, TError = ErrorType<ForbiddenResponse | NotFoundResponse>>(id: string,
+    params?: ListSystemAssetsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSystemAssets>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListSystemAssetsQueryKey(id);
+  const queryKey =  queryOptions?.queryKey ?? getListSystemAssetsQueryKey(id,params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSystemAssets>>> = ({ signal }) => listSystemAssets(id, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSystemAssets>>> = ({ signal }) => listSystemAssets(id,params, { signal, ...requestOptions });
 
 
 
@@ -4905,11 +4969,12 @@ export type ListSystemAssetsQueryError = ErrorType<ForbiddenResponse | NotFoundR
  */
 
 export function useListSystemAssets<TData = Awaited<ReturnType<typeof listSystemAssets>>, TError = ErrorType<ForbiddenResponse | NotFoundResponse>>(
- id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSystemAssets>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ id: string,
+    params?: ListSystemAssetsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSystemAssets>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListSystemAssetsQueryOptions(id,options)
+  const queryOptions = getListSystemAssetsQueryOptions(id,params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

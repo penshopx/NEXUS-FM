@@ -12,7 +12,7 @@ import {
   getGetMyPermissionsQueryKey,
   getGetAuthorizationAuditLogsQueryKey,
 } from '@workspace/api-client-react';
-import { Building2, LayoutDashboard, Shield, ChevronDown, Check, LogOut, KeyRound } from 'lucide-react';
+import { Building2, LayoutDashboard, Shield, ChevronDown, Check, LogOut, KeyRound, MapPin } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,17 +34,13 @@ export function AppShell({ children }: { children: ReactNode }) {
   const selectOrg = useSelectOrganization();
   const { data: myPermissions } = useGetMyPermissions();
 
+  const [, setLocation] = useLocation();
+
   const handleSelectOrg = (organizationId: string) => {
     selectOrg.mutate({ data: { organizationId } }, {
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getGetSessionQueryKey() });
-        queryClient.invalidateQueries({ queryKey: getGetFoundationSummaryQueryKey() });
-        queryClient.invalidateQueries({ queryKey: getGetMyPermissionsQueryKey() });
-        queryClient.invalidateQueries({ queryKey: getGetAuthorizationAuditLogsQueryKey() });
-        // Can't reliably invalidate all role bindings or specific role permissions without ID,
-        // but invalidating the entire query array base will force refetch.
-        queryClient.invalidateQueries({ queryKey: ['/api/users'] });
-        queryClient.invalidateQueries({ queryKey: ['/api/roles'] });
+        queryClient.clear();
+        setLocation('/app');
       }
     });
   };
@@ -53,9 +49,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     if (!myPermissions) return false;
     const required = ['ROLE.MANAGE', 'USER.VIEW', 'USER.MANAGE', 'AUDIT_LOG.VIEW_AUDIT'];
     for (const permCode of required) {
-      const grants = myPermissions.permissions.filter(p => p.code === permCode);
-      const isDenied = grants.some(g => g.effect === 'DENY');
-      const isAllowed = grants.some(g => g.effect === 'ALLOW');
+      const grants = myPermissions.permissions.filter((p) => p.code === permCode);
+      const isDenied = grants.some((g) => g.effect === 'DENY');
+      const isAllowed = grants.some((g) => g.effect === 'ALLOW');
       if (isDenied) continue;
       if (isAllowed) return true;
     }
@@ -64,6 +60,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const navItems = [
     { href: '/app', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/app/facilities', label: 'Facilities', icon: MapPin },
     ...(hasAuthAccess ? [{ href: '/authorization', label: 'Authorization', icon: KeyRound }] : []),
     { href: '/profile', label: 'Identity & Access', icon: Shield },
   ];

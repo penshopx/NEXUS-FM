@@ -920,11 +920,27 @@ test("facility registry resolves trusted ancestors and enforces every route surf
   try {
     const listed = await request("/facilities?limit=1&page=1");
     assert.equal(listed.response.status, 200);
-    const listedBody = JSON.parse(listed.text) as { items: Array<{ id: string }>; total: number };
+    const listedBody = JSON.parse(listed.text) as {
+      items: Array<{ id: string; capabilities: {
+        view: boolean;
+        create: boolean;
+        update: boolean;
+        delete: boolean;
+        createChildren: Record<string, boolean>;
+      } }>;
+      total: number;
+    };
     // The second facility is in the same organization but outside the
     // actor's persisted facility binding and must not be enumerable.
     assert.equal(listedBody.total, 1);
     assert.equal(listedBody.items.length, 1);
+    assert.deepEqual(listedBody.items[0]?.capabilities, {
+      view: true,
+      create: true,
+      update: true,
+      delete: true,
+      createChildren: { BUILDING: true },
+    });
     const searched = await request("/facilities/search?q=North");
     assert.equal(searched.response.status, 200);
     assert.equal((JSON.parse(searched.text) as { items: Array<{ id: string }> }).items[0]?.id, facility.id);
@@ -937,6 +953,19 @@ test("facility registry resolves trusted ancestors and enforces every route surf
     const nested = await request(`/facilities/${facility.id}/buildings`);
     assert.equal(nested.response.status, 200);
     assert.equal((JSON.parse(nested.text) as { items: Array<{ id: string }> }).items[0]?.id, building.id, nested.text);
+    const nestedSearchPage = await request(`/facilities/${facility.id}/buildings?q=Main&page=1&limit=1`);
+    assert.equal(nestedSearchPage.response.status, 200);
+    const nestedSearchBody = JSON.parse(nestedSearchPage.text) as {
+      items: Array<{ id: string }>;
+      page: number;
+      limit: number;
+      total: number;
+    };
+    assert.equal(nestedSearchBody.items[0]?.id, building.id);
+    assert.deepEqual(
+      { page: nestedSearchBody.page, limit: nestedSearchBody.limit, total: nestedSearchBody.total },
+      { page: 1, limit: 1, total: 1 },
+    );
     const exported = await request("/assets/export");
     assert.equal(exported.response.status, 200);
     assert.match(exported.text, /Air Handler/);
@@ -1186,6 +1215,37 @@ test("registry HTTP adversarial matrix excludes unauthorized rows across every b
       server.close();
     }
     await db.delete(organizationsTable).where(eq(organizationsTable.id, otherOrganization[0]!.id));
+  }
+});
+
+test("empty facility collection exposes server-derived bootstrap create capability", async () => {
+  const manager = await makeFixture("FACILITY_MANAGER", "ORGANIZATION");
+  await db.insert(userContextsTable).values({
+    userId: manager.userId,
+    activeOrganizationId: manager.organizationId,
+  });
+  const app = express();
+  app.use(express.json());
+  app.use(createFacilitiesRouter({
+    currentUser: async () => (await db.select().from(usersTable).where(eq(usersTable.id, manager.userId)))[0] ?? null,
+  }));
+  const server = createServer(app);
+  await new Promise<void>((resolve) => server.listen(0, resolve));
+  const address = server.address();
+  assert.ok(address && typeof address === "object");
+  try {
+    const response = await fetch(`http://127.0.0.1:${address.port}/facilities`);
+    assert.equal(response.status, 200);
+    const body = await response.json() as {
+      items: unknown[];
+      total: number;
+      collectionCapabilities: { create: boolean };
+    };
+    assert.deepEqual(body.items, []);
+    assert.equal(body.total, 0);
+    assert.deepEqual(body.collectionCapabilities, { create: true });
+  } finally {
+    server.close();
   }
 });
 

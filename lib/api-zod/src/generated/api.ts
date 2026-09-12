@@ -435,11 +435,26 @@ export const ListFacilitiesResponse = zod.object({
   "description": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.coerce.date().optional(),
-  "updatedAt": zod.coerce.date().optional()
+  "updatedAt": zod.coerce.date().optional(),
+  "capabilities": zod.object({
+  "view": zod.boolean(),
+  "create": zod.boolean(),
+  "update": zod.boolean(),
+  "delete": zod.boolean(),
+  "createChildren": zod.object({
+  "BUILDING": zod.boolean().optional(),
+  "SPACE": zod.boolean().optional(),
+  "SYSTEM": zod.boolean().optional(),
+  "ASSET": zod.boolean().optional()
+})
+}).describe('Server-evaluated UI actions for this object. create is the permission to create another object of this kind in its verified scope. The createChildren entries are the safe child-kind semantics for detail surfaces; an entry is present only for a valid child kind and is never inferred from request input.')
 })),
   "page": zod.number().int(),
   "limit": zod.number().int(),
-  "total": zod.number().int()
+  "total": zod.number().int(),
+  "collectionCapabilities": zod.object({
+  "create": zod.boolean().describe('Whether the server permits creating the collection\'s resource kind in this verified context.')
+}).describe('Server-evaluated actions for the current authorized collection context.')
 })
 
 
@@ -469,7 +484,19 @@ export const CreateFacilityResponse = zod.object({
   "description": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.coerce.date().optional(),
-  "updatedAt": zod.coerce.date().optional()
+  "updatedAt": zod.coerce.date().optional(),
+  "capabilities": zod.object({
+  "view": zod.boolean(),
+  "create": zod.boolean(),
+  "update": zod.boolean(),
+  "delete": zod.boolean(),
+  "createChildren": zod.object({
+  "BUILDING": zod.boolean().optional(),
+  "SPACE": zod.boolean().optional(),
+  "SYSTEM": zod.boolean().optional(),
+  "ASSET": zod.boolean().optional()
+})
+}).describe('Server-evaluated UI actions for this object. create is the permission to create another object of this kind in its verified scope. The createChildren entries are the safe child-kind semantics for detail surfaces; an entry is present only for a valid child kind and is never inferred from request input.')
 })
 
 
@@ -489,11 +516,26 @@ export const SearchFacilitiesResponse = zod.object({
   "description": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.coerce.date().optional(),
-  "updatedAt": zod.coerce.date().optional()
+  "updatedAt": zod.coerce.date().optional(),
+  "capabilities": zod.object({
+  "view": zod.boolean(),
+  "create": zod.boolean(),
+  "update": zod.boolean(),
+  "delete": zod.boolean(),
+  "createChildren": zod.object({
+  "BUILDING": zod.boolean().optional(),
+  "SPACE": zod.boolean().optional(),
+  "SYSTEM": zod.boolean().optional(),
+  "ASSET": zod.boolean().optional()
+})
+}).describe('Server-evaluated UI actions for this object. create is the permission to create another object of this kind in its verified scope. The createChildren entries are the safe child-kind semantics for detail surfaces; an entry is present only for a valid child kind and is never inferred from request input.')
 })),
   "page": zod.number().int(),
   "limit": zod.number().int(),
-  "total": zod.number().int()
+  "total": zod.number().int(),
+  "collectionCapabilities": zod.object({
+  "create": zod.boolean().describe('Whether the server permits creating the collection\'s resource kind in this verified context.')
+}).describe('Server-evaluated actions for the current authorized collection context.')
 })
 
 
@@ -518,7 +560,19 @@ export const GetFacilityResponse = zod.object({
   "description": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.coerce.date().optional(),
-  "updatedAt": zod.coerce.date().optional()
+  "updatedAt": zod.coerce.date().optional(),
+  "capabilities": zod.object({
+  "view": zod.boolean(),
+  "create": zod.boolean(),
+  "update": zod.boolean(),
+  "delete": zod.boolean(),
+  "createChildren": zod.object({
+  "BUILDING": zod.boolean().optional(),
+  "SPACE": zod.boolean().optional(),
+  "SYSTEM": zod.boolean().optional(),
+  "ASSET": zod.boolean().optional()
+})
+}).describe('Server-evaluated UI actions for this object. create is the permission to create another object of this kind in its verified scope. The createChildren entries are the safe child-kind semantics for detail surfaces; an entry is present only for a valid child kind and is never inferred from request input.')
 })
 
 
@@ -552,7 +606,19 @@ export const UpdateFacilityResponse = zod.object({
   "description": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.coerce.date().optional(),
-  "updatedAt": zod.coerce.date().optional()
+  "updatedAt": zod.coerce.date().optional(),
+  "capabilities": zod.object({
+  "view": zod.boolean(),
+  "create": zod.boolean(),
+  "update": zod.boolean(),
+  "delete": zod.boolean(),
+  "createChildren": zod.object({
+  "BUILDING": zod.boolean().optional(),
+  "SPACE": zod.boolean().optional(),
+  "SYSTEM": zod.boolean().optional(),
+  "ASSET": zod.boolean().optional()
+})
+}).describe('Server-evaluated UI actions for this object. create is the permission to create another object of this kind in its verified scope. The createChildren entries are the safe child-kind semantics for detail surfaces; an entry is present only for a valid child kind and is never inferred from request input.')
 })
 
 
@@ -586,7 +652,19 @@ export const ReplaceFacilityResponse = zod.object({
   "description": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.coerce.date().optional(),
-  "updatedAt": zod.coerce.date().optional()
+  "updatedAt": zod.coerce.date().optional(),
+  "capabilities": zod.object({
+  "view": zod.boolean(),
+  "create": zod.boolean(),
+  "update": zod.boolean(),
+  "delete": zod.boolean(),
+  "createChildren": zod.object({
+  "BUILDING": zod.boolean().optional(),
+  "SPACE": zod.boolean().optional(),
+  "SYSTEM": zod.boolean().optional(),
+  "ASSET": zod.boolean().optional()
+})
+}).describe('Server-evaluated UI actions for this object. create is the permission to create another object of this kind in its verified scope. The createChildren entries are the safe child-kind semantics for detail surfaces; an entry is present only for a valid child kind and is never inferred from request input.')
 })
 
 
@@ -630,7 +708,19 @@ export const CreateFacilityBuildingResponse = zod.object({
   "description": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.coerce.date().optional(),
-  "updatedAt": zod.coerce.date().optional()
+  "updatedAt": zod.coerce.date().optional(),
+  "capabilities": zod.object({
+  "view": zod.boolean(),
+  "create": zod.boolean(),
+  "update": zod.boolean(),
+  "delete": zod.boolean(),
+  "createChildren": zod.object({
+  "BUILDING": zod.boolean().optional(),
+  "SPACE": zod.boolean().optional(),
+  "SYSTEM": zod.boolean().optional(),
+  "ASSET": zod.boolean().optional()
+})
+}).describe('Server-evaluated UI actions for this object. create is the permission to create another object of this kind in its verified scope. The createChildren entries are the safe child-kind semantics for detail surfaces; an entry is present only for a valid child kind and is never inferred from request input.')
 }).and(zod.object({
   "facilityId": zod.string().uuid()
 }))
@@ -643,6 +733,19 @@ export const ListFacilityBuildingsParams = zod.object({
   "id": zod.coerce.string().uuid()
 })
 
+export const listFacilityBuildingsQueryPageDefault = 1;
+
+export const listFacilityBuildingsQueryLimitDefault = 50;
+export const listFacilityBuildingsQueryLimitMax = 100;
+
+
+
+export const ListFacilityBuildingsQueryParams = zod.object({
+  "q": zod.coerce.string().optional(),
+  "page": zod.coerce.number().int().min(1).default(listFacilityBuildingsQueryPageDefault),
+  "limit": zod.coerce.number().int().min(1).max(listFacilityBuildingsQueryLimitMax).default(listFacilityBuildingsQueryLimitDefault)
+})
+
 export const ListFacilityBuildingsResponse = zod.object({
   "items": zod.array(zod.object({
   "id": zod.string().uuid(),
@@ -652,11 +755,26 @@ export const ListFacilityBuildingsResponse = zod.object({
   "description": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.coerce.date().optional(),
-  "updatedAt": zod.coerce.date().optional()
+  "updatedAt": zod.coerce.date().optional(),
+  "capabilities": zod.object({
+  "view": zod.boolean(),
+  "create": zod.boolean(),
+  "update": zod.boolean(),
+  "delete": zod.boolean(),
+  "createChildren": zod.object({
+  "BUILDING": zod.boolean().optional(),
+  "SPACE": zod.boolean().optional(),
+  "SYSTEM": zod.boolean().optional(),
+  "ASSET": zod.boolean().optional()
+})
+}).describe('Server-evaluated UI actions for this object. create is the permission to create another object of this kind in its verified scope. The createChildren entries are the safe child-kind semantics for detail surfaces; an entry is present only for a valid child kind and is never inferred from request input.')
 })),
   "page": zod.number().int(),
   "limit": zod.number().int(),
-  "total": zod.number().int()
+  "total": zod.number().int(),
+  "collectionCapabilities": zod.object({
+  "create": zod.boolean().describe('Whether the server permits creating the collection\'s resource kind in this verified context.')
+}).describe('Server-evaluated actions for the current authorized collection context.')
 })
 
 
@@ -676,11 +794,26 @@ export const SearchBuildingsResponse = zod.object({
   "description": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.coerce.date().optional(),
-  "updatedAt": zod.coerce.date().optional()
+  "updatedAt": zod.coerce.date().optional(),
+  "capabilities": zod.object({
+  "view": zod.boolean(),
+  "create": zod.boolean(),
+  "update": zod.boolean(),
+  "delete": zod.boolean(),
+  "createChildren": zod.object({
+  "BUILDING": zod.boolean().optional(),
+  "SPACE": zod.boolean().optional(),
+  "SYSTEM": zod.boolean().optional(),
+  "ASSET": zod.boolean().optional()
+})
+}).describe('Server-evaluated UI actions for this object. create is the permission to create another object of this kind in its verified scope. The createChildren entries are the safe child-kind semantics for detail surfaces; an entry is present only for a valid child kind and is never inferred from request input.')
 })),
   "page": zod.number().int(),
   "limit": zod.number().int(),
-  "total": zod.number().int()
+  "total": zod.number().int(),
+  "collectionCapabilities": zod.object({
+  "create": zod.boolean().describe('Whether the server permits creating the collection\'s resource kind in this verified context.')
+}).describe('Server-evaluated actions for the current authorized collection context.')
 })
 
 
@@ -705,7 +838,19 @@ export const GetBuildingResponse = zod.object({
   "description": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.coerce.date().optional(),
-  "updatedAt": zod.coerce.date().optional()
+  "updatedAt": zod.coerce.date().optional(),
+  "capabilities": zod.object({
+  "view": zod.boolean(),
+  "create": zod.boolean(),
+  "update": zod.boolean(),
+  "delete": zod.boolean(),
+  "createChildren": zod.object({
+  "BUILDING": zod.boolean().optional(),
+  "SPACE": zod.boolean().optional(),
+  "SYSTEM": zod.boolean().optional(),
+  "ASSET": zod.boolean().optional()
+})
+}).describe('Server-evaluated UI actions for this object. create is the permission to create another object of this kind in its verified scope. The createChildren entries are the safe child-kind semantics for detail surfaces; an entry is present only for a valid child kind and is never inferred from request input.')
 }).and(zod.object({
   "facilityId": zod.string().uuid()
 }))
@@ -741,7 +886,19 @@ export const UpdateBuildingResponse = zod.object({
   "description": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.coerce.date().optional(),
-  "updatedAt": zod.coerce.date().optional()
+  "updatedAt": zod.coerce.date().optional(),
+  "capabilities": zod.object({
+  "view": zod.boolean(),
+  "create": zod.boolean(),
+  "update": zod.boolean(),
+  "delete": zod.boolean(),
+  "createChildren": zod.object({
+  "BUILDING": zod.boolean().optional(),
+  "SPACE": zod.boolean().optional(),
+  "SYSTEM": zod.boolean().optional(),
+  "ASSET": zod.boolean().optional()
+})
+}).describe('Server-evaluated UI actions for this object. create is the permission to create another object of this kind in its verified scope. The createChildren entries are the safe child-kind semantics for detail surfaces; an entry is present only for a valid child kind and is never inferred from request input.')
 }).and(zod.object({
   "facilityId": zod.string().uuid()
 }))
@@ -777,7 +934,19 @@ export const ReplaceBuildingResponse = zod.object({
   "description": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.coerce.date().optional(),
-  "updatedAt": zod.coerce.date().optional()
+  "updatedAt": zod.coerce.date().optional(),
+  "capabilities": zod.object({
+  "view": zod.boolean(),
+  "create": zod.boolean(),
+  "update": zod.boolean(),
+  "delete": zod.boolean(),
+  "createChildren": zod.object({
+  "BUILDING": zod.boolean().optional(),
+  "SPACE": zod.boolean().optional(),
+  "SYSTEM": zod.boolean().optional(),
+  "ASSET": zod.boolean().optional()
+})
+}).describe('Server-evaluated UI actions for this object. create is the permission to create another object of this kind in its verified scope. The createChildren entries are the safe child-kind semantics for detail surfaces; an entry is present only for a valid child kind and is never inferred from request input.')
 }).and(zod.object({
   "facilityId": zod.string().uuid()
 }))
@@ -800,6 +969,19 @@ export const ListBuildingSpacesParams = zod.object({
   "id": zod.coerce.string().uuid()
 })
 
+export const listBuildingSpacesQueryPageDefault = 1;
+
+export const listBuildingSpacesQueryLimitDefault = 50;
+export const listBuildingSpacesQueryLimitMax = 100;
+
+
+
+export const ListBuildingSpacesQueryParams = zod.object({
+  "q": zod.coerce.string().optional(),
+  "page": zod.coerce.number().int().min(1).default(listBuildingSpacesQueryPageDefault),
+  "limit": zod.coerce.number().int().min(1).max(listBuildingSpacesQueryLimitMax).default(listBuildingSpacesQueryLimitDefault)
+})
+
 export const ListBuildingSpacesResponse = zod.object({
   "items": zod.array(zod.object({
   "id": zod.string().uuid(),
@@ -809,11 +991,26 @@ export const ListBuildingSpacesResponse = zod.object({
   "description": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.coerce.date().optional(),
-  "updatedAt": zod.coerce.date().optional()
+  "updatedAt": zod.coerce.date().optional(),
+  "capabilities": zod.object({
+  "view": zod.boolean(),
+  "create": zod.boolean(),
+  "update": zod.boolean(),
+  "delete": zod.boolean(),
+  "createChildren": zod.object({
+  "BUILDING": zod.boolean().optional(),
+  "SPACE": zod.boolean().optional(),
+  "SYSTEM": zod.boolean().optional(),
+  "ASSET": zod.boolean().optional()
+})
+}).describe('Server-evaluated UI actions for this object. create is the permission to create another object of this kind in its verified scope. The createChildren entries are the safe child-kind semantics for detail surfaces; an entry is present only for a valid child kind and is never inferred from request input.')
 })),
   "page": zod.number().int(),
   "limit": zod.number().int(),
-  "total": zod.number().int()
+  "total": zod.number().int(),
+  "collectionCapabilities": zod.object({
+  "create": zod.boolean().describe('Whether the server permits creating the collection\'s resource kind in this verified context.')
+}).describe('Server-evaluated actions for the current authorized collection context.')
 })
 
 
@@ -847,7 +1044,19 @@ export const CreateBuildingSpaceResponse = zod.object({
   "description": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.coerce.date().optional(),
-  "updatedAt": zod.coerce.date().optional()
+  "updatedAt": zod.coerce.date().optional(),
+  "capabilities": zod.object({
+  "view": zod.boolean(),
+  "create": zod.boolean(),
+  "update": zod.boolean(),
+  "delete": zod.boolean(),
+  "createChildren": zod.object({
+  "BUILDING": zod.boolean().optional(),
+  "SPACE": zod.boolean().optional(),
+  "SYSTEM": zod.boolean().optional(),
+  "ASSET": zod.boolean().optional()
+})
+}).describe('Server-evaluated UI actions for this object. create is the permission to create another object of this kind in its verified scope. The createChildren entries are the safe child-kind semantics for detail surfaces; an entry is present only for a valid child kind and is never inferred from request input.')
 }).and(zod.object({
   "facilityId": zod.string().uuid(),
   "buildingId": zod.string().uuid()
@@ -870,11 +1079,26 @@ export const SearchSpacesResponse = zod.object({
   "description": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.coerce.date().optional(),
-  "updatedAt": zod.coerce.date().optional()
+  "updatedAt": zod.coerce.date().optional(),
+  "capabilities": zod.object({
+  "view": zod.boolean(),
+  "create": zod.boolean(),
+  "update": zod.boolean(),
+  "delete": zod.boolean(),
+  "createChildren": zod.object({
+  "BUILDING": zod.boolean().optional(),
+  "SPACE": zod.boolean().optional(),
+  "SYSTEM": zod.boolean().optional(),
+  "ASSET": zod.boolean().optional()
+})
+}).describe('Server-evaluated UI actions for this object. create is the permission to create another object of this kind in its verified scope. The createChildren entries are the safe child-kind semantics for detail surfaces; an entry is present only for a valid child kind and is never inferred from request input.')
 })),
   "page": zod.number().int(),
   "limit": zod.number().int(),
-  "total": zod.number().int()
+  "total": zod.number().int(),
+  "collectionCapabilities": zod.object({
+  "create": zod.boolean().describe('Whether the server permits creating the collection\'s resource kind in this verified context.')
+}).describe('Server-evaluated actions for the current authorized collection context.')
 })
 
 
@@ -899,7 +1123,19 @@ export const GetSpaceResponse = zod.object({
   "description": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.coerce.date().optional(),
-  "updatedAt": zod.coerce.date().optional()
+  "updatedAt": zod.coerce.date().optional(),
+  "capabilities": zod.object({
+  "view": zod.boolean(),
+  "create": zod.boolean(),
+  "update": zod.boolean(),
+  "delete": zod.boolean(),
+  "createChildren": zod.object({
+  "BUILDING": zod.boolean().optional(),
+  "SPACE": zod.boolean().optional(),
+  "SYSTEM": zod.boolean().optional(),
+  "ASSET": zod.boolean().optional()
+})
+}).describe('Server-evaluated UI actions for this object. create is the permission to create another object of this kind in its verified scope. The createChildren entries are the safe child-kind semantics for detail surfaces; an entry is present only for a valid child kind and is never inferred from request input.')
 }).and(zod.object({
   "facilityId": zod.string().uuid(),
   "buildingId": zod.string().uuid()
@@ -936,7 +1172,19 @@ export const UpdateSpaceResponse = zod.object({
   "description": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.coerce.date().optional(),
-  "updatedAt": zod.coerce.date().optional()
+  "updatedAt": zod.coerce.date().optional(),
+  "capabilities": zod.object({
+  "view": zod.boolean(),
+  "create": zod.boolean(),
+  "update": zod.boolean(),
+  "delete": zod.boolean(),
+  "createChildren": zod.object({
+  "BUILDING": zod.boolean().optional(),
+  "SPACE": zod.boolean().optional(),
+  "SYSTEM": zod.boolean().optional(),
+  "ASSET": zod.boolean().optional()
+})
+}).describe('Server-evaluated UI actions for this object. create is the permission to create another object of this kind in its verified scope. The createChildren entries are the safe child-kind semantics for detail surfaces; an entry is present only for a valid child kind and is never inferred from request input.')
 }).and(zod.object({
   "facilityId": zod.string().uuid(),
   "buildingId": zod.string().uuid()
@@ -973,7 +1221,19 @@ export const ReplaceSpaceResponse = zod.object({
   "description": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.coerce.date().optional(),
-  "updatedAt": zod.coerce.date().optional()
+  "updatedAt": zod.coerce.date().optional(),
+  "capabilities": zod.object({
+  "view": zod.boolean(),
+  "create": zod.boolean(),
+  "update": zod.boolean(),
+  "delete": zod.boolean(),
+  "createChildren": zod.object({
+  "BUILDING": zod.boolean().optional(),
+  "SPACE": zod.boolean().optional(),
+  "SYSTEM": zod.boolean().optional(),
+  "ASSET": zod.boolean().optional()
+})
+}).describe('Server-evaluated UI actions for this object. create is the permission to create another object of this kind in its verified scope. The createChildren entries are the safe child-kind semantics for detail surfaces; an entry is present only for a valid child kind and is never inferred from request input.')
 }).and(zod.object({
   "facilityId": zod.string().uuid(),
   "buildingId": zod.string().uuid()
@@ -997,6 +1257,19 @@ export const ListSpaceSystemsParams = zod.object({
   "id": zod.coerce.string().uuid()
 })
 
+export const listSpaceSystemsQueryPageDefault = 1;
+
+export const listSpaceSystemsQueryLimitDefault = 50;
+export const listSpaceSystemsQueryLimitMax = 100;
+
+
+
+export const ListSpaceSystemsQueryParams = zod.object({
+  "q": zod.coerce.string().optional(),
+  "page": zod.coerce.number().int().min(1).default(listSpaceSystemsQueryPageDefault),
+  "limit": zod.coerce.number().int().min(1).max(listSpaceSystemsQueryLimitMax).default(listSpaceSystemsQueryLimitDefault)
+})
+
 export const ListSpaceSystemsResponse = zod.object({
   "items": zod.array(zod.object({
   "id": zod.string().uuid(),
@@ -1006,11 +1279,26 @@ export const ListSpaceSystemsResponse = zod.object({
   "description": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.coerce.date().optional(),
-  "updatedAt": zod.coerce.date().optional()
+  "updatedAt": zod.coerce.date().optional(),
+  "capabilities": zod.object({
+  "view": zod.boolean(),
+  "create": zod.boolean(),
+  "update": zod.boolean(),
+  "delete": zod.boolean(),
+  "createChildren": zod.object({
+  "BUILDING": zod.boolean().optional(),
+  "SPACE": zod.boolean().optional(),
+  "SYSTEM": zod.boolean().optional(),
+  "ASSET": zod.boolean().optional()
+})
+}).describe('Server-evaluated UI actions for this object. create is the permission to create another object of this kind in its verified scope. The createChildren entries are the safe child-kind semantics for detail surfaces; an entry is present only for a valid child kind and is never inferred from request input.')
 })),
   "page": zod.number().int(),
   "limit": zod.number().int(),
-  "total": zod.number().int()
+  "total": zod.number().int(),
+  "collectionCapabilities": zod.object({
+  "create": zod.boolean().describe('Whether the server permits creating the collection\'s resource kind in this verified context.')
+}).describe('Server-evaluated actions for the current authorized collection context.')
 })
 
 
@@ -1044,7 +1332,19 @@ export const CreateSpaceSystemResponse = zod.object({
   "description": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.coerce.date().optional(),
-  "updatedAt": zod.coerce.date().optional()
+  "updatedAt": zod.coerce.date().optional(),
+  "capabilities": zod.object({
+  "view": zod.boolean(),
+  "create": zod.boolean(),
+  "update": zod.boolean(),
+  "delete": zod.boolean(),
+  "createChildren": zod.object({
+  "BUILDING": zod.boolean().optional(),
+  "SPACE": zod.boolean().optional(),
+  "SYSTEM": zod.boolean().optional(),
+  "ASSET": zod.boolean().optional()
+})
+}).describe('Server-evaluated UI actions for this object. create is the permission to create another object of this kind in its verified scope. The createChildren entries are the safe child-kind semantics for detail surfaces; an entry is present only for a valid child kind and is never inferred from request input.')
 }).and(zod.object({
   "facilityId": zod.string().uuid(),
   "buildingId": zod.string().uuid(),
@@ -1059,6 +1359,19 @@ export const ListSpaceAssetsParams = zod.object({
   "id": zod.coerce.string().uuid()
 })
 
+export const listSpaceAssetsQueryPageDefault = 1;
+
+export const listSpaceAssetsQueryLimitDefault = 50;
+export const listSpaceAssetsQueryLimitMax = 100;
+
+
+
+export const ListSpaceAssetsQueryParams = zod.object({
+  "q": zod.coerce.string().optional(),
+  "page": zod.coerce.number().int().min(1).default(listSpaceAssetsQueryPageDefault),
+  "limit": zod.coerce.number().int().min(1).max(listSpaceAssetsQueryLimitMax).default(listSpaceAssetsQueryLimitDefault)
+})
+
 export const ListSpaceAssetsResponse = zod.object({
   "items": zod.array(zod.object({
   "id": zod.string().uuid(),
@@ -1068,11 +1381,26 @@ export const ListSpaceAssetsResponse = zod.object({
   "description": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.coerce.date().optional(),
-  "updatedAt": zod.coerce.date().optional()
+  "updatedAt": zod.coerce.date().optional(),
+  "capabilities": zod.object({
+  "view": zod.boolean(),
+  "create": zod.boolean(),
+  "update": zod.boolean(),
+  "delete": zod.boolean(),
+  "createChildren": zod.object({
+  "BUILDING": zod.boolean().optional(),
+  "SPACE": zod.boolean().optional(),
+  "SYSTEM": zod.boolean().optional(),
+  "ASSET": zod.boolean().optional()
+})
+}).describe('Server-evaluated UI actions for this object. create is the permission to create another object of this kind in its verified scope. The createChildren entries are the safe child-kind semantics for detail surfaces; an entry is present only for a valid child kind and is never inferred from request input.')
 })),
   "page": zod.number().int(),
   "limit": zod.number().int(),
-  "total": zod.number().int()
+  "total": zod.number().int(),
+  "collectionCapabilities": zod.object({
+  "create": zod.boolean().describe('Whether the server permits creating the collection\'s resource kind in this verified context.')
+}).describe('Server-evaluated actions for the current authorized collection context.')
 })
 
 
@@ -1109,7 +1437,19 @@ export const CreateSpaceAssetResponse = zod.object({
   "description": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.coerce.date().optional(),
-  "updatedAt": zod.coerce.date().optional()
+  "updatedAt": zod.coerce.date().optional(),
+  "capabilities": zod.object({
+  "view": zod.boolean(),
+  "create": zod.boolean(),
+  "update": zod.boolean(),
+  "delete": zod.boolean(),
+  "createChildren": zod.object({
+  "BUILDING": zod.boolean().optional(),
+  "SPACE": zod.boolean().optional(),
+  "SYSTEM": zod.boolean().optional(),
+  "ASSET": zod.boolean().optional()
+})
+}).describe('Server-evaluated UI actions for this object. create is the permission to create another object of this kind in its verified scope. The createChildren entries are the safe child-kind semantics for detail surfaces; an entry is present only for a valid child kind and is never inferred from request input.')
 }).and(zod.object({
   "facilityId": zod.string().uuid(),
   "buildingId": zod.string().uuid(),
@@ -1134,11 +1474,26 @@ export const SearchSystemsResponse = zod.object({
   "description": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.coerce.date().optional(),
-  "updatedAt": zod.coerce.date().optional()
+  "updatedAt": zod.coerce.date().optional(),
+  "capabilities": zod.object({
+  "view": zod.boolean(),
+  "create": zod.boolean(),
+  "update": zod.boolean(),
+  "delete": zod.boolean(),
+  "createChildren": zod.object({
+  "BUILDING": zod.boolean().optional(),
+  "SPACE": zod.boolean().optional(),
+  "SYSTEM": zod.boolean().optional(),
+  "ASSET": zod.boolean().optional()
+})
+}).describe('Server-evaluated UI actions for this object. create is the permission to create another object of this kind in its verified scope. The createChildren entries are the safe child-kind semantics for detail surfaces; an entry is present only for a valid child kind and is never inferred from request input.')
 })),
   "page": zod.number().int(),
   "limit": zod.number().int(),
-  "total": zod.number().int()
+  "total": zod.number().int(),
+  "collectionCapabilities": zod.object({
+  "create": zod.boolean().describe('Whether the server permits creating the collection\'s resource kind in this verified context.')
+}).describe('Server-evaluated actions for the current authorized collection context.')
 })
 
 
@@ -1163,7 +1518,19 @@ export const GetSystemResponse = zod.object({
   "description": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.coerce.date().optional(),
-  "updatedAt": zod.coerce.date().optional()
+  "updatedAt": zod.coerce.date().optional(),
+  "capabilities": zod.object({
+  "view": zod.boolean(),
+  "create": zod.boolean(),
+  "update": zod.boolean(),
+  "delete": zod.boolean(),
+  "createChildren": zod.object({
+  "BUILDING": zod.boolean().optional(),
+  "SPACE": zod.boolean().optional(),
+  "SYSTEM": zod.boolean().optional(),
+  "ASSET": zod.boolean().optional()
+})
+}).describe('Server-evaluated UI actions for this object. create is the permission to create another object of this kind in its verified scope. The createChildren entries are the safe child-kind semantics for detail surfaces; an entry is present only for a valid child kind and is never inferred from request input.')
 }).and(zod.object({
   "facilityId": zod.string().uuid(),
   "buildingId": zod.string().uuid(),
@@ -1201,7 +1568,19 @@ export const UpdateSystemResponse = zod.object({
   "description": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.coerce.date().optional(),
-  "updatedAt": zod.coerce.date().optional()
+  "updatedAt": zod.coerce.date().optional(),
+  "capabilities": zod.object({
+  "view": zod.boolean(),
+  "create": zod.boolean(),
+  "update": zod.boolean(),
+  "delete": zod.boolean(),
+  "createChildren": zod.object({
+  "BUILDING": zod.boolean().optional(),
+  "SPACE": zod.boolean().optional(),
+  "SYSTEM": zod.boolean().optional(),
+  "ASSET": zod.boolean().optional()
+})
+}).describe('Server-evaluated UI actions for this object. create is the permission to create another object of this kind in its verified scope. The createChildren entries are the safe child-kind semantics for detail surfaces; an entry is present only for a valid child kind and is never inferred from request input.')
 }).and(zod.object({
   "facilityId": zod.string().uuid(),
   "buildingId": zod.string().uuid(),
@@ -1239,7 +1618,19 @@ export const ReplaceSystemResponse = zod.object({
   "description": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.coerce.date().optional(),
-  "updatedAt": zod.coerce.date().optional()
+  "updatedAt": zod.coerce.date().optional(),
+  "capabilities": zod.object({
+  "view": zod.boolean(),
+  "create": zod.boolean(),
+  "update": zod.boolean(),
+  "delete": zod.boolean(),
+  "createChildren": zod.object({
+  "BUILDING": zod.boolean().optional(),
+  "SPACE": zod.boolean().optional(),
+  "SYSTEM": zod.boolean().optional(),
+  "ASSET": zod.boolean().optional()
+})
+}).describe('Server-evaluated UI actions for this object. create is the permission to create another object of this kind in its verified scope. The createChildren entries are the safe child-kind semantics for detail surfaces; an entry is present only for a valid child kind and is never inferred from request input.')
 }).and(zod.object({
   "facilityId": zod.string().uuid(),
   "buildingId": zod.string().uuid(),
@@ -1273,11 +1664,26 @@ export const SearchAssetsResponse = zod.object({
   "description": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.coerce.date().optional(),
-  "updatedAt": zod.coerce.date().optional()
+  "updatedAt": zod.coerce.date().optional(),
+  "capabilities": zod.object({
+  "view": zod.boolean(),
+  "create": zod.boolean(),
+  "update": zod.boolean(),
+  "delete": zod.boolean(),
+  "createChildren": zod.object({
+  "BUILDING": zod.boolean().optional(),
+  "SPACE": zod.boolean().optional(),
+  "SYSTEM": zod.boolean().optional(),
+  "ASSET": zod.boolean().optional()
+})
+}).describe('Server-evaluated UI actions for this object. create is the permission to create another object of this kind in its verified scope. The createChildren entries are the safe child-kind semantics for detail surfaces; an entry is present only for a valid child kind and is never inferred from request input.')
 })),
   "page": zod.number().int(),
   "limit": zod.number().int(),
-  "total": zod.number().int()
+  "total": zod.number().int(),
+  "collectionCapabilities": zod.object({
+  "create": zod.boolean().describe('Whether the server permits creating the collection\'s resource kind in this verified context.')
+}).describe('Server-evaluated actions for the current authorized collection context.')
 })
 
 
@@ -1302,7 +1708,19 @@ export const GetAssetResponse = zod.object({
   "description": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.coerce.date().optional(),
-  "updatedAt": zod.coerce.date().optional()
+  "updatedAt": zod.coerce.date().optional(),
+  "capabilities": zod.object({
+  "view": zod.boolean(),
+  "create": zod.boolean(),
+  "update": zod.boolean(),
+  "delete": zod.boolean(),
+  "createChildren": zod.object({
+  "BUILDING": zod.boolean().optional(),
+  "SPACE": zod.boolean().optional(),
+  "SYSTEM": zod.boolean().optional(),
+  "ASSET": zod.boolean().optional()
+})
+}).describe('Server-evaluated UI actions for this object. create is the permission to create another object of this kind in its verified scope. The createChildren entries are the safe child-kind semantics for detail surfaces; an entry is present only for a valid child kind and is never inferred from request input.')
 }).and(zod.object({
   "facilityId": zod.string().uuid(),
   "buildingId": zod.string().uuid(),
@@ -1341,7 +1759,19 @@ export const UpdateAssetResponse = zod.object({
   "description": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.coerce.date().optional(),
-  "updatedAt": zod.coerce.date().optional()
+  "updatedAt": zod.coerce.date().optional(),
+  "capabilities": zod.object({
+  "view": zod.boolean(),
+  "create": zod.boolean(),
+  "update": zod.boolean(),
+  "delete": zod.boolean(),
+  "createChildren": zod.object({
+  "BUILDING": zod.boolean().optional(),
+  "SPACE": zod.boolean().optional(),
+  "SYSTEM": zod.boolean().optional(),
+  "ASSET": zod.boolean().optional()
+})
+}).describe('Server-evaluated UI actions for this object. create is the permission to create another object of this kind in its verified scope. The createChildren entries are the safe child-kind semantics for detail surfaces; an entry is present only for a valid child kind and is never inferred from request input.')
 }).and(zod.object({
   "facilityId": zod.string().uuid(),
   "buildingId": zod.string().uuid(),
@@ -1380,7 +1810,19 @@ export const ReplaceAssetResponse = zod.object({
   "description": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.coerce.date().optional(),
-  "updatedAt": zod.coerce.date().optional()
+  "updatedAt": zod.coerce.date().optional(),
+  "capabilities": zod.object({
+  "view": zod.boolean(),
+  "create": zod.boolean(),
+  "update": zod.boolean(),
+  "delete": zod.boolean(),
+  "createChildren": zod.object({
+  "BUILDING": zod.boolean().optional(),
+  "SPACE": zod.boolean().optional(),
+  "SYSTEM": zod.boolean().optional(),
+  "ASSET": zod.boolean().optional()
+})
+}).describe('Server-evaluated UI actions for this object. create is the permission to create another object of this kind in its verified scope. The createChildren entries are the safe child-kind semantics for detail surfaces; an entry is present only for a valid child kind and is never inferred from request input.')
 }).and(zod.object({
   "facilityId": zod.string().uuid(),
   "buildingId": zod.string().uuid(),
@@ -1406,6 +1848,19 @@ export const ListSystemAssetsParams = zod.object({
   "id": zod.coerce.string().uuid()
 })
 
+export const listSystemAssetsQueryPageDefault = 1;
+
+export const listSystemAssetsQueryLimitDefault = 50;
+export const listSystemAssetsQueryLimitMax = 100;
+
+
+
+export const ListSystemAssetsQueryParams = zod.object({
+  "q": zod.coerce.string().optional(),
+  "page": zod.coerce.number().int().min(1).default(listSystemAssetsQueryPageDefault),
+  "limit": zod.coerce.number().int().min(1).max(listSystemAssetsQueryLimitMax).default(listSystemAssetsQueryLimitDefault)
+})
+
 export const ListSystemAssetsResponse = zod.object({
   "items": zod.array(zod.object({
   "id": zod.string().uuid(),
@@ -1415,11 +1870,26 @@ export const ListSystemAssetsResponse = zod.object({
   "description": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.coerce.date().optional(),
-  "updatedAt": zod.coerce.date().optional()
+  "updatedAt": zod.coerce.date().optional(),
+  "capabilities": zod.object({
+  "view": zod.boolean(),
+  "create": zod.boolean(),
+  "update": zod.boolean(),
+  "delete": zod.boolean(),
+  "createChildren": zod.object({
+  "BUILDING": zod.boolean().optional(),
+  "SPACE": zod.boolean().optional(),
+  "SYSTEM": zod.boolean().optional(),
+  "ASSET": zod.boolean().optional()
+})
+}).describe('Server-evaluated UI actions for this object. create is the permission to create another object of this kind in its verified scope. The createChildren entries are the safe child-kind semantics for detail surfaces; an entry is present only for a valid child kind and is never inferred from request input.')
 })),
   "page": zod.number().int(),
   "limit": zod.number().int(),
-  "total": zod.number().int()
+  "total": zod.number().int(),
+  "collectionCapabilities": zod.object({
+  "create": zod.boolean().describe('Whether the server permits creating the collection\'s resource kind in this verified context.')
+}).describe('Server-evaluated actions for the current authorized collection context.')
 })
 
 
@@ -1456,7 +1926,19 @@ export const CreateSystemAssetResponse = zod.object({
   "description": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.coerce.date().optional(),
-  "updatedAt": zod.coerce.date().optional()
+  "updatedAt": zod.coerce.date().optional(),
+  "capabilities": zod.object({
+  "view": zod.boolean(),
+  "create": zod.boolean(),
+  "update": zod.boolean(),
+  "delete": zod.boolean(),
+  "createChildren": zod.object({
+  "BUILDING": zod.boolean().optional(),
+  "SPACE": zod.boolean().optional(),
+  "SYSTEM": zod.boolean().optional(),
+  "ASSET": zod.boolean().optional()
+})
+}).describe('Server-evaluated UI actions for this object. create is the permission to create another object of this kind in its verified scope. The createChildren entries are the safe child-kind semantics for detail surfaces; an entry is present only for a valid child kind and is never inferred from request input.')
 }).and(zod.object({
   "facilityId": zod.string().uuid(),
   "buildingId": zod.string().uuid(),
@@ -1490,11 +1972,26 @@ export const ListBuildingsResponse = zod.object({
   "description": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.coerce.date().optional(),
-  "updatedAt": zod.coerce.date().optional()
+  "updatedAt": zod.coerce.date().optional(),
+  "capabilities": zod.object({
+  "view": zod.boolean(),
+  "create": zod.boolean(),
+  "update": zod.boolean(),
+  "delete": zod.boolean(),
+  "createChildren": zod.object({
+  "BUILDING": zod.boolean().optional(),
+  "SPACE": zod.boolean().optional(),
+  "SYSTEM": zod.boolean().optional(),
+  "ASSET": zod.boolean().optional()
+})
+}).describe('Server-evaluated UI actions for this object. create is the permission to create another object of this kind in its verified scope. The createChildren entries are the safe child-kind semantics for detail surfaces; an entry is present only for a valid child kind and is never inferred from request input.')
 })),
   "page": zod.number().int(),
   "limit": zod.number().int(),
-  "total": zod.number().int()
+  "total": zod.number().int(),
+  "collectionCapabilities": zod.object({
+  "create": zod.boolean().describe('Whether the server permits creating the collection\'s resource kind in this verified context.')
+}).describe('Server-evaluated actions for the current authorized collection context.')
 })
 
 
@@ -1526,7 +2023,19 @@ export const CreateBuildingResponse = zod.object({
   "description": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.coerce.date().optional(),
-  "updatedAt": zod.coerce.date().optional()
+  "updatedAt": zod.coerce.date().optional(),
+  "capabilities": zod.object({
+  "view": zod.boolean(),
+  "create": zod.boolean(),
+  "update": zod.boolean(),
+  "delete": zod.boolean(),
+  "createChildren": zod.object({
+  "BUILDING": zod.boolean().optional(),
+  "SPACE": zod.boolean().optional(),
+  "SYSTEM": zod.boolean().optional(),
+  "ASSET": zod.boolean().optional()
+})
+}).describe('Server-evaluated UI actions for this object. create is the permission to create another object of this kind in its verified scope. The createChildren entries are the safe child-kind semantics for detail surfaces; an entry is present only for a valid child kind and is never inferred from request input.')
 }).and(zod.object({
   "facilityId": zod.string().uuid()
 }))
@@ -1557,11 +2066,26 @@ export const ListSpacesResponse = zod.object({
   "description": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.coerce.date().optional(),
-  "updatedAt": zod.coerce.date().optional()
+  "updatedAt": zod.coerce.date().optional(),
+  "capabilities": zod.object({
+  "view": zod.boolean(),
+  "create": zod.boolean(),
+  "update": zod.boolean(),
+  "delete": zod.boolean(),
+  "createChildren": zod.object({
+  "BUILDING": zod.boolean().optional(),
+  "SPACE": zod.boolean().optional(),
+  "SYSTEM": zod.boolean().optional(),
+  "ASSET": zod.boolean().optional()
+})
+}).describe('Server-evaluated UI actions for this object. create is the permission to create another object of this kind in its verified scope. The createChildren entries are the safe child-kind semantics for detail surfaces; an entry is present only for a valid child kind and is never inferred from request input.')
 })),
   "page": zod.number().int(),
   "limit": zod.number().int(),
-  "total": zod.number().int()
+  "total": zod.number().int(),
+  "collectionCapabilities": zod.object({
+  "create": zod.boolean().describe('Whether the server permits creating the collection\'s resource kind in this verified context.')
+}).describe('Server-evaluated actions for the current authorized collection context.')
 })
 
 
@@ -1593,7 +2117,19 @@ export const CreateSpaceResponse = zod.object({
   "description": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.coerce.date().optional(),
-  "updatedAt": zod.coerce.date().optional()
+  "updatedAt": zod.coerce.date().optional(),
+  "capabilities": zod.object({
+  "view": zod.boolean(),
+  "create": zod.boolean(),
+  "update": zod.boolean(),
+  "delete": zod.boolean(),
+  "createChildren": zod.object({
+  "BUILDING": zod.boolean().optional(),
+  "SPACE": zod.boolean().optional(),
+  "SYSTEM": zod.boolean().optional(),
+  "ASSET": zod.boolean().optional()
+})
+}).describe('Server-evaluated UI actions for this object. create is the permission to create another object of this kind in its verified scope. The createChildren entries are the safe child-kind semantics for detail surfaces; an entry is present only for a valid child kind and is never inferred from request input.')
 }).and(zod.object({
   "facilityId": zod.string().uuid(),
   "buildingId": zod.string().uuid()
@@ -1625,11 +2161,26 @@ export const ListSystemsResponse = zod.object({
   "description": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.coerce.date().optional(),
-  "updatedAt": zod.coerce.date().optional()
+  "updatedAt": zod.coerce.date().optional(),
+  "capabilities": zod.object({
+  "view": zod.boolean(),
+  "create": zod.boolean(),
+  "update": zod.boolean(),
+  "delete": zod.boolean(),
+  "createChildren": zod.object({
+  "BUILDING": zod.boolean().optional(),
+  "SPACE": zod.boolean().optional(),
+  "SYSTEM": zod.boolean().optional(),
+  "ASSET": zod.boolean().optional()
+})
+}).describe('Server-evaluated UI actions for this object. create is the permission to create another object of this kind in its verified scope. The createChildren entries are the safe child-kind semantics for detail surfaces; an entry is present only for a valid child kind and is never inferred from request input.')
 })),
   "page": zod.number().int(),
   "limit": zod.number().int(),
-  "total": zod.number().int()
+  "total": zod.number().int(),
+  "collectionCapabilities": zod.object({
+  "create": zod.boolean().describe('Whether the server permits creating the collection\'s resource kind in this verified context.')
+}).describe('Server-evaluated actions for the current authorized collection context.')
 })
 
 
@@ -1661,7 +2212,19 @@ export const CreateSystemResponse = zod.object({
   "description": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.coerce.date().optional(),
-  "updatedAt": zod.coerce.date().optional()
+  "updatedAt": zod.coerce.date().optional(),
+  "capabilities": zod.object({
+  "view": zod.boolean(),
+  "create": zod.boolean(),
+  "update": zod.boolean(),
+  "delete": zod.boolean(),
+  "createChildren": zod.object({
+  "BUILDING": zod.boolean().optional(),
+  "SPACE": zod.boolean().optional(),
+  "SYSTEM": zod.boolean().optional(),
+  "ASSET": zod.boolean().optional()
+})
+}).describe('Server-evaluated UI actions for this object. create is the permission to create another object of this kind in its verified scope. The createChildren entries are the safe child-kind semantics for detail surfaces; an entry is present only for a valid child kind and is never inferred from request input.')
 }).and(zod.object({
   "facilityId": zod.string().uuid(),
   "buildingId": zod.string().uuid(),
@@ -1694,11 +2257,26 @@ export const ListAssetsResponse = zod.object({
   "description": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.coerce.date().optional(),
-  "updatedAt": zod.coerce.date().optional()
+  "updatedAt": zod.coerce.date().optional(),
+  "capabilities": zod.object({
+  "view": zod.boolean(),
+  "create": zod.boolean(),
+  "update": zod.boolean(),
+  "delete": zod.boolean(),
+  "createChildren": zod.object({
+  "BUILDING": zod.boolean().optional(),
+  "SPACE": zod.boolean().optional(),
+  "SYSTEM": zod.boolean().optional(),
+  "ASSET": zod.boolean().optional()
+})
+}).describe('Server-evaluated UI actions for this object. create is the permission to create another object of this kind in its verified scope. The createChildren entries are the safe child-kind semantics for detail surfaces; an entry is present only for a valid child kind and is never inferred from request input.')
 })),
   "page": zod.number().int(),
   "limit": zod.number().int(),
-  "total": zod.number().int()
+  "total": zod.number().int(),
+  "collectionCapabilities": zod.object({
+  "create": zod.boolean().describe('Whether the server permits creating the collection\'s resource kind in this verified context.')
+}).describe('Server-evaluated actions for the current authorized collection context.')
 })
 
 
@@ -1731,7 +2309,19 @@ export const CreateAssetResponse = zod.object({
   "description": zod.string().nullish(),
   "status": zod.string(),
   "createdAt": zod.coerce.date().optional(),
-  "updatedAt": zod.coerce.date().optional()
+  "updatedAt": zod.coerce.date().optional(),
+  "capabilities": zod.object({
+  "view": zod.boolean(),
+  "create": zod.boolean(),
+  "update": zod.boolean(),
+  "delete": zod.boolean(),
+  "createChildren": zod.object({
+  "BUILDING": zod.boolean().optional(),
+  "SPACE": zod.boolean().optional(),
+  "SYSTEM": zod.boolean().optional(),
+  "ASSET": zod.boolean().optional()
+})
+}).describe('Server-evaluated UI actions for this object. create is the permission to create another object of this kind in its verified scope. The createChildren entries are the safe child-kind semantics for detail surfaces; an entry is present only for a valid child kind and is never inferred from request input.')
 }).and(zod.object({
   "facilityId": zod.string().uuid(),
   "buildingId": zod.string().uuid(),
