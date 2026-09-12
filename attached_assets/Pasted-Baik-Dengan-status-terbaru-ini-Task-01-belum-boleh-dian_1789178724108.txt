@@ -1,0 +1,92 @@
+Baik. Dengan status terbaru ini, **Task #01 belum boleh dianggap Stable/Locked**, tetapi foundation implementasinya sudah selesai.
+
+### Baseline NEXUS-FM saat ini
+
+```text
+TASK #01 — FOUNDATION
+Status: IMPLEMENTED
+        │
+        ▼
+Signed-in E2E Verification
+        │
+   ┌────┴────┐
+   │         │
+ PASS      FAILURE
+   │         │
+   ▼         ▼
+EVIDENCE   FIX
+REVIEW      │
+   │        └──→ Re-test
+   ▼
+STABLE
+   │
+   ▼
+LOCKED
+```
+
+Yang penting, **Task #02 tetap `NOT STARTED`**. Jangan memasukkan permission expansion, scope resolver, central authorization evaluator, atau perubahan authorization architecture Task #02 ke dalam pekerjaan Task #01.
+
+### Gate Task #01 yang tersisa
+
+Fokus berikutnya sebaiknya **signed-in end-to-end verification**, minimal membuktikan:
+
+1. Clerk sign-in berhasil.
+2. Identity Clerk terhubung ke application user yang benar.
+3. First-access bootstrap berjalan transactional + idempotent.
+4. Organization context tersedia setelah login.
+5. Active organization dapat dipilih/digunakan.
+6. Role canonical diterapkan sesuai foundation.
+7. Protected dashboard dapat diakses setelah authenticated.
+8. Profile dapat diakses.
+9. Server mengenali session dan organization context dengan benar.
+10. Unauthorized access tetap ditolak.
+11. Audit event provisioning dan perubahan organization context tercatat.
+12. Tidak ada regression terhadap API/frontend typecheck dan build.
+13. Tidak ada runtime error pada alur signed-in aktual.
+
+### Satu hal yang perlu dipisahkan
+
+`Aggregate root build` yang gagal hanya karena konfigurasi `PORT` artifact **mockup sandbox terpisah** jangan dianggap sebagai kegagalan build NEXUS-FM apabila memang sudah terbukti target build NEXUS-FM sendiri berhasil.
+
+Namun bukti tersebut perlu dicatat secara eksplisit dalam verification evidence agar nantinya tidak menimbulkan ambiguity:
+
+```text
+NEXUS-FM API build       = PASS
+NEXUS-FM Web build       = PASS
+Mockup sandbox artifact  = separate / unrelated
+Aggregate root issue     = infrastructure/config boundary
+```
+
+### Setelah Task #01 Stable/Locked
+
+Barulah baseline menjadi:
+
+```text
+TASK #01
+IMPLEMENTED
+   ↓
+E2E VERIFIED
+   ↓
+STABLE
+   ↓
+LOCKED
+   │
+   │  canonical foundation
+   ▼
+TASK #02
+NOT STARTED
+   ↓
+IMPLEMENTATION
+   ↓
+INTEGRATION
+   ↓
+ADVERSARIAL TESTING
+   ↓
+REGRESSION
+   ↓
+EVIDENCE REVIEW
+   ↓
+VERIFIED
+```
+
+**Jadi keputusan governance saat ini: jangan mulai Task #02 dulu.** Selesaikan signed-in E2E verification Task #01, kumpulkan evidence, lalu naikkan Task #01 secara berurutan menuju `STABLE → LOCKED`. Setelah itu Task #02 dapat dimulai di atas foundation yang sudah terkunci.
