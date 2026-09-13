@@ -1,0 +1,80 @@
+Saya sudah melihat screenshot tersebut. Kondisinya cukup jelas:
+
+### Status yang terlihat
+
+* **Foundation/core aplikasi:** sekitar **90%**.
+* **Task #10 — Drizzle Upgrade Safety:** masih **`IN_PROGRESS`** pada isolated agent.
+* Karena Task #10 belum `MERGED`, sistem yang sedang dijalankan **menolak perubahan paralel** yang berpotensi konflik.
+* Pesan agent juga secara eksplisit menyatakan belum ada **status `MERGED` atau blocker baru** yang dapat dijadikan dasar untuk membuka pekerjaan berikutnya.
+* Panel Preview menampilkan **`replit.com refused to connect`**. Ini tampaknya masalah koneksi/embedding Preview, **bukan bukti bahwa domain aplikasi rusak**.
+
+### Yang penting untuk arsitektur kita
+
+Dengan kondisi ini, **jangan memasukkan perluasan SKK Bangunan Gedung ke Task #10**.
+
+Perluasan yang baru kita bahas tetap dicatat sebagai **scope berikutnya**, tetapi boundary aktif tetap:
+
+```text
+CURRENT ACTIVE BOUNDARY
+Task #10 — Drizzle Upgrade Safety
+STATUS: IN_PROGRESS
+ISOLATION: ACTIVE
+```
+
+Kemudian setelah Task #10 selesai:
+
+```text
+Task #10
+IN_PROGRESS
+   ↓
+VERIFIED
+   ↓
+STABLE
+   ↓
+LOCKED
+   ↓
+MERGED
+```
+
+baru kita dapat membuat task baru, misalnya:
+
+```text
+Task #XX — Building Professional & SKK Expansion
+STATUS: PENDING
+BOUNDARY: ISOLATED
+```
+
+dengan prinsip:
+
+```text
+EXISTING NEXUS-FM CORE
+        │
+        ├── Facility & Space
+        ├── Asset & System
+        ├── Inspection
+        ├── Issue
+        ├── Work Order
+        ├── Maintenance
+        ├── Project
+        ├── Vendor
+        ├── Document
+        ├── Evidence
+        ├── Compliance
+        └── KPI
+                │
+                ▼
+       ADDITIVE PROFESSIONAL LAYER
+                │
+        ├── Professional Profile
+        ├── SKK Reference
+        ├── Professional Role
+        ├── Professional Assignment
+        ├── Capability Scope
+        └── Professional Workspace
+```
+
+Jadi **tidak ada alasan untuk mengubah core yang sudah ±90% tersebut hanya karena kita memperluas cakupan ke seluruh tenaga ahli SKK Gedung**.
+
+Bahkan screenshot ini memperkuat keputusan sebelumnya: **kita harus menunggu Task #10 selesai sebelum membuka boundary baru**, bukan memaksa Replit mengerjakan dua domain sekaligus.
+
+Kalau tujuan Anda sekarang adalah **melanjutkan pekerjaan di Replit**, saya bisa langsung menyusun **kontrak Task berikutnya yang sudah dipersiapkan sekarang tetapi tidak dieksekusi sampai Task #10 MERGED**, termasuk mapping seluruh SKK Gedung ke engine NEXUS-FM dengan perubahan minimum.
