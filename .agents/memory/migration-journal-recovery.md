@@ -14,3 +14,9 @@ When converting legacy Drizzle migrations to timestamped folders, preserve their
 **Why:** Drizzle's folder-based migrator decides what is pending from folder time relative to the latest journal timestamp; matching hashes alone do not prevent replay.
 
 **How to apply:** Before migration execution, verify every local historical hash is already tracked. If folder chronology and journal chronology disagree, skip database mutation and fail closed on any untracked or unknown hash until ordering is reconciled.
+
+For forward migrations after a folder-timestamp conversion, determine pending work by the contiguous local hash chain rather than folder time alone. Apply only the untracked tail under one database transaction and advisory lock, and reject destructive SQL, unknown hashes, or gaps.
+
+**Why:** A valid new index migration could not run through the upgraded migrator because two older, already-tracked folders had later timestamps than their journal entries.
+
+**How to apply:** Historical hashes must form an uninterrupted applied prefix. New hashes may only extend that prefix; execute that tail transactionally and record each successful hash normally.

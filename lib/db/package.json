@@ -10,6 +10,7 @@
   "scripts": {
     "generate": "drizzle-kit generate --config ./drizzle.config.ts",
     "migrate": "drizzle-kit migrate --config ./drizzle.config.ts",
+    "migrate:safe": "node ./scripts/migrate-safe.mjs",
     "migrate:verify-applied": "node ./scripts/verify-migrations-applied.mjs",
     "migrate:adopt-foundation": "node ./scripts/adopt-foundation-baseline.mjs",
     "test:migrate-adoption": "node ./scripts/test-foundation-adoption.mjs",
