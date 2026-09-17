@@ -8,3 +8,9 @@ If the expected schema already exists while the migration journal is empty, neve
 **Why:** A post-merge migration attempted to replay already-applied authorization DDL because its journal was empty. The replay stopped mid-chain and prevented the API from starting, even though the existing objects matched the generated migrations.
 
 **How to apply:** Treat journal repair as metadata recovery, not schema creation. Fail closed on any fingerprint mismatch; after verified journal recovery, run the normal forward-only migration command and confirm the API starts.
+
+When converting legacy Drizzle migrations to timestamped folders, preserve their original chronological timestamps. A newer folder timestamp can make an upgraded migrator replay an already-recorded migration even when its SQL hash is present in the database journal.
+
+**Why:** Drizzle's folder-based migrator decides what is pending from folder time relative to the latest journal timestamp; matching hashes alone do not prevent replay.
+
+**How to apply:** Before migration execution, verify every local historical hash is already tracked. If folder chronology and journal chronology disagree, skip database mutation and fail closed on any untracked or unknown hash until ordering is reconciled.
