@@ -1,0 +1,52 @@
+Yang saya maksud **evidence** adalah bukti yang bisa dilihat dari panel Task #10 bahwa status agent dan boundary memang sudah berubah. Tidak harus berupa dokumen formal.
+
+Untuk kasus Task #10, evidence minimalnya:
+
+| Yang perlu dibuktikan   | Contoh evidence                                                             |
+| ----------------------- | --------------------------------------------------------------------------- |
+| **Aktivitas terakhir**  | Timestamp/log aktivitas agent terakhir                                      |
+| **Agent dihentikan**    | Status berubah menjadi `STOPPED`, `CANCELLED`, atau status setara           |
+| **Boundary dilepas**    | Task tidak lagi menunjukkan `ACTIVE ISOLATED` / resource lock sudah dilepas |
+| **Retry/reassign**      | Ada task run/agent baru yang ditugaskan setelah agent lama berhenti         |
+| **Baseline tetap aman** | Tidak ada perubahan Drizzle/schema di luar boundary Task #10                |
+| **Hasil implementasi**  | Commit/diff yang memang berasal dari retry Task #10                         |
+| **Verifikasi**          | Test/log E2E atau laporan verifikasi berhasil                               |
+| **Merge**               | Status akhirnya `MERGED`                                                    |
+
+### Jadi, untuk sekarang yang paling penting hanya 3 bukti
+
+**1. Bukti aktivitas**
+
+```text
+Last activity: <timestamp>
+Last action: <misalnya test / code change / agent message>
+```
+
+**2. Bukti penghentian**
+
+```text
+Task #10 Agent: STOPPED/CANCELLED
+```
+
+**3. Bukti boundary**
+
+```text
+Task #10 Boundary: RELEASED / CLOSED
+```
+
+Baru setelah ketiganya ada, kita bisa mengatakan:
+
+```text
+OLD AGENT
+→ STOPPED
+
+OLD BOUNDARY
+→ RELEASED
+
+TASK #10
+→ SAFE TO RETRY / REASSIGN
+```
+
+**Workflow `RUNNING` bukan evidence untuk tiga hal tersebut.** Itu hanya evidence bahwa aplikasi masih berjalan.
+
+Kalau Anda kirim **screenshot/detail panel Task #10**, saya bisa bantu membaca mana yang sudah terbukti dan mana yang belum, tanpa menyentuh implementasi.
