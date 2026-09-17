@@ -3,8 +3,8 @@ name: Drizzle composite unique introspection
 description: Why composite UNIQUE declarations may need physical-column order for non-interactive Drizzle reconciliation.
 ---
 
-Patch Drizzle Kit's PostgreSQL constraint introspection to read composite columns in constraint-key order and preserve the `indnullsnotdistinct` flag.
+Use the Drizzle 1.0 release line that reads composite columns in constraint-key order and preserves NULLS NOT DISTINCT metadata. Keep Drizzle Kit and Drizzle ORM on the same release channel.
 
-**Why:** The released introspector reads composite columns through `information_schema` in physical table-column order and hardcodes `nullsNotDistinct: false`. Existing, semantically identical constraints are then reported as new and can trigger unsafe truncate prompts.
+**Why:** Older stable introspection reordered composite keys and discarded NULLS NOT DISTINCT, causing false schema diffs and unsafe truncate prompts. The 1.0 migration-folder converter also aborts partway when custom migrations lack snapshots.
 
-**How to apply:** Keep the workspace patch active until the upstream package fixes both behaviors. Confine `push` reconciliation checks to disposable databases; automatic post-merge setup must keep using authoritative migrations. When upgrading Drizzle Kit, remove the patch only after non-interactive reconciliation preserves full data and schema snapshots.
+**How to apply:** For custom migrations without snapshots, construct accurate intermediate snapshots from the schema at each historical boundary, but preserve every migration SQL file byte-for-byte so existing database hashes still match. Confine `push` checks to disposable databases and verify post-merge migrations preserve rows without prompts.
