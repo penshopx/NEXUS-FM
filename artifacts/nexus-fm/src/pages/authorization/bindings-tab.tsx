@@ -329,6 +329,12 @@ function BindingRow({ binding, userId, canManage, onEdit }: {
 }) {
   const isExpired = binding.status === 'EXPIRED';
   const isSuspended = binding.status === 'SUSPENDED';
+  const bindingName = `${binding.roleCode} binding`;
+  const statusDescription = isExpired
+    ? `${bindingName} is expired and read-only. Suspension, expiry editing, and permanent revocation are unavailable.`
+    : isSuspended
+      ? `${bindingName} is suspended. It can be reactivated, edited, or permanently revoked.`
+      : `${bindingName} is active. It can be suspended, edited, or permanently revoked.`;
 
   const revokeMutation = useRevokeUserRoleBinding();
   const updateMutation = useUpdateUserRoleBinding();
@@ -377,7 +383,11 @@ function BindingRow({ binding, userId, canManage, onEdit }: {
   };
 
   return (
-    <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-card hover:bg-muted/10 transition-colors" data-testid={`row-binding-${binding.id}`}>
+    <div
+      className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-card hover:bg-muted/10 transition-colors"
+      data-testid={`row-binding-${binding.id}`}
+      aria-describedby={`binding-status-description-${binding.id}`}
+    >
       <div className="space-y-1">
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="text-xs" data-testid={`display-rolename-${binding.id}`}>{binding.roleCode}</Badge>
@@ -388,6 +398,9 @@ function BindingRow({ binding, userId, canManage, onEdit }: {
           >
             {binding.status}
           </Badge>
+          <span id={`binding-status-description-${binding.id}`} className="sr-only">
+            {statusDescription}
+          </span>
         </div>
         <div className="text-sm font-mono text-muted-foreground flex gap-3 flex-wrap">
           <span data-testid={`display-roleid-${binding.id}`}>Role ID: {binding.roleId}</span>
@@ -410,6 +423,8 @@ function BindingRow({ binding, userId, canManage, onEdit }: {
           size="sm" 
           onClick={handleToggleSuspend}
           disabled={isExpired || updateMutation.isPending}
+          aria-label={`${isSuspended ? 'Reactivate' : 'Suspend'} ${bindingName}`}
+          aria-describedby={isExpired ? `binding-status-description-${binding.id}` : undefined}
           title={isSuspended ? "Reactivate" : "Suspend"}
           data-testid={`button-toggle-suspend-${binding.id}`}
         >
@@ -420,6 +435,8 @@ function BindingRow({ binding, userId, canManage, onEdit }: {
           size="sm" 
           onClick={onEdit}
           disabled={isExpired}
+          aria-label={`Edit expiry and scope for ${bindingName}`}
+          aria-describedby={isExpired ? `binding-status-description-${binding.id}` : undefined}
           title="Edit Expiry/Scope"
           data-testid={`button-edit-binding-${binding.id}`}
         >
@@ -431,13 +448,15 @@ function BindingRow({ binding, userId, canManage, onEdit }: {
               variant="destructive" 
               size="sm" 
               disabled={isExpired || revokeMutation.isPending}
+              aria-label={`Permanently revoke ${bindingName}`}
+              aria-describedby={isExpired ? `binding-status-description-${binding.id}` : undefined}
               title="Revoke Permanently"
               data-testid={`button-revoke-binding-${binding.id}`}
             >
               <Trash2 className="size-4" />
             </Button>
           </AlertDialogTrigger>
-          <AlertDialogContent>
+          <AlertDialogContent data-testid={`revoke-dialog-${binding.id}`}>
             <AlertDialogHeader>
               <AlertDialogTitle>Revoke Binding Permanently?</AlertDialogTitle>
               <AlertDialogDescription>
@@ -445,9 +464,14 @@ function BindingRow({ binding, userId, canManage, onEdit }: {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleRevoke} className="bg-destructive text-destructive-foreground hover:bg-destructive/90" data-testid="button-confirm-revoke">
-                Revoke
+              <AlertDialogCancel aria-label={`Cancel permanent revocation of ${bindingName}`}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleRevoke}
+                aria-label={`Confirm permanent revocation of ${bindingName}`}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                data-testid="button-confirm-revoke"
+              >
+                Revoke permanently
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

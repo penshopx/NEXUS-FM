@@ -260,7 +260,7 @@ describe('authorization administration browser regressions', () => {
     expect(screen.getByText('Administrators cannot change their own access binding')).toBeVisible();
   });
 
-  it('covers suspension, expiry, confirmed revocation, and read-only audit details', async () => {
+  it('announces suspension, expiry, and read-only binding actions clearly', async () => {
     const user = userEvent.setup();
     const revoke = vi.fn((_variables, options) => options.onSuccess());
     api.revokeBinding.mockReturnValue({ mutate: revoke, isPending: false });
@@ -330,15 +330,92 @@ describe('authorization administration browser regressions', () => {
     await openBindingsForMember(user);
 
     expect(screen.getByTestId('display-status-suspended')).toHaveTextContent('SUSPENDED');
-    expect(screen.getByTestId('button-toggle-suspend-suspended')).toHaveAttribute('title', 'Reactivate');
+    expect(screen.getByRole('button', { name: 'Reactivate PLATFORM_ADMIN binding' })).toBeEnabled();
     expect(screen.getByTestId('display-status-expired')).toHaveTextContent('EXPIRED');
+    expect(screen.getByText(/PLATFORM_ADMIN binding is expired and read-only/)).toHaveClass('sr-only');
+    expect(screen.getByTestId('button-toggle-suspend-expired')).toHaveAccessibleName('Suspend PLATFORM_ADMIN binding');
     expect(screen.getByTestId('button-toggle-suspend-expired')).toBeDisabled();
+    expect(screen.getByTestId('button-edit-binding-expired')).toHaveAccessibleName('Edit expiry and scope for PLATFORM_ADMIN binding');
+    expect(screen.getByTestId('button-edit-binding-expired')).toBeDisabled();
+    expect(screen.getByTestId('button-revoke-binding-expired')).toHaveAccessibleName('Permanently revoke PLATFORM_ADMIN binding');
     expect(screen.getByTestId('button-revoke-binding-expired')).toBeDisabled();
+  });
 
-    await user.click(screen.getByTestId('button-revoke-binding-active'));
-    expect(screen.getByText('Revoke Binding Permanently?')).toBeVisible();
-    await user.click(screen.getByTestId('button-confirm-revoke'));
+  it('supports cancelling and confirming permanent revocation with the keyboard while containing and restoring focus', async () => {
+    const user = userEvent.setup();
+    const revoke = vi.fn((_variables, options) => options.onSuccess());
+    api.revokeBinding.mockReturnValue({ mutate: revoke, isPending: false });
+    api.bindings.mockReturnValue({
+      data: [{
+        id: 'active',
+        userId: 'target-user',
+        roleId: role.id,
+        roleCode: role.code,
+        version: 'active-version',
+        organizationId: 'org-1',
+        scopeType: 'ORGANIZATION',
+        scopeId: null,
+        status: 'ACTIVE',
+        startsAt: null,
+        endsAt: null,
+      }],
+      isLoading: false,
+    });
+    renderPage();
+    await openBindingsForMember(user);
+
+    const trigger = screen.getByRole('button', { name: 'Permanently revoke PLATFORM_ADMIN binding' });
+    trigger.focus();
+    await user.keyboard('{Enter}');
+
+    const dialog = screen.getByRole('alertdialog', { name: 'Revoke Binding Permanently?' });
+    const cancel = within(dialog).getByRole('button', { name: 'Cancel permanent revocation of PLATFORM_ADMIN binding' });
+    const confirm = within(dialog).getByRole('button', { name: 'Confirm permanent revocation of PLATFORM_ADMIN binding' });
+    expect(cancel).toHaveFocus();
+
+    await user.tab({ shift: true });
+    expect(confirm).toHaveFocus();
+    await user.tab();
+    expect(cancel).toHaveFocus();
+    await user.keyboard('{Escape}');
+    expect(dialog).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+    expect(revoke).not.toHaveBeenCalled();
+
+    await user.keyboard('{Enter}');
+    const reopenedDialog = screen.getByRole('alertdialog', { name: 'Revoke Binding Permanently?' });
+    const reopenedCancel = within(reopenedDialog).getByRole('button', { name: 'Cancel permanent revocation of PLATFORM_ADMIN binding' });
+    const reopenedConfirm = within(reopenedDialog).getByRole('button', { name: 'Confirm permanent revocation of PLATFORM_ADMIN binding' });
+    expect(reopenedCancel).toHaveFocus();
+    await user.tab();
+    expect(reopenedConfirm).toHaveFocus();
+    await user.keyboard('{Enter}');
     expect(revoke).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+  });
+
+  it('keeps authorization audit details read-only', async () => {
+    const user = userEvent.setup();
+    api.auditLogs.mockReturnValue({
+      data: [{
+        id: 'audit-1',
+        actorUserId: 'admin-1',
+        organizationId: 'org-1',
+        action: 'ROLE_REVOKED',
+        resource: 'USER_ROLE_BINDING',
+        resourceId: 'active',
+        decision: 'ALLOW',
+        reasonCode: 'AUTHORIZED',
+        scopeEvaluated: 'ORGANIZATION',
+        requestId: 'request-1',
+        beforeState: '{"status":"ACTIVE"}',
+        afterState: '{"status":"REVOKED"}',
+        createdAt: '2026-09-12T12:00:00.000Z',
+      }],
+      isLoading: false,
+    });
+    renderPage();
 
     await user.click(screen.getByTestId('tab-audit'));
     await user.click(await screen.findByTestId('button-audit-details-audit-1'));
