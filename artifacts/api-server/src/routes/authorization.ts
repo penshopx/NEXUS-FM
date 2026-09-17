@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { randomUUID } from "node:crypto";
-import { and, asc, desc, eq, gt, ilike, isNull, lte, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, ilike, isNull, lte, or } from "drizzle-orm";
 import {
   authorizationAuditLogsTable,
   canonicalRoleValues,
@@ -277,8 +277,16 @@ router.get("/users/search", async (req, res): Promise<void> => {
 
   const query = typeof req.query.query === "string" ? req.query.query.trim() : "";
   const rawLimit = typeof req.query.limit === "string" ? Number(req.query.limit) : 20;
-  if (query.length < 2 || query.length > 100 || !Number.isInteger(rawLimit) || rawLimit < 1 || rawLimit > 50) {
-    res.status(400).json({ error: "query must be 2-100 characters and limit must be an integer from 1-50" });
+  const rawPage = typeof req.query.page === "string" ? Number(req.query.page) : 1;
+  const organizationIdFilter = typeof req.query.organizationId === "string" ? req.query.organizationId : undefined;
+  if (
+    query.length < 2 || query.length > 100 ||
+    !Number.isInteger(rawLimit) || rawLimit < 1 || rawLimit > 50 ||
+    !Number.isInteger(rawPage) || rawPage < 1
+  ) {
+    res.status(400).json({
+      error: "query must be 2-100 characters, limit must be an integer from 1-50, and page must be a positive integer",
+    });
     return;
   }
   if (admin.scopeType !== "PLATFORM" && !admin.organizationId) {
@@ -295,9 +303,22 @@ router.get("/users/search", async (req, res): Promise<void> => {
       ilike(usersTable.email, `%${query}%`),
     )!,
   ];
-  if (admin.scopeType !== "PLATFORM") {
+  if (admin.scopeType === "PLATFORM") {
+    // Platform administrators may optionally narrow results to a single
+    // organization. Anyone else is locked to their active organization
+    // below and this filter is ignored for them.
+    if (organizationIdFilter) filters.push(eq(membershipsTable.organizationId, organizationIdFilter));
+  } else {
+    // Non-platform administrators stay locked to their active organization
+    // regardless of any organizationId query parameter supplied.
     filters.push(eq(membershipsTable.organizationId, admin.organizationId!));
   }
+  const where = and(...filters);
+
+  const [totalRow] = await database.select({ value: count() }).from(membershipsTable)
+    .innerJoin(usersTable, eq(membershipsTable.userId, usersTable.id))
+    .innerJoin(organizationsTable, eq(membershipsTable.organizationId, organizationsTable.id))
+    .where(where);
 
   const rows = await database.select({
     userId: usersTable.id,
@@ -309,11 +330,18 @@ router.get("/users/search", async (req, res): Promise<void> => {
   }).from(membershipsTable)
     .innerJoin(usersTable, eq(membershipsTable.userId, usersTable.id))
     .innerJoin(organizationsTable, eq(membershipsTable.organizationId, organizationsTable.id))
-    .where(and(...filters))
-    .orderBy(asc(usersTable.displayName), asc(usersTable.email), asc(organizationsTable.name))
-    .limit(rawLimit);
+    .where(where)
+    .orderBy(
+      asc(usersTable.displayName),
+      asc(usersTable.email),
+      asc(usersTable.id),
+      asc(organizationsTable.name),
+      asc(organizationsTable.id),
+    )
+    .limit(rawLimit)
+    .offset((rawPage - 1) * rawLimit);
 
-  res.json(rows);
+  res.json({ items: rows, page: rawPage, limit: rawLimit, total: Number(totalRow?.value ?? 0) });
 });
 
 router.get("/users/:userId/role-bindings", async (req, res): Promise<void> => {

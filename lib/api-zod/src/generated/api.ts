@@ -230,11 +230,13 @@ export const GetAuthorizationAuditLogsResponse = zod.array(GetAuthorizationAudit
 
 
 /**
- * Searches active users with active organization memberships by display name or email. Non-platform administrators are restricted to their active organization.
+ * Searches active users with active organization memberships by display name or email. Platform administrators may optionally narrow results to one organization; non-platform administrators are always restricted to their active organization regardless of the organizationId parameter.
  * @summary Search active organization members
  */
 export const searchOrganizationMembersQueryQueryMin = 2;
 export const searchOrganizationMembersQueryQueryMax = 100;
+
+export const searchOrganizationMembersQueryPageDefault = 1;
 
 export const searchOrganizationMembersQueryLimitDefault = 20;
 export const searchOrganizationMembersQueryLimitMax = 50;
@@ -243,18 +245,24 @@ export const searchOrganizationMembersQueryLimitMax = 50;
 
 export const SearchOrganizationMembersQueryParams = zod.object({
   "query": zod.coerce.string().min(searchOrganizationMembersQueryQueryMin).max(searchOrganizationMembersQueryQueryMax),
+  "organizationId": zod.coerce.string().uuid().optional().describe('Restrict results to one organization. Only honored for platform administrators.'),
+  "page": zod.coerce.number().int().min(1).default(searchOrganizationMembersQueryPageDefault),
   "limit": zod.coerce.number().int().min(1).max(searchOrganizationMembersQueryLimitMax).default(searchOrganizationMembersQueryLimitDefault)
 })
 
-export const SearchOrganizationMembersResponseItem = zod.object({
+export const SearchOrganizationMembersResponse = zod.object({
+  "items": zod.array(zod.object({
   "userId": zod.string().uuid(),
   "displayName": zod.string(),
   "email": zod.string().email(),
   "organizationId": zod.string().uuid(),
   "organizationName": zod.string(),
   "membershipRole": zod.enum(['PLATFORM_ADMIN', 'FACILITY_MANAGER', 'FACILITY_SUPERVISOR', 'INSPECTOR', 'MAINTENANCE_TECHNICIAN', 'WAREHOUSE_SUPERVISOR', 'VENDOR'])
+})),
+  "page": zod.number().int(),
+  "limit": zod.number().int(),
+  "total": zod.number().int()
 })
-export const SearchOrganizationMembersResponse = zod.array(SearchOrganizationMembersResponseItem)
 
 
 /**

@@ -307,6 +307,13 @@ export interface OrganizationMemberSearchResult {
   membershipRole: CanonicalRole;
 }
 
+export interface OrganizationMemberSearchPage {
+  items: OrganizationMemberSearchResult[];
+  page: number;
+  limit: number;
+  total: number;
+}
+
 export type UserRoleBindingStatus = typeof UserRoleBindingStatus[keyof typeof UserRoleBindingStatus];
 
 
@@ -476,6 +483,14 @@ export type SearchOrganizationMembersParams = {
  * @maxLength 100
  */
 query: string;
+/**
+ * Restrict results to one organization. Only honored for platform administrators.
+ */
+organizationId?: string;
+/**
+ * @minimum 1
+ */
+page?: PageParameter;
 /**
  * @minimum 1
  * @maximum 50

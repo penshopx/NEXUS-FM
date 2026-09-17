@@ -246,12 +246,23 @@ paths:
       operationId: searchOrganizationMembers
       tags: [authorization]
       summary: Search active organization members
-      description: Searches active users with active organization memberships by display name or email. Non-platform administrators are restricted to their active organization.
+      description: >-
+        Searches active users with active organization memberships by
+        display name or email. Platform administrators may optionally
+        narrow results to one organization; non-platform administrators are
+        always restricted to their active organization regardless of the
+        organizationId parameter.
       parameters:
         - name: query
           in: query
           required: true
           schema: {type: string, minLength: 2, maxLength: 100}
+        - name: organizationId
+          in: query
+          required: false
+          description: Restrict results to one organization. Only honored for platform administrators.
+          schema: {type: string, format: uuid}
+        - {$ref: "#/components/parameters/Page"}
         - name: limit
           in: query
           required: false
@@ -262,9 +273,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/OrganizationMemberSearchResult"
+                $ref: "#/components/schemas/OrganizationMemberSearchPage"
         "400": {$ref: "#/components/responses/BadRequest"}
         "401": {$ref: "#/components/responses/Unauthorized"}
         "403": {$ref: "#/components/responses/Forbidden"}
@@ -1265,6 +1274,16 @@ components:
         organizationId: {type: string, format: uuid}
         organizationName: {type: string}
         membershipRole: {$ref: "#/components/schemas/CanonicalRole"}
+    OrganizationMemberSearchPage:
+      type: object
+      required: [items, page, limit, total]
+      properties:
+        items:
+          type: array
+          items: {$ref: "#/components/schemas/OrganizationMemberSearchResult"}
+        page: {type: integer}
+        limit: {type: integer}
+        total: {type: integer}
     UserRoleBinding:
       type: object
       required: [id, userId, organizationId, roleId, version, scopeType, status]

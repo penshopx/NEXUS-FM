@@ -6,6 +6,7 @@ import {
   useRevokeUserRoleBinding,
   useListRoles,
   useGetSession,
+  useGetMyPermissions,
   useSearchOrganizationMembers,
   UserRoleBinding,
   OrganizationMemberSearchResult,
@@ -34,7 +35,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Search, UserPlus, Trash2, Calendar, Edit2, Play, Pause, AlertTriangle, Mail, Building2, UserRound } from 'lucide-react';
+import { Search, UserPlus, Trash2, Calendar, Edit2, Play, Pause, AlertTriangle, Mail, Building2, UserRound, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -51,13 +52,28 @@ import {
 export function BindingsTab({ canManage }: { canManage: boolean }) {
   const [searchInput, setSearchInput] = useState('');
   const [submittedQuery, setSubmittedQuery] = useState('');
+  const [organizationInput, setOrganizationInput] = useState('');
+  const [submittedOrganizationId, setSubmittedOrganizationId] = useState('');
+  const [page, setPage] = useState(1);
   const [selectedMember, setSelectedMember] = useState<OrganizationMemberSearchResult | null>(null);
+  const { data: myPermissions } = useGetMyPermissions();
+  const isPlatformAdmin = myPermissions?.permissions.some(
+    (permission) => permission.code === 'USER.VIEW' &&
+      permission.effect === 'ALLOW' &&
+      permission.scopeType === 'PLATFORM',
+  ) ?? false;
+  const searchParams = {
+    query: submittedQuery,
+    organizationId: submittedOrganizationId || undefined,
+    page,
+    limit: 20,
+  };
   const search = useSearchOrganizationMembers(
-    { query: submittedQuery, limit: 20 },
+    searchParams,
     {
       query: {
         enabled: submittedQuery.length >= 2,
-        queryKey: getSearchOrganizationMembersQueryKey({ query: submittedQuery, limit: 20 }),
+        queryKey: getSearchOrganizationMembersQueryKey(searchParams),
       },
     },
   );
@@ -65,25 +81,48 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     const query = searchInput.trim();
-    if (query.length >= 2) setSubmittedQuery(query);
+    if (query.length >= 2) {
+      setSubmittedQuery(query);
+      setSubmittedOrganizationId(isPlatformAdmin ? organizationInput.trim() : '');
+      setPage(1);
+    }
   };
+
+  const totalPages = search.data ? Math.max(1, Math.ceil(search.data.total / search.data.limit)) : 1;
 
   return (
     <div className="space-y-6">
       <div className="p-6 border border-border rounded-lg bg-card shadow-sm">
         <div className="space-y-2">
           <label className="text-sm font-medium" htmlFor="member-search">Find a member</label>
-          <form onSubmit={handleSearch} className="flex gap-2">
-            <Input 
-              id="member-search"
-              placeholder="Search by name or email"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              data-testid="input-target-user"
-            />
-            <Button type="submit" disabled={searchInput.trim().length < 2 || search.isFetching} data-testid="button-search-user">
-              <Search className="size-4 mr-2" /> {search.isFetching ? 'Searching...' : 'Search'}
-            </Button>
+          <form onSubmit={handleSearch} className="space-y-3">
+            <div className="flex gap-2">
+              <Input
+                id="member-search"
+                placeholder="Search by name or email"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                data-testid="input-target-user"
+              />
+              <Button type="submit" disabled={searchInput.trim().length < 2 || search.isFetching} data-testid="button-search-user">
+                <Search className="size-4 mr-2" /> {search.isFetching ? 'Searching...' : 'Search'}
+              </Button>
+            </div>
+            {isPlatformAdmin && (
+              <div>
+                <label className="text-sm font-medium" htmlFor="member-organization-filter">
+                  Organization ID <span className="font-normal text-muted-foreground">(optional)</span>
+                </label>
+                <Input
+                  id="member-organization-filter"
+                  className="mt-1"
+                  placeholder="Limit this search to one organization"
+                  value={organizationInput}
+                  onChange={(event) => setOrganizationInput(event.target.value)}
+                  data-testid="input-member-organization"
+                />
+              </div>
+            )}
           </form>
           <p className="text-xs text-muted-foreground">
             Results include active members in the organizations you are allowed to administer.
@@ -98,9 +137,9 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
 
         {submittedQuery && !search.isFetching && !search.isError && (
           <div className="mt-4 border border-border rounded-md overflow-hidden" data-testid="member-search-results">
-            {search.data?.length ? (
+            {search.data?.items.length ? (
               <div className="divide-y divide-border">
-                {search.data.map((member) => {
+                {search.data.items.map((member) => {
                   const isSelected = selectedMember?.userId === member.userId &&
                     selectedMember.organizationId === member.organizationId;
                   return (
@@ -141,6 +180,36 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
             ) : (
               <div className="p-8 text-center text-sm text-muted-foreground">
                 No active members matched “{submittedQuery}”.
+              </div>
+            )}
+            {search.data && search.data.total > 0 && (
+              <div className="p-3 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm">
+                <div className="text-muted-foreground" data-testid="member-search-page-summary">
+                  Page {search.data.page} of {totalPages} · {search.data.total} results
+                  {submittedOrganizationId && <> · Organization <code>{submittedOrganizationId}</code></>}
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage((current) => Math.max(1, current - 1))}
+                    disabled={search.isFetching || page <= 1}
+                    data-testid="button-member-previous-page"
+                  >
+                    <ChevronLeft className="size-4 mr-1" /> Previous
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage((current) => current + 1)}
+                    disabled={search.isFetching || page >= totalPages}
+                    data-testid="button-member-next-page"
+                  >
+                    Next <ChevronRight className="size-4 ml-1" />
+                  </Button>
+                </div>
               </div>
             )}
           </div>

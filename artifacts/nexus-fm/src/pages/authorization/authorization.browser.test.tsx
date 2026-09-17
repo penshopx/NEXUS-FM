@@ -122,7 +122,7 @@ describe('authorization administration browser regressions', () => {
     });
     api.updateRolePermissions.mockReturnValue(mutation());
     api.searchMembers.mockReturnValue({
-      data: [member],
+      data: { items: [member], page: 1, limit: 20, total: 1 },
       isFetching: false,
       isError: false,
     });

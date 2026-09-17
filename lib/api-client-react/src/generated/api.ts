@@ -48,7 +48,7 @@ import type {
   MyPermissions,
   NotFoundResponse,
   OrganizationAccess,
-  OrganizationMemberSearchResult,
+  OrganizationMemberSearchPage,
   OrganizationSelection,
   Permission,
   PortfolioImportResult,
@@ -920,12 +920,12 @@ export const getSearchOrganizationMembersUrl = (params: SearchOrganizationMember
 }
 
 /**
- * Searches active users with active organization memberships by display name or email. Non-platform administrators are restricted to their active organization.
+ * Searches active users with active organization memberships by display name or email. Platform administrators may optionally narrow results to one organization; non-platform administrators are always restricted to their active organization regardless of the organizationId parameter.
  * @summary Search active organization members
  */
-export const searchOrganizationMembers = async (params: SearchOrganizationMembersParams, options?: Parameters<typeof customFetch>[1]): Promise<OrganizationMemberSearchResult[]> => {
+export const searchOrganizationMembers = async (params: SearchOrganizationMembersParams, options?: Parameters<typeof customFetch>[1]): Promise<OrganizationMemberSearchPage> => {
 
-  return customFetch<OrganizationMemberSearchResult[]>(getSearchOrganizationMembersUrl(params),
+  return customFetch<OrganizationMemberSearchPage>(getSearchOrganizationMembersUrl(params),
   {
     ...options,
     method: 'GET'

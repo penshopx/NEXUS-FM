@@ -590,19 +590,38 @@ test("authorization routes run through a real HTTP app with injected currentUser
 
     const platformSearch = await request(`/users/search?query=${encodeURIComponent(targetUser.email)}`);
     assert.equal(platformSearch.response.status, 200);
-    assert.ok((platformSearch.body as Array<{ userId: string; organizationId: string }>)
+    assert.ok((platformSearch.body as { items: Array<{ userId: string; organizationId: string }> }).items
       .some((row) => row.userId === target.userId && row.organizationId === target.organizationId));
+    const platformFilteredSearch = await request(
+      `/users/search?query=${encodeURIComponent(targetUser.email)}&organizationId=${target.organizationId}&page=1&limit=1`,
+    );
+    assert.equal(platformFilteredSearch.response.status, 200);
+    assert.equal((platformFilteredSearch.body as { page: number }).page, 1);
+    assert.equal((platformFilteredSearch.body as { limit: number }).limit, 1);
+    assert.equal((platformFilteredSearch.body as { total: number }).total, 1);
+    assert.deepEqual(
+      (platformFilteredSearch.body as { items: Array<{ organizationId: string }> }).items.map((row) => row.organizationId),
+      [target.organizationId],
+    );
+    const platformEmptySecondPage = await request(
+      `/users/search?query=${encodeURIComponent(targetUser.email)}&organizationId=${target.organizationId}&page=2&limit=1`,
+    );
+    assert.deepEqual((platformEmptySecondPage.body as { items: unknown[] }).items, []);
 
     actorId = manager.userId;
-    const scopedOwnSearch = await request(`/users/search?query=${encodeURIComponent(managerUser.email)}`);
+    const scopedOwnSearch = await request(
+      `/users/search?query=${encodeURIComponent(managerUser.email)}&organizationId=${target.organizationId}`,
+    );
     assert.equal(scopedOwnSearch.response.status, 200);
-    assert.ok((scopedOwnSearch.body as Array<{ userId: string; organizationId: string }>)
+    assert.ok((scopedOwnSearch.body as { items: Array<{ userId: string; organizationId: string }> }).items
       .some((row) => row.userId === manager.userId && row.organizationId === manager.organizationId));
     const scopedCrossOrgSearch = await request(`/users/search?query=${encodeURIComponent(targetUser.email)}`);
     assert.equal(scopedCrossOrgSearch.response.status, 200);
-    assert.deepEqual(scopedCrossOrgSearch.body, []);
+    assert.deepEqual((scopedCrossOrgSearch.body as { items: unknown[] }).items, []);
     const invalidSearch = await request("/users/search?query=x");
     assert.equal(invalidSearch.response.status, 400);
+    const invalidPage = await request("/users/search?query=target&page=0");
+    assert.equal(invalidPage.response.status, 400);
     actorId = platform.userId;
 
     const permissions = await request("/permissions");

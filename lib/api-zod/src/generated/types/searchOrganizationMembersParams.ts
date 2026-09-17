@@ -5,6 +5,7 @@
  * NEXUS-FM foundation API
  * OpenAPI spec version: 0.1.0
  */
+import type { PageParameter } from './pageParameter';
 
 export type SearchOrganizationMembersParams = {
 /**
@@ -12,6 +13,14 @@ export type SearchOrganizationMembersParams = {
  * @maxLength 100
  */
 query: string;
+/**
+ * Restrict results to one organization. Only honored for platform administrators.
+ */
+organizationId?: string;
+/**
+ * @minimum 1
+ */
+page?: PageParameter;
 /**
  * @minimum 1
  * @maximum 50
