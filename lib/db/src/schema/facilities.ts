@@ -27,6 +27,7 @@ export const facilitiesTable = pgTable("facilities", {
 }, (table) => [
   unique("facilities_id_organization_unique").on(table.id, table.organizationId),
   index("facilities_organization_idx").on(table.organizationId),
+  index("facilities_organization_name_id_idx").on(table.organizationId, table.name, table.id),
 ]);
 
 export const buildingsTable = pgTable("buildings", {
@@ -41,6 +42,7 @@ export const buildingsTable = pgTable("buildings", {
     name: "buildings_facility_organization_fk",
   }).onDelete("cascade"),
   index("buildings_organization_facility_idx").on(table.organizationId, table.facilityId),
+  index("buildings_organization_name_id_idx").on(table.organizationId, table.name, table.id),
 ]);
 
 export const spacesTable = pgTable("spaces", {
@@ -56,6 +58,7 @@ export const spacesTable = pgTable("spaces", {
     name: "spaces_building_facility_organization_fk",
   }).onDelete("cascade"),
   index("spaces_organization_building_idx").on(table.organizationId, table.buildingId),
+  index("spaces_organization_name_id_idx").on(table.organizationId, table.name, table.id),
 ]);
 
 export const systemsTable = pgTable("systems", {
@@ -72,6 +75,7 @@ export const systemsTable = pgTable("systems", {
     name: "systems_space_building_facility_organization_fk",
   }).onDelete("cascade"),
   index("systems_organization_space_idx").on(table.organizationId, table.spaceId),
+  index("systems_organization_name_id_idx").on(table.organizationId, table.name, table.id),
 ]);
 
 export const assetsTable = pgTable("assets", {
@@ -93,6 +97,7 @@ export const assetsTable = pgTable("assets", {
     name: "assets_system_space_building_facility_organization_fk",
   }).onDelete("restrict"),
   index("assets_organization_space_idx").on(table.organizationId, table.spaceId),
+  index("assets_organization_name_id_idx").on(table.organizationId, table.name, table.id),
 ]);
 
 export type Facility = typeof facilitiesTable.$inferSelect;

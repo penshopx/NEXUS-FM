@@ -16,6 +16,7 @@ import {
   membershipsTable,
   organizationsTable,
   permissionsTable,
+  pool,
   rolePermissionsTable,
   rolesTable,
   spacesTable,
@@ -55,6 +56,8 @@ import {
   parsePortfolioImport,
   portfolioImportHeaderLine,
   PORTFOLIO_IMPORT_MAX_ROWS,
+  listAuthorizedRegistryBatch,
+  queryAuthorizedRegistryRows,
   resolveRegistryObject,
 } from "../src/services/facilities.ts";
 
@@ -1596,6 +1599,156 @@ test("empty facility collection exposes server-derived bootstrap create capabili
   } finally {
     server.close();
   }
+});
+
+test("large registry portfolio keeps list, search, nested totals, and export queries bounded", async () => {
+  const facilityId = randomUUID();
+  const actor = await makeFixture("FACILITY_MANAGER", "FACILITY", facilityId);
+  const [facility] = await db.insert(facilitiesTable).values({
+    id: facilityId,
+    organizationId: actor.organizationId,
+    name: "Performance Campus",
+  }).returning();
+  assert.ok(facility);
+  const [building] = await db.insert(buildingsTable).values({
+    organizationId: actor.organizationId,
+    facilityId: facility.id,
+    name: "Performance Building",
+  }).returning();
+  assert.ok(building);
+  const spaces = await db.insert(spacesTable).values(
+    Array.from({ length: 64 }, (_, index) => ({
+      organizationId: actor.organizationId,
+      facilityId: facility.id,
+      buildingId: building.id,
+      name: `Performance Space ${String(index).padStart(2, "0")}`,
+    })),
+  ).returning();
+  assert.equal(spaces.length, 64);
+
+  const assetRows = spaces.flatMap((space, spaceIndex) =>
+    Array.from({ length: 128 }, (_, assetIndex) => ({
+      organizationId: actor.organizationId,
+      facilityId: facility.id,
+      buildingId: building.id,
+      spaceId: space.id,
+      name: assetIndex === 73 && spaceIndex === 31
+        ? "Performance Needle"
+        : `Asset ${String(spaceIndex).padStart(2, "0")}-${String(assetIndex).padStart(3, "0")}`,
+      code: `PERF-${String(spaceIndex).padStart(2, "0")}-${String(assetIndex).padStart(3, "0")}`,
+    })),
+  );
+  for (let offset = 0; offset < assetRows.length; offset += 1_500) {
+    await db.insert(assetsTable).values(assetRows.slice(offset, offset + 1_500));
+  }
+  await pool.query("ANALYZE assets");
+
+  const startedAt = performance.now();
+  const list = await queryAuthorizedRegistryRows({
+    database: db,
+    kind: "ASSET",
+    organizationId: actor.organizationId,
+    actorUserId: actor.userId,
+    limit: 25,
+    offset: 4_000,
+  });
+  assert.equal(list.rows.length, 25);
+  assert.equal(list.total, 8_192);
+
+  const search = await queryAuthorizedRegistryRows({
+    database: db,
+    kind: "ASSET",
+    organizationId: actor.organizationId,
+    actorUserId: actor.userId,
+    query: "Needle",
+    limit: 25,
+    offset: 0,
+  });
+  assert.equal(search.rows.length, 1);
+  assert.equal(search.total, 1);
+
+  const selectedSpace = spaces[31]!;
+  const nested = await queryAuthorizedRegistryRows({
+    database: db,
+    kind: "ASSET",
+    organizationId: actor.organizationId,
+    actorUserId: actor.userId,
+    parent: { kind: "SPACE", id: selectedSpace.id },
+    limit: 17,
+    offset: 51,
+  });
+  assert.equal(nested.rows.length, 17);
+  assert.equal(nested.total, 128);
+
+  let exported = 0;
+  let after: { name: string; id: string } | undefined;
+  do {
+    const batch = await listAuthorizedRegistryBatch({
+      database: db,
+      kind: "ASSET",
+      organizationId: actor.organizationId,
+      actorUserId: actor.userId,
+      limit: 500,
+      after,
+    });
+    exported += batch.length;
+    const last = batch.at(-1);
+    after = last ? { name: last.name, id: last.id } : undefined;
+    if (batch.length < 500) break;
+  } while (after);
+  assert.equal(exported, 8_192);
+  assert.ok(performance.now() - startedAt < 5_000, "large registry query set exceeded the 5s CI budget");
+
+  type PlanNode = {
+    "Node Type": string;
+    "Relation Name"?: string;
+    "Index Name"?: string;
+    Plans?: PlanNode[];
+  };
+  const planNodes = (node: PlanNode): PlanNode[] => [
+    node,
+    ...(node.Plans?.flatMap(planNodes) ?? []),
+  ];
+  const explain = async (statement: string, parameters: unknown[]) => {
+    const result = await pool.query(`EXPLAIN (ANALYZE, FORMAT JSON) ${statement}`, parameters);
+    const root = result.rows[0]?.["QUERY PLAN"]?.[0];
+    assert.ok(root);
+    return {
+      executionTime: Number(root["Execution Time"]),
+      nodes: planNodes(root.Plan as PlanNode),
+    };
+  };
+  const nestedPlan = await explain(
+    `SELECT id, name FROM assets
+       WHERE organization_id = $1 AND space_id = $2
+       ORDER BY name, id LIMIT 17 OFFSET 51`,
+    [actor.organizationId, selectedSpace.id],
+  );
+  assert.ok(
+    nestedPlan.nodes.some((node) =>
+      node["Relation Name"] === "assets" &&
+      node["Index Name"] === "assets_organization_space_idx"),
+    "nested registry query must use its organization/space index",
+  );
+  assert.ok(
+    !nestedPlan.nodes.some((node) => node["Relation Name"] === "assets" && node["Node Type"] === "Seq Scan"),
+    "nested registry query must not scan every asset in the organization",
+  );
+  assert.ok(nestedPlan.executionTime < 250, "nested registry query exceeded the 250ms plan budget");
+
+  const exportPlan = await explain(
+    `SELECT id, name FROM assets
+       WHERE organization_id = $1 AND (name > $2 OR (name = $2 AND id > $3))
+       ORDER BY name, id LIMIT 500`,
+    [actor.organizationId, "Asset 31-063", "00000000-0000-4000-8000-000000000000"],
+  );
+  assert.ok(
+    exportPlan.nodes.some((node) =>
+      node["Relation Name"] === "assets" &&
+      node["Index Name"] === "assets_organization_name_id_idx"),
+    "registry export must use its organization/name/id pagination index",
+  );
+  assert.ok(exportPlan.executionTime < 250, "registry export query exceeded the 250ms plan budget");
 });
 
 test("mutation authorization linearizes against concurrent revocation and policy deny", async () => {
