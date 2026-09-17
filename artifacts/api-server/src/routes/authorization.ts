@@ -347,7 +347,21 @@ router.get("/users/search", async (req, res): Promise<void> => {
 router.get("/users/:userId/role-bindings", async (req, res): Promise<void> => {
   const admin = await requireAdmin(req, res, "USER.VIEW", resolveCurrentUser, database);
   if (!admin) return;
-  const rows = await database.select().from(userRoleBindingsTable).where(eq(userRoleBindingsTable.userId, req.params.userId));
+  const rows = await database.select({
+    id: userRoleBindingsTable.id,
+    userId: userRoleBindingsTable.userId,
+    organizationId: userRoleBindingsTable.organizationId,
+    roleId: userRoleBindingsTable.roleId,
+    roleCode: rolesTable.code,
+    version: userRoleBindingsTable.version,
+    scopeType: userRoleBindingsTable.scopeType,
+    scopeId: userRoleBindingsTable.scopeId,
+    status: userRoleBindingsTable.status,
+    startsAt: userRoleBindingsTable.startsAt,
+    endsAt: userRoleBindingsTable.endsAt,
+  }).from(userRoleBindingsTable)
+    .innerJoin(rolesTable, eq(userRoleBindingsTable.roleId, rolesTable.id))
+    .where(eq(userRoleBindingsTable.userId, req.params.userId));
   res.json(admin.scopeType === "PLATFORM"
     ? rows
     : rows.filter((row) => row.organizationId === admin.organizationId));
@@ -390,7 +404,7 @@ router.post("/users/:userId/role-bindings", async (req, res): Promise<void> => {
       eq(membershipsTable.organizationId, body.organizationId),
       eq(membershipsTable.isActive, true),
     ));
-  const [targetRole] = await database.select({ id: rolesTable.id })
+  const [targetRole] = await database.select({ id: rolesTable.id, code: rolesTable.code })
     .from(rolesTable)
     .where(and(eq(rolesTable.id, body.roleId), eq(rolesTable.status, "ACTIVE")));
   if (!targetMembership || !targetRole) {
@@ -450,7 +464,7 @@ router.post("/users/:userId/role-bindings", async (req, res): Promise<void> => {
     res.status(409).json({ error: "Role binding already exists" });
     return;
   }
-  res.status(201).json(binding);
+  res.status(201).json({ ...binding, roleCode: targetRole.code });
 });
 
 router.patch("/users/:userId/role-bindings/:bindingId", async (req, res): Promise<void> => {
@@ -526,7 +540,10 @@ router.patch("/users/:userId/role-bindings/:bindingId", async (req, res): Promis
     res.status(409).json({ error: "Role binding changed concurrently" });
     return;
   }
-  res.json(after);
+  const [role] = await database.select({ code: rolesTable.code })
+    .from(rolesTable)
+    .where(eq(rolesTable.id, after.roleId));
+  res.json({ ...after, roleCode: role!.code });
 });
 
 router.delete("/users/:userId/role-bindings/:bindingId", async (req, res): Promise<void> => {
@@ -575,7 +592,10 @@ router.delete("/users/:userId/role-bindings/:bindingId", async (req, res): Promi
     res.status(409).json({ error: "Role binding changed concurrently" });
     return;
   }
-  res.json(after);
+  const [role] = await database.select({ code: rolesTable.code })
+    .from(rolesTable)
+    .where(eq(rolesTable.id, after.roleId));
+  res.json({ ...after, roleCode: role!.code });
 });
 
 router.get("/me/permissions", async (req, res): Promise<void> => {
@@ -604,13 +624,27 @@ router.get("/me/scope", async (req, res): Promise<void> => {
     return;
   }
   const now = new Date();
-  res.json(await database.select().from(userRoleBindingsTable).where(and(
-    eq(userRoleBindingsTable.userId, user.id),
-    eq(userRoleBindingsTable.organizationId, organizationId),
-    eq(userRoleBindingsTable.status, "ACTIVE"),
-    or(isNull(userRoleBindingsTable.startsAt), lte(userRoleBindingsTable.startsAt, now)),
-    or(isNull(userRoleBindingsTable.endsAt), gt(userRoleBindingsTable.endsAt, now)),
-  )));
+  res.json(await database.select({
+    id: userRoleBindingsTable.id,
+    userId: userRoleBindingsTable.userId,
+    organizationId: userRoleBindingsTable.organizationId,
+    roleId: userRoleBindingsTable.roleId,
+    roleCode: rolesTable.code,
+    version: userRoleBindingsTable.version,
+    scopeType: userRoleBindingsTable.scopeType,
+    scopeId: userRoleBindingsTable.scopeId,
+    status: userRoleBindingsTable.status,
+    startsAt: userRoleBindingsTable.startsAt,
+    endsAt: userRoleBindingsTable.endsAt,
+  }).from(userRoleBindingsTable)
+    .innerJoin(rolesTable, eq(userRoleBindingsTable.roleId, rolesTable.id))
+    .where(and(
+      eq(userRoleBindingsTable.userId, user.id),
+      eq(userRoleBindingsTable.organizationId, organizationId),
+      eq(userRoleBindingsTable.status, "ACTIVE"),
+      or(isNull(userRoleBindingsTable.startsAt), lte(userRoleBindingsTable.startsAt, now)),
+      or(isNull(userRoleBindingsTable.endsAt), gt(userRoleBindingsTable.endsAt, now)),
+    )));
 });
 
 router.post("/authorization/check", async (req, res): Promise<void> => {

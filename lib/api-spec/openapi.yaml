@@ -1286,12 +1286,13 @@ components:
         total: {type: integer}
     UserRoleBinding:
       type: object
-      required: [id, userId, organizationId, roleId, version, scopeType, status]
+      required: [id, userId, organizationId, roleId, roleCode, version, scopeType, status]
       properties:
         id: {type: string, format: uuid}
         userId: {type: string, format: uuid}
         organizationId: {type: string, format: uuid}
         roleId: {type: string, format: uuid}
+        roleCode: {$ref: "#/components/schemas/CanonicalRole"}
         version: {type: string, format: uuid}
         scopeType: {$ref: "#/components/schemas/ScopeType"}
         scopeId: {type: string, format: uuid, nullable: true}

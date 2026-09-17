@@ -291,7 +291,6 @@ function BindingsManager({ userId, member, canManage }: {
             <BindingRow 
               key={binding.id} 
               binding={binding} 
-              roles={roles || []} 
               userId={userId}
               canManage={canManage}
               onEdit={() => setEditingBinding(binding)}
@@ -322,14 +321,12 @@ function BindingsManager({ userId, member, canManage }: {
   );
 }
 
-function BindingRow({ binding, roles, userId, canManage, onEdit }: {
+function BindingRow({ binding, userId, canManage, onEdit }: {
   binding: UserRoleBinding;
-  roles: Role[];
   userId: string;
   canManage: boolean;
   onEdit: () => void;
 }) {
-  const roleName = roles.find(r => r.id === binding.roleId)?.code || binding.roleId;
   const isExpired = binding.status === 'EXPIRED';
   const isSuspended = binding.status === 'SUSPENDED';
 
@@ -383,7 +380,7 @@ function BindingRow({ binding, roles, userId, canManage, onEdit }: {
     <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-card hover:bg-muted/10 transition-colors" data-testid={`row-binding-${binding.id}`}>
       <div className="space-y-1">
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className="font-mono text-xs" data-testid={`display-rolename-${binding.id}`}>{roleName}</Badge>
+          <Badge variant="outline" className="text-xs" data-testid={`display-rolename-${binding.id}`}>{binding.roleCode}</Badge>
           <Badge 
             variant={binding.status === 'ACTIVE' ? 'default' : binding.status === 'SUSPENDED' ? 'secondary' : 'destructive'} 
             className="text-[10px] h-5"
@@ -393,6 +390,7 @@ function BindingRow({ binding, roles, userId, canManage, onEdit }: {
           </Badge>
         </div>
         <div className="text-sm font-mono text-muted-foreground flex gap-3 flex-wrap">
+          <span data-testid={`display-roleid-${binding.id}`}>Role ID: {binding.roleId}</span>
           <span data-testid={`display-scope-${binding.id}`}>Scope: {binding.scopeType} {binding.scopeId && `(${binding.scopeId})`}</span>
           <span data-testid={`display-org-${binding.id}`}>Org: {binding.organizationId}</span>
         </div>

@@ -160,6 +160,46 @@ describe('authorization administration browser regressions', () => {
     expect(screen.queryByTestId('tab-roles')).not.toBeInTheDocument();
   });
 
+  it('shows canonical role names to view-only administrators without loading role policy', async () => {
+    const user = userEvent.setup();
+    api.myPermissions.mockReturnValue({
+      data: {
+        organizationId: 'org-1',
+        permissions: [{ code: 'USER.VIEW', effect: 'ALLOW', scopeType: 'ORGANIZATION' }],
+      },
+      isLoading: false,
+    });
+    api.bindings.mockReturnValue({
+      data: [{
+        id: 'view-only-binding',
+        userId: member.userId,
+        roleId: role.id,
+        roleCode: 'PLATFORM_ADMIN',
+        version: 'binding-version',
+        organizationId: 'org-1',
+        scopeType: 'ORGANIZATION',
+        scopeId: null,
+        status: 'ACTIVE',
+        startsAt: null,
+        endsAt: null,
+      }],
+      isLoading: false,
+    });
+    renderPage();
+
+    expect(screen.queryByTestId('tab-roles')).not.toBeInTheDocument();
+    await user.type(screen.getByTestId('input-target-user'), 'Target');
+    await user.click(screen.getByTestId('button-search-user'));
+    await user.click(await screen.findByTestId('member-result-target-user-org-1'));
+
+    expect(screen.getByTestId('display-rolename-view-only-binding')).toHaveTextContent('PLATFORM_ADMIN');
+    expect(screen.getByTestId('display-roleid-view-only-binding')).toHaveTextContent(role.id);
+    expect(api.listRoles).toHaveBeenCalledWith(expect.objectContaining({
+      query: expect.objectContaining({ enabled: false }),
+    }));
+    expect(screen.queryByTestId('button-toggle-suspend-view-only-binding')).not.toBeInTheDocument();
+  });
+
   it('recovers from stale role-policy saves and exposes self-escalation server errors', async () => {
     const user = userEvent.setup();
     const refetch = vi.fn();
@@ -198,7 +238,10 @@ describe('authorization administration browser regressions', () => {
     api.bindings.mockReturnValue({
       data: [{
         id: 'self-binding',
+        userId: 'target-user',
         roleId: role.id,
+        roleCode: role.code,
+        version: 'self-binding-version',
         organizationId: 'org-1',
         scopeType: 'ORGANIZATION',
         scopeId: null,
@@ -225,7 +268,10 @@ describe('authorization administration browser regressions', () => {
       data: [
         {
           id: 'suspended',
+          userId: 'target-user',
           roleId: role.id,
+          roleCode: role.code,
+          version: 'suspended-version',
           organizationId: 'org-1',
           scopeType: 'ORGANIZATION',
           scopeId: null,
@@ -235,7 +281,10 @@ describe('authorization administration browser regressions', () => {
         },
         {
           id: 'expired',
+          userId: 'target-user',
           roleId: role.id,
+          roleCode: role.code,
+          version: 'expired-version',
           organizationId: 'org-1',
           scopeType: 'ORGANIZATION',
           scopeId: null,
@@ -245,7 +294,10 @@ describe('authorization administration browser regressions', () => {
         },
         {
           id: 'active',
+          userId: 'target-user',
           roleId: role.id,
+          roleCode: role.code,
+          version: 'active-version',
           organizationId: 'org-1',
           scopeType: 'ORGANIZATION',
           scopeId: null,

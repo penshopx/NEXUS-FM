@@ -328,6 +328,7 @@ export interface UserRoleBinding {
   userId: string;
   organizationId: string;
   roleId: string;
+  roleCode: CanonicalRole;
   version: string;
   scopeType: ScopeType;
   scopeId?: string | null;

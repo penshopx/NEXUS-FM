@@ -5,6 +5,7 @@
  * NEXUS-FM foundation API
  * OpenAPI spec version: 0.1.0
  */
+import type { CanonicalRole } from './canonicalRole';
 import type { ScopeType } from './scopeType';
 import type { UserRoleBindingStatus } from './userRoleBindingStatus';
 
@@ -13,6 +14,7 @@ export interface UserRoleBinding {
   userId: string;
   organizationId: string;
   roleId: string;
+  roleCode: CanonicalRole;
   version: string;
   scopeType: ScopeType;
   scopeId?: string | null;

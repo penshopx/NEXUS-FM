@@ -693,6 +693,7 @@ test("authorization routes run through a real HTTP app with injected currentUser
       }),
     });
     assert.equal(created.response.status, 201, JSON.stringify(created.body));
+    assert.equal((created.body as { roleCode: string }).roleCode, "FACILITY_MANAGER");
     const createdBindingId = (created.body as { id: string }).id;
     const assignmentAudits = await db.select().from(authorizationAuditLogsTable).where(and(
       eq(authorizationAuditLogsTable.resource, "USER_ROLE_BINDING"),
@@ -705,6 +706,7 @@ test("authorization routes run through a real HTTP app with injected currentUser
       body: JSON.stringify({ scopeType: "ORGANIZATION" }),
     });
     assert.equal(generalPatch.response.status, 200, JSON.stringify(generalPatch.body));
+    assert.equal((generalPatch.body as { roleCode: string }).roleCode, "FACILITY_MANAGER");
     const generalUpdateAudits = await db.select().from(authorizationAuditLogsTable).where(and(
       eq(authorizationAuditLogsTable.resource, "USER_ROLE_BINDING"),
       eq(authorizationAuditLogsTable.resourceId, createdBindingId),
@@ -759,6 +761,11 @@ test("authorization routes run through a real HTTP app with injected currentUser
     assert.equal(duplicate.response.status, 409);
     const listed = await request(`/users/${target.userId}/role-bindings`);
     assert.equal(listed.response.status, 200);
+    const listedBindings = listed.body as Array<{ roleId: string; roleCode: string; organizationId: string }>;
+    assert.ok(listedBindings.length > 0);
+    assert.ok(listedBindings.every((binding) => canonicalRoleValues.includes(binding.roleCode as typeof canonicalRoleValues[number])));
+    assert.ok(listedBindings.some((binding) =>
+      binding.roleId === manager.roleId && binding.roleCode === "FACILITY_MANAGER"));
     assert.ok((listed.body as unknown[]).some((row) => (row as { id: string }).id === createdBindingId));
 
     const patched = await request(`/users/${target.userId}/role-bindings/${createdBindingId}`, {
@@ -797,6 +804,7 @@ test("authorization routes run through a real HTTP app with injected currentUser
 
     const deleted = await request(`/users/${target.userId}/role-bindings/${createdBindingId}`, { method: "DELETE" });
     assert.equal(deleted.response.status, 200, JSON.stringify(deleted.body));
+    assert.equal((deleted.body as { roleCode: string }).roleCode, "FACILITY_MANAGER");
     const revocationAudits = await db.select().from(authorizationAuditLogsTable).where(and(
       eq(authorizationAuditLogsTable.resource, "USER_ROLE_BINDING"),
       eq(authorizationAuditLogsTable.resourceId, createdBindingId),
@@ -832,7 +840,9 @@ test("authorization routes run through a real HTTP app with injected currentUser
     assert.equal((mePermissions.body as { organizationId: string }).organizationId, manager.organizationId);
     const meScope = await request("/me/scope");
     assert.equal(meScope.response.status, 200);
-    assert.ok((meScope.body as Array<{ organizationId: string }>).every((row) => row.organizationId === manager.organizationId));
+    assert.ok((meScope.body as Array<{ organizationId: string; roleCode: string }>).every((row) =>
+      row.organizationId === manager.organizationId &&
+      canonicalRoleValues.includes(row.roleCode as typeof canonicalRoleValues[number])));
 
     const previousEnvironment = process.env.NODE_ENV;
     process.env.NODE_ENV = "production";
