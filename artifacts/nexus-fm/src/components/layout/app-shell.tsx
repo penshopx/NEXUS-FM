@@ -3,14 +3,10 @@ import { Link, useLocation } from 'wouter';
 import { useClerk } from '@clerk/react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  getGetFoundationSummaryQueryKey,
-  getGetSessionQueryKey,
   useGetSession,
   useListOrganizations,
   useSelectOrganization,
   useGetMyPermissions,
-  getGetMyPermissionsQueryKey,
-  getGetAuthorizationAuditLogsQueryKey,
 } from '@workspace/api-client-react';
 import { Building2, LayoutDashboard, Shield, ChevronDown, Check, LogOut, KeyRound, MapPin } from 'lucide-react';
 import {
@@ -23,6 +19,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { replaceOrganizationContext } from '@/lib/organization-context';
 
 export function AppShell({ children }: { children: ReactNode }) {
   const [location] = useLocation();
@@ -38,8 +35,8 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const handleSelectOrg = (organizationId: string) => {
     selectOrg.mutate({ data: { organizationId } }, {
-      onSuccess: () => {
-        queryClient.clear();
+      onSuccess: (nextSession) => {
+        replaceOrganizationContext(queryClient, nextSession);
         setLocation('/app');
       }
     });
@@ -151,7 +148,10 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <main className="flex-1 overflow-y-auto">
+      <main
+        key={session?.activeOrganization?.organization.id ?? 'no-active-organization'}
+        className="flex-1 overflow-y-auto"
+      >
         <div className="container py-8">
           {children}
         </div>
