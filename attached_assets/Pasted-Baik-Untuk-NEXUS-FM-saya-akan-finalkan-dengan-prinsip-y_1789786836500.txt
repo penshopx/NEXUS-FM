@@ -1,0 +1,911 @@
+Baik. Untuk **NEXUS-FM**, saya akan finalkan dengan prinsip yang sama seperti TERAS, tetapi disesuaikan dengan karakter NEXUS sebagai **Integrated Smart Facility, Asset & Warehouse Management System (ISF-WMS)** dengan Digital Twin/BIM 7D, facility, asset, inspection, issue/incident, maintenance, safety & compliance, utility, vendor, project, finance, document, dan Nexus Copilot.
+
+## NEXUS-FM — Final Agentic AI Architecture
+
+### 1. Posisi strategis
+
+NEXUS jangan dibangun sebagai “aplikasi dengan chatbot”.
+
+Targetnya:
+
+> **NEXUS = operational system + decision intelligence + controlled agentic execution.**
+
+Strukturnya:
+
+```text
+┌─────────────────────────────────────────────┐
+│              HUMAN / ORGANIZATION           │
+│ Facility Manager • Engineer • Supervisor    │
+│ Technician • Warehouse • Vendor • Auditor   │
+└──────────────────────┬──────────────────────┘
+                       │
+                Nexus Copilot / UI
+                       │
+┌──────────────────────▼──────────────────────┐
+│         AGENTIC OPERATING LAYER             │
+│                                             │
+│ Reasoning • Orchestration • Policy •       │
+│ Evidence • Approval • Audit • Memory        │
+└──────────────────────┬──────────────────────┘
+                       │
+              Controlled Tools
+                       │
+┌──────────────────────▼──────────────────────┐
+│              NEXUS DOMAIN CORE              │
+│                                             │
+│ Facility │ Asset │ Inspection │ Maintenance │
+│ Incident │ Safety │ Utility │ Vendor        │
+│ Warehouse│ Project │ Finance │ Document      │
+│ Digital Twin / BIM 7D                       │
+└─────────────────────────────────────────────┘
+```
+
+**NEXUS Domain Core tetap menjadi source of truth.**
+
+AI tidak boleh menjadi database kedua yang menentukan keadaan fasilitas.
+
+---
+
+# 2. Prinsip utama
+
+Ada enam prinsip yang saya tetapkan sebagai baseline:
+
+### A. Domain Core tetap canonical
+
+AI tidak menentukan:
+
+* status asset;
+* status work order;
+* hasil inspeksi resmi;
+* status incident;
+* status safety/compliance;
+* stok aktual;
+* transaksi keuangan;
+* approval;
+* vendor status;
+* completion pekerjaan;
+* audit record.
+
+AI hanya **membaca, menganalisis, menjelaskan, mengusulkan**, dan pada tahap tertentu melakukan aksi yang memang diizinkan.
+
+---
+
+### B. Agent tidak langsung menyentuh database
+
+Jangan:
+
+```text
+Agent → SQL → Database
+```
+
+Tetapi:
+
+```text
+Agent
+  ↓
+Authorized Tool
+  ↓
+NEXUS Service / Command
+  ↓
+Authorization + Policy
+  ↓
+Transaction
+  ↓
+Audit Event
+```
+
+Ini sangat penting untuk NEXUS karena domainnya menyentuh **asset, maintenance, safety, inventory, vendor, dan finance**.
+
+---
+
+# 3. Permission model
+
+Saya sarankan memakai model yang sama secara konseptual dengan TERAS:
+
+| Level   | Fungsi                                          |
+| ------- | ----------------------------------------------- |
+| READ    | membaca data yang diizinkan                     |
+| ANALYZE | menganalisis data                               |
+| PROPOSE | membuat usulan                                  |
+| REQUEST | mengirim usulan untuk approval                  |
+| EXECUTE | menjalankan aksi berisiko rendah yang diizinkan |
+| DENY    | aksi yang tidak boleh dilakukan agent           |
+
+Tetapi `EXECUTE` **tidak pernah menjadi hak global agent**.
+
+Evaluasinya harus:
+
+```text
+Agent
++ Actor
++ Organization
++ Facility
++ Asset
++ Module
++ Current State
++ Risk
++ Approval Requirement
++ Tool Permission
+```
+
+---
+
+# 4. Agent pertama yang paling masuk akal
+
+Saya **tidak menyarankan langsung membuat 10–15 agent**.
+
+Mulai dengan:
+
+## Nexus Facility Intelligence Agent
+
+Fokusnya:
+
+> **memahami kondisi operasional fasilitas dan membantu manager menentukan prioritas tindakan.**
+
+Input:
+
+```text
+Facility
+Asset
+Inspection
+Maintenance
+Issue / Incident
+Safety
+Utility
+Warehouse
+Vendor
+Project
+Document
+```
+
+Output:
+
+```text
+Facility Situation Summary
+↓
+Critical Issues
+↓
+Overdue / At-Risk Items
+↓
+Asset Risk Signals
+↓
+Maintenance Priorities
+↓
+Inspection Findings
+↓
+Utility Anomalies
+↓
+Pending Human Decisions
+↓
+Recommended Actions
+↓
+Evidence References
+↓
+Confidence / Uncertainty
+```
+
+Versi pertama **read-only**.
+
+Tidak boleh:
+
+* mengubah asset;
+* membuat work order;
+* menutup incident;
+* mengubah inspection;
+* mengubah stok;
+* mengubah financial record;
+* mengubah compliance status.
+
+---
+
+# 5. Setelah itu baru pecah menjadi tiga agent
+
+Bukan sembilan agent.
+
+### Agent A — Facility Intelligence
+
+```text
+Facility overview
+Asset health
+Maintenance condition
+Inspection status
+Risk signals
+Utility trends
+Operational priorities
+```
+
+### Agent B — Maintenance & Asset Intelligence
+
+```text
+Asset history
+Failure patterns
+Maintenance backlog
+Recurring problems
+Inspection findings
+Suggested maintenance plan
+Spare-part requirement
+Technician workload
+```
+
+### Agent C — Compliance & Knowledge Operations
+
+```text
+Safety
+Compliance
+Inspection documentation
+Regulatory documents
+SOP
+Audit preparation
+Document gaps
+Knowledge retrieval
+Draft document
+```
+
+Kemudian **Nexus Copilot** menjadi conversational interface di atas capability tersebut.
+
+---
+
+# 6. Jangan membuat “AI memory” sebagai source of truth
+
+Ini sangat penting untuk NEXUS.
+
+### Domain memory
+
+Tetap berasal dari NEXUS:
+
+```text
+Facility
+Asset
+Asset History
+Inspection
+Maintenance
+Incident
+Utility
+Warehouse
+Vendor
+Project
+Document
+Audit
+```
+
+### Agent working memory
+
+Hanya:
+
+```text
+current task
+tool results
+intermediate reasoning
+temporary plan
+```
+
+### Conversation memory
+
+Misalnya:
+
+```text
+user prefers daily maintenance summary
+user frequently monitors Building A
+```
+
+Tetapi harus:
+
+```text
+source
+confidence
+expiry
+correction
+```
+
+Jangan membiarkan agent menyimpan seluruh data fasilitas secara bebas ke memory engine.
+
+---
+
+# 7. Evidence Envelope
+
+Setiap jawaban penting dari Nexus Agent harus bisa menjawab:
+
+> “AI mengatakan ini berdasarkan apa?”
+
+Format canonical:
+
+```json
+{
+  "summary": "...",
+  "claims": [
+    {
+      "claim": "...",
+      "evidenceRefs": [
+        "asset:AST-001",
+        "inspection:INS-203",
+        "workorder:WO-778"
+      ],
+      "confidence": "high"
+    }
+  ],
+  "limitations": [],
+  "recommendedActions": []
+}
+```
+
+Dengan demikian:
+
+```text
+Nexus Copilot
+      ↓
+Claim
+      ↓
+Evidence
+      ↓
+NEXUS Record
+```
+
+bukan:
+
+```text
+LLM → opinion
+```
+
+---
+
+# 8. Agent Run Ledger
+
+Saya anggap ini **komponen penting Agentic NEXUS**.
+
+Setiap agent run dicatat:
+
+```text
+run_id
+agent_definition_version
+actor_id
+organization_id
+facility_scope
+objective
+input_reference_hashes
+evidence_references
+tool_calls
+policy_decisions
+approval_reference
+output_hash
+status
+timestamp
+token/cost metrics
+```
+
+Tujuannya bukan menyimpan semua prompt.
+
+Tujuannya adalah:
+
+> **reconstructability + accountability.**
+
+Jika manager bertanya:
+
+> “Mengapa Nexus merekomendasikan pemeriksaan AHU ini?”
+
+sistem dapat menelusuri:
+
+```text
+Recommendation
+↓
+Evidence
+↓
+Asset
+↓
+Inspection
+↓
+Maintenance history
+↓
+Policy
+↓
+Agent run
+```
+
+---
+
+# 9. Approval lifecycle
+
+Agent proposal jangan mencampur lifecycle AI dengan lifecycle domain.
+
+AI:
+
+```text
+DRAFT
+   ↓
+PENDING_REVIEW
+   ↓
+APPROVED / REJECTED / EXPIRED
+```
+
+Sedangkan NEXUS tetap memiliki lifecycle masing-masing:
+
+```text
+Work Order
+Inspection
+Incident
+Maintenance
+Purchase
+Vendor
+Project
+Compliance
+```
+
+Approval agent **tidak menggantikan approval domain**.
+
+---
+
+# 10. Tool Registry
+
+NEXUS nantinya memiliki controlled tools seperti:
+
+```text
+get_facility_summary()
+get_asset()
+get_asset_history()
+get_asset_risk()
+get_open_inspections()
+get_inspection_findings()
+get_maintenance_backlog()
+get_work_order()
+get_incident()
+get_utility_summary()
+get_inventory()
+get_vendor_status()
+get_project_status()
+get_compliance_status()
+get_document()
+get_digital_twin_context()
+```
+
+Kemudian proposal:
+
+```text
+propose_maintenance()
+propose_inspection()
+propose_follow_up()
+propose_asset_review()
+propose_document_update()
+request_manager_review()
+```
+
+Dan baru kemudian, jika sudah terbukti aman:
+
+```text
+schedule_low_risk_maintenance()
+create_low_risk_task()
+send_notification()
+```
+
+dengan authorization dan audit.
+
+---
+
+# 11. Digital Twin + Agentic AI
+
+Ini justru bisa menjadi pembeda terbesar NEXUS.
+
+Jangan membuat Digital Twin hanya sebagai visualisasi 3D.
+
+Agent harus dapat memahami relasi:
+
+```text
+Building
+   ↓
+Floor
+   ↓
+Room
+   ↓
+System
+   ↓
+Equipment
+   ↓
+Component
+   ↓
+Inspection
+   ↓
+Failure
+   ↓
+Maintenance
+   ↓
+Spare Part
+   ↓
+Vendor
+   ↓
+Cost
+```
+
+Contohnya:
+
+```text
+AHU-03
+ ↓
+Inspection finding
+ ↓
+Recurring vibration
+ ↓
+Previous maintenance
+ ↓
+Bearing replacement
+ ↓
+Spare part consumption
+ ↓
+Vendor
+ ↓
+Energy consumption
+```
+
+Ini yang membuat **Digital Twin + operational history + Agentic AI** jauh lebih bernilai daripada chatbot biasa.
+
+---
+
+# 12. Nexus Copilot
+
+Nexus Copilot bukan sekadar:
+
+> “Ask AI anything.”
+
+Tetapi:
+
+> **Ask → Investigate → Explain → Recommend → Approve → Execute → Verify**
+
+Contoh:
+
+**Manager:**
+
+> “Kenapa maintenance gedung ini meningkat bulan ini?”
+
+NEXUS:
+
+```text
+Investigating...
+
+42 maintenance records
+8 recurring assets
+3 repeated failure patterns
+2 overdue inspections
+1 utility anomaly
+```
+
+Kemudian:
+
+```text
+CAUSE SIGNALS
+
+AHU-03
+4 recurring maintenance events
+
+Pump-02
+2 repeated failures
+
+Electrical Panel EP-07
+Inspection overdue
+
+Utility
+Energy consumption +11.8%
+```
+
+Lalu:
+
+> “Berikut evidence yang mendukung analisis.”
+
+Manager tetap memegang keputusan.
+
+---
+
+# 13. Safety & Compliance harus deterministic
+
+AI boleh:
+
+```text
+detect
+summarize
+explain
+recommend
+```
+
+AI tidak boleh sendirian:
+
+```text
+declare safe
+declare compliant
+close safety incident
+override safety rule
+override inspection result
+override approval
+```
+
+Untuk safety:
+
+```text
+Deterministic Safety Rule
+        ↓
+NEXUS Decision
+        ↓
+AI explains
+```
+
+bukan:
+
+```text
+LLM
+ ↓
+Safety decision
+```
+
+---
+
+# 14. Hermes / OpenClaw / MultiClaw
+
+Untuk NEXUS, saya juga **tidak akan mengunci arsitektur pada vendor/runtime tertentu sejak awal**.
+
+Gunakan abstraction:
+
+```text
+ReasoningRuntime
+AgentOrchestrator
+ToolExecutor
+ChannelGateway
+MemoryProvider
+ModelProvider
+```
+
+Kemudian:
+
+```text
+Hermes
+OpenClaw
+MultiClaw
+other runtime
+```
+
+menjadi adapter.
+
+Dengan demikian:
+
+```text
+NEXUS Domain
+      ↑
+Agentic Interface
+      ↑
+Runtime Adapter
+      ↑
+Hermes / OpenClaw / MultiClaw
+```
+
+bukan:
+
+```text
+NEXUS
+ ↓
+Hermes-specific code
+ ↓
+OpenClaw-specific code
+```
+
+Ini menjaga NEXUS tetap hidup meskipun runtime AI berubah.
+
+---
+
+# 15. MCP
+
+MCP dapat digunakan, tetapi sebagai **controlled tool interface**, bukan pintu masuk bebas.
+
+Arsitektur:
+
+```text
+Agent Runtime
+      ↓
+Authenticated Gateway
+      ↓
+Allowlisted MCP Tool
+      ↓
+NEXUS Service / Command
+      ↓
+Authorization
+      ↓
+Policy
+      ↓
+Audit
+```
+
+Jangan:
+
+```text
+Browser
+ ↓
+arbitrary MCP tool
+ ↓
+database
+```
+
+---
+
+# 16. Roadmap final NEXUS Agentic
+
+Saya tetapkan roadmap konseptualnya:
+
+### Stage A — Agentic Contract
+
+Bangun:
+
+* permission model;
+* tool contract;
+* Evidence Envelope;
+* Agent Run Ledger;
+* policy decision;
+* evaluation harness.
+
+**Belum perlu Hermes/OpenClaw/MultiClaw.**
+
+### Stage B — Facility Intelligence Agent
+
+Read-only.
+
+Fokus:
+
+> Facility → Asset → Inspection → Maintenance → Incident → Utility.
+
+### Stage C — Maintenance & Asset Intelligence
+
+Mulai:
+
+```text
+failure pattern
+maintenance priority
+recurring issue
+asset risk
+spare-part signal
+```
+
+Tetap proposal-only.
+
+### Stage D — Compliance & Knowledge Agent
+
+Menghubungkan:
+
+```text
+Document
+SOP
+Inspection
+Safety
+Compliance
+Audit
+```
+
+### Stage E — Human Approval
+
+Mulai:
+
+```text
+AI recommendation
+↓
+Manager review
+↓
+Approve / Reject
+↓
+NEXUS domain command
+```
+
+### Stage F — Controlled Execution
+
+Hanya low-risk actions.
+
+Misalnya:
+
+```text
+notification
+reminder
+follow-up request
+low-risk scheduling
+```
+
+### Stage G — Runtime Integration
+
+Baru evaluasi:
+
+```text
+OpenClaw
+Hermes
+MultiClaw
+MCP
+```
+
+berdasarkan:
+
+* reliability;
+* security;
+* tool accuracy;
+* latency;
+* cost;
+* memory isolation;
+* recovery;
+* prompt-injection resistance.
+
+### Stage H — Multi-Agent
+
+Baru dilakukan jika bukti menunjukkan satu agent sudah terlalu luas.
+
+---
+
+# 17. Impact terhadap task NEXUS yang sedang dikerjakan
+
+Ini bagian yang paling penting untuk governance proyek.
+
+**Jangan memasukkan seluruh Agentic Architecture ini ke Task #10 yang sedang aktif.**
+
+Task #10:
+
+> **Stay current with Drizzle without restoring unsafe database prompts**
+
+tetap isolated.
+
+Jangan dicampur dengan:
+
+* Nexus Copilot;
+* Agentic AI;
+* MCP;
+* Hermes;
+* OpenClaw;
+* MultiClaw;
+* Digital Twin AI;
+* tool registry.
+
+Setelah Task #10 selesai dan boundary benar-benar dilepas, Agentic NEXUS sebaiknya mendapat **task khusus**.
+
+Urutannya:
+
+```text
+Task #10
+Drizzle safety
+       ↓
+MERGED / VERIFIED / LOCKED
+       ↓
+Boundary released
+       ↓
+NEXUS Agentic Architecture Task
+       ↓
+Control Plane
+       ↓
+Facility Intelligence Agent
+       ↓
+Evaluation
+       ↓
+Approval
+       ↓
+Controlled Execution
+```
+
+---
+
+# 18. Final positioning
+
+Dengan arsitektur ini, NEXUS bukan:
+
+> **Facility Management + ChatGPT**
+
+tetapi:
+
+> **NEXUS = Facility & Asset System of Record + Digital Twin + Operational Intelligence + Controlled Agentic Execution.**
+
+Dan nilai tertingginya berada pada rantai:
+
+```text
+DATA
+ ↓
+CONTEXT
+ ↓
+EVIDENCE
+ ↓
+REASONING
+ ↓
+RECOMMENDATION
+ ↓
+HUMAN DECISION
+ ↓
+CONTROLLED ACTION
+ ↓
+VERIFICATION
+ ↓
+AUDIT
+```
+
+Itulah arsitektur yang saya rekomendasikan sebagai **baseline final Agentic NEXUS-FM**. Yang perlu dikerjakan pertama bukan memasang banyak agent, melainkan membangun **fondasi kontrol Agentic yang tipis di atas NEXUS Core**, lalu membuktikannya dengan satu **Facility Intelligence Agent read-only**.
