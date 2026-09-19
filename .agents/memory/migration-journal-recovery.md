@@ -20,3 +20,9 @@ For forward migrations after a folder-timestamp conversion, determine pending wo
 **Why:** A valid new index migration could not run through the upgraded migrator because two older, already-tracked folders had later timestamps than their journal entries.
 
 **How to apply:** Historical hashes must form an uninterrupted applied prefix. New hashes may only extend that prefix; execute that tail transactionally and record each successful hash normally.
+
+Pin the known historical SQL hashes in migration regression fixtures. During a legacy journal upgrade, add the extended metadata columns only after every stored hash is recognized, then backfill each migration name from its verified hash without replaying its SQL.
+
+**Why:** Computing fixture hashes from the same mutable SQL under test lets an accidental historical edit change both sides of the assertion and pass unnoticed.
+
+**How to apply:** Keep the pinned prefix immutable. A newly generated migration extends the local tail; it does not rewrite or replace a pinned historical hash.
