@@ -7,6 +7,7 @@
  */
 import type { CanonicalRole } from './canonicalRole';
 import type { ScopeType } from './scopeType';
+import type { UserRoleBindingScopeTargetStatus } from './userRoleBindingScopeTargetStatus';
 import type { UserRoleBindingStatus } from './userRoleBindingStatus';
 
 export interface UserRoleBinding {
@@ -18,6 +19,8 @@ export interface UserRoleBinding {
   version: string;
   scopeType: ScopeType;
   scopeId?: string | null;
+  scopeTargetName: string | null;
+  scopeTargetStatus: UserRoleBindingScopeTargetStatus;
   status: UserRoleBindingStatus;
   startsAt?: Date | null;
   endsAt?: Date | null;

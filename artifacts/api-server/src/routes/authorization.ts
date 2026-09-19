@@ -1,20 +1,24 @@
 import { Router, type IRouter } from "express";
 import { randomUUID } from "node:crypto";
-import { and, asc, count, desc, eq, gt, ilike, isNull, lte, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, ilike, inArray, isNull, lte, or } from "drizzle-orm";
 import {
   SearchPlatformOrganizationsQueryParams,
   SearchPlatformOrganizationsResponse,
 } from "@workspace/api-zod";
 import {
+  assetsTable,
   authorizationAuditLogsTable,
+  buildingsTable,
   canonicalRoleValues,
   db,
+  facilitiesTable,
   membershipsTable,
   organizationsTable,
   permissionsTable,
   rolePermissionsTable,
   rolesTable,
   scopeTypeValues,
+  spacesTable,
   userContextsTable,
   userRoleBindingsTable,
   usersTable,
@@ -36,6 +40,79 @@ import {
 } from "../services/authorization-catalog";
 
 type PermissionUpdate = { permissionId: string; defaultScopeType?: string; effect?: string };
+
+type BindingScope = {
+  organizationId: string;
+  scopeType: typeof scopeTypeValues[number];
+  scopeId: string | null;
+};
+
+type ScopeTarget = {
+  scopeTargetName: string | null;
+  scopeTargetStatus: "RESOLVED" | "MISSING" | "NOT_APPLICABLE";
+};
+
+async function resolveBindingScopeTargets(
+  rows: BindingScope[],
+  database: typeof db,
+): Promise<ScopeTarget[]> {
+  const organizationIds = [...new Set(rows.map((row) => row.organizationId))];
+  const registryTables = {
+    FACILITY: facilitiesTable,
+    BUILDING: buildingsTable,
+    SPACE: spacesTable,
+    ASSET: assetsTable,
+  } as const;
+  const organizationNames = new Map<string, string>();
+
+  if (organizationIds.length) {
+    const organizations = await database.select({
+      id: organizationsTable.id,
+      name: organizationsTable.name,
+    }).from(organizationsTable).where(inArray(organizationsTable.id, organizationIds));
+    for (const organization of organizations) organizationNames.set(organization.id, organization.name);
+  }
+
+  const registryNames = new Map<string, string>();
+  await Promise.all(Object.entries(registryTables).map(async ([scopeType, table]) => {
+    const ids = [...new Set(rows
+      .filter((row) => row.scopeType === scopeType && row.scopeId)
+      .map((row) => row.scopeId!))];
+    if (!ids.length || !organizationIds.length) return;
+    const targets = await database.select({
+      id: table.id,
+      organizationId: table.organizationId,
+      name: table.name,
+    }).from(table).where(and(
+      inArray(table.id, ids),
+      inArray(table.organizationId, organizationIds),
+    ));
+    for (const target of targets) {
+      registryNames.set(`${scopeType}:${target.organizationId}:${target.id}`, target.name);
+    }
+  }));
+
+  return rows.map((row) => {
+    if (row.scopeType === "PLATFORM") {
+      return { scopeTargetName: "Platform", scopeTargetStatus: "RESOLVED" };
+    }
+    if (row.scopeType === "ORGANIZATION") {
+      const name = organizationNames.get(row.organizationId);
+      return name
+        ? { scopeTargetName: name, scopeTargetStatus: "RESOLVED" }
+        : { scopeTargetName: null, scopeTargetStatus: "MISSING" };
+    }
+    if (row.scopeType in registryTables && row.scopeId) {
+      const name = registryNames.get(`${row.scopeType}:${row.organizationId}:${row.scopeId}`);
+      return name
+        ? { scopeTargetName: name, scopeTargetStatus: "RESOLVED" }
+        : { scopeTargetName: null, scopeTargetStatus: "MISSING" };
+    }
+    return row.scopeId
+      ? { scopeTargetName: null, scopeTargetStatus: "MISSING" }
+      : { scopeTargetName: null, scopeTargetStatus: "NOT_APPLICABLE" };
+  });
+}
 
 function bindingAuditState(input: Record<string, unknown>) {
   return {
@@ -403,9 +480,11 @@ router.get("/users/:userId/role-bindings", async (req, res): Promise<void> => {
   }).from(userRoleBindingsTable)
     .innerJoin(rolesTable, eq(userRoleBindingsTable.roleId, rolesTable.id))
     .where(eq(userRoleBindingsTable.userId, req.params.userId));
-  res.json(admin.scopeType === "PLATFORM"
+  const authorizedRows = admin.scopeType === "PLATFORM"
     ? rows
-    : rows.filter((row) => row.organizationId === admin.organizationId));
+    : rows.filter((row) => row.organizationId === admin.organizationId);
+  const scopeTargets = await resolveBindingScopeTargets(authorizedRows, database);
+  res.json(authorizedRows.map((row, index) => ({ ...row, ...scopeTargets[index]! })));
 });
 
 router.post("/users/:userId/role-bindings", async (req, res): Promise<void> => {
@@ -505,7 +584,8 @@ router.post("/users/:userId/role-bindings", async (req, res): Promise<void> => {
     res.status(409).json({ error: "Role binding already exists" });
     return;
   }
-  res.status(201).json({ ...binding, roleCode: targetRole.code });
+  const [scopeTarget] = await resolveBindingScopeTargets([binding], database);
+  res.status(201).json({ ...binding, roleCode: targetRole.code, ...scopeTarget });
 });
 
 router.patch("/users/:userId/role-bindings/:bindingId", async (req, res): Promise<void> => {
@@ -584,7 +664,8 @@ router.patch("/users/:userId/role-bindings/:bindingId", async (req, res): Promis
   const [role] = await database.select({ code: rolesTable.code })
     .from(rolesTable)
     .where(eq(rolesTable.id, after.roleId));
-  res.json({ ...after, roleCode: role!.code });
+  const [scopeTarget] = await resolveBindingScopeTargets([after], database);
+  res.json({ ...after, roleCode: role!.code, ...scopeTarget });
 });
 
 router.delete("/users/:userId/role-bindings/:bindingId", async (req, res): Promise<void> => {
@@ -636,7 +717,8 @@ router.delete("/users/:userId/role-bindings/:bindingId", async (req, res): Promi
   const [role] = await database.select({ code: rolesTable.code })
     .from(rolesTable)
     .where(eq(rolesTable.id, after.roleId));
-  res.json({ ...after, roleCode: role!.code });
+  const [scopeTarget] = await resolveBindingScopeTargets([after], database);
+  res.json({ ...after, roleCode: role!.code, ...scopeTarget });
 });
 
 router.get("/me/permissions", async (req, res): Promise<void> => {
@@ -665,7 +747,7 @@ router.get("/me/scope", async (req, res): Promise<void> => {
     return;
   }
   const now = new Date();
-  res.json(await database.select({
+  const rows = await database.select({
     id: userRoleBindingsTable.id,
     userId: userRoleBindingsTable.userId,
     organizationId: userRoleBindingsTable.organizationId,
@@ -685,7 +767,9 @@ router.get("/me/scope", async (req, res): Promise<void> => {
       eq(userRoleBindingsTable.status, "ACTIVE"),
       or(isNull(userRoleBindingsTable.startsAt), lte(userRoleBindingsTable.startsAt, now)),
       or(isNull(userRoleBindingsTable.endsAt), gt(userRoleBindingsTable.endsAt, now)),
-    )));
+    ));
+  const scopeTargets = await resolveBindingScopeTargets(rows, database);
+  res.json(rows.map((row, index) => ({ ...row, ...scopeTargets[index]! })));
 });
 
 router.post("/authorization/check", async (req, res): Promise<void> => {

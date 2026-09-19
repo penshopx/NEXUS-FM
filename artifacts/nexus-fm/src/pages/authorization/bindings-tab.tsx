@@ -468,6 +468,11 @@ function BindingRow({ binding, userId, canManage, onEdit }: {
     : isSuspended
       ? `${bindingName} is suspended. It can be reactivated, edited, or permanently revoked.`
       : `${bindingName} is active. It can be suspended, edited, or permanently revoked.`;
+  const scopeTargetLabel = binding.scopeTargetStatus === 'RESOLVED'
+    ? binding.scopeTargetName
+    : binding.scopeTargetStatus === 'MISSING'
+      ? 'Missing or historical target'
+      : 'No named target';
 
   const revokeMutation = useRevokeUserRoleBinding();
   const updateMutation = useUpdateUserRoleBinding();
@@ -535,9 +540,16 @@ function BindingRow({ binding, userId, canManage, onEdit }: {
             {statusDescription}
           </span>
         </div>
-        <div className="text-sm font-mono text-muted-foreground flex gap-3 flex-wrap">
+        <div className="text-sm">
+          <span className="font-medium" data-testid={`display-scopename-${binding.id}`}>
+            {binding.scopeType}: {scopeTargetLabel}
+          </span>
+        </div>
+        <div className="text-xs font-mono text-muted-foreground flex gap-3 flex-wrap">
           <span data-testid={`display-roleid-${binding.id}`}>Role ID: {binding.roleId}</span>
-          <span data-testid={`display-scope-${binding.id}`}>Scope: {binding.scopeType} {binding.scopeId && `(${binding.scopeId})`}</span>
+          <span data-testid={`display-scope-${binding.id}`}>
+            Scope ID: {binding.scopeId ?? 'None'}
+          </span>
           <span data-testid={`display-org-${binding.id}`}>Org: {binding.organizationId}</span>
         </div>
         {(binding.startsAt || binding.endsAt) && (

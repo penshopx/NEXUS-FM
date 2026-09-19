@@ -1367,7 +1367,7 @@ components:
         slug: {type: string}
     UserRoleBinding:
       type: object
-      required: [id, userId, organizationId, roleId, roleCode, version, scopeType, status]
+      required: [id, userId, organizationId, roleId, roleCode, version, scopeType, scopeTargetName, scopeTargetStatus, status]
       properties:
         id: {type: string, format: uuid}
         userId: {type: string, format: uuid}
@@ -1377,6 +1377,10 @@ components:
         version: {type: string, format: uuid}
         scopeType: {$ref: "#/components/schemas/ScopeType"}
         scopeId: {type: string, format: uuid, nullable: true}
+        scopeTargetName: {type: string, nullable: true}
+        scopeTargetStatus:
+          type: string
+          enum: [RESOLVED, MISSING, NOT_APPLICABLE]
         status: {type: string, enum: [ACTIVE, SUSPENDED, EXPIRED]}
         startsAt: {type: string, format: date-time, nullable: true}
         endsAt: {type: string, format: date-time, nullable: true}

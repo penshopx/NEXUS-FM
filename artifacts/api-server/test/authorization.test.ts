@@ -836,6 +836,36 @@ test("authorization routes run through a real HTTP app with injected currentUser
       }),
     });
     assert.equal(duplicate.response.status, 409);
+    const [namedFacility] = await db.insert(facilitiesTable).values({
+      organizationId: target.organizationId,
+      name: "North Campus",
+      code: `NORTH-${randomUUID()}`,
+    }).returning();
+    const namedScopeBinding = await request(`/users/${target.userId}/role-bindings`, {
+      method: "POST",
+      body: JSON.stringify({
+        organizationId: target.organizationId,
+        roleId: manager.roleId,
+        scopeType: "FACILITY",
+        scopeId: namedFacility.id,
+      }),
+    });
+    assert.equal(namedScopeBinding.response.status, 201, JSON.stringify(namedScopeBinding.body));
+    assert.equal((namedScopeBinding.body as { scopeTargetName: string }).scopeTargetName, "North Campus");
+    assert.equal((namedScopeBinding.body as { scopeTargetStatus: string }).scopeTargetStatus, "RESOLVED");
+    const missingScopeId = randomUUID();
+    const missingScopeBinding = await request(`/users/${target.userId}/role-bindings`, {
+      method: "POST",
+      body: JSON.stringify({
+        organizationId: target.organizationId,
+        roleId: manager.roleId,
+        scopeType: "BUILDING",
+        scopeId: missingScopeId,
+      }),
+    });
+    assert.equal(missingScopeBinding.response.status, 201, JSON.stringify(missingScopeBinding.body));
+    assert.equal((missingScopeBinding.body as { scopeTargetName: null }).scopeTargetName, null);
+    assert.equal((missingScopeBinding.body as { scopeTargetStatus: string }).scopeTargetStatus, "MISSING");
     const listed = await request(`/users/${target.userId}/role-bindings`);
     assert.equal(listed.response.status, 200);
     const listedBindings = listed.body as Array<{ roleId: string; roleCode: string; organizationId: string }>;
@@ -844,6 +874,14 @@ test("authorization routes run through a real HTTP app with injected currentUser
     assert.ok(listedBindings.some((binding) =>
       binding.roleId === manager.roleId && binding.roleCode === "FACILITY_MANAGER"));
     assert.ok((listed.body as unknown[]).some((row) => (row as { id: string }).id === createdBindingId));
+    assert.ok((listed.body as Array<{ scopeId: string | null; scopeTargetName: string | null; scopeTargetStatus: string }>)
+      .some((row) => row.scopeId === namedFacility.id &&
+        row.scopeTargetName === "North Campus" &&
+        row.scopeTargetStatus === "RESOLVED"));
+    assert.ok((listed.body as Array<{ scopeId: string | null; scopeTargetName: string | null; scopeTargetStatus: string }>)
+      .some((row) => row.scopeId === missingScopeId &&
+        row.scopeTargetName === null &&
+        row.scopeTargetStatus === "MISSING"));
 
     const patched = await request(`/users/${target.userId}/role-bindings/${createdBindingId}`, {
       method: "PATCH",

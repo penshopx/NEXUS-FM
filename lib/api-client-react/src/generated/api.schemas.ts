@@ -335,6 +335,15 @@ export interface PlatformOrganizationSearchResult {
   slug: string;
 }
 
+export type UserRoleBindingScopeTargetStatus = typeof UserRoleBindingScopeTargetStatus[keyof typeof UserRoleBindingScopeTargetStatus];
+
+
+export const UserRoleBindingScopeTargetStatus = {
+  RESOLVED: 'RESOLVED',
+  MISSING: 'MISSING',
+  NOT_APPLICABLE: 'NOT_APPLICABLE',
+} as const;
+
 export type UserRoleBindingStatus = typeof UserRoleBindingStatus[keyof typeof UserRoleBindingStatus];
 
 
@@ -353,6 +362,8 @@ export interface UserRoleBinding {
   version: string;
   scopeType: ScopeType;
   scopeId?: string | null;
+  scopeTargetName: string | null;
+  scopeTargetStatus: UserRoleBindingScopeTargetStatus;
   status: UserRoleBindingStatus;
   startsAt?: string | null;
   endsAt?: string | null;

@@ -306,6 +306,8 @@ export const GetUserRoleBindingsResponseItem = zod.object({
   "version": zod.string().uuid(),
   "scopeType": zod.enum(['PLATFORM', 'ORGANIZATION', 'PORTFOLIO', 'FACILITY', 'BUILDING', 'SPACE', 'ASSET', 'ASSIGNED', 'TEAM', 'VENDOR_ASSIGNMENT', 'OWNED_REQUEST']),
   "scopeId": zod.string().uuid().nullish(),
+  "scopeTargetName": zod.string().nullable(),
+  "scopeTargetStatus": zod.enum(['RESOLVED', 'MISSING', 'NOT_APPLICABLE']),
   "status": zod.enum(['ACTIVE', 'SUSPENDED', 'EXPIRED']),
   "startsAt": zod.coerce.date().nullish(),
   "endsAt": zod.coerce.date().nullish()
@@ -338,6 +340,8 @@ export const CreateUserRoleBindingResponse = zod.object({
   "version": zod.string().uuid(),
   "scopeType": zod.enum(['PLATFORM', 'ORGANIZATION', 'PORTFOLIO', 'FACILITY', 'BUILDING', 'SPACE', 'ASSET', 'ASSIGNED', 'TEAM', 'VENDOR_ASSIGNMENT', 'OWNED_REQUEST']),
   "scopeId": zod.string().uuid().nullish(),
+  "scopeTargetName": zod.string().nullable(),
+  "scopeTargetStatus": zod.enum(['RESOLVED', 'MISSING', 'NOT_APPLICABLE']),
   "status": zod.enum(['ACTIVE', 'SUSPENDED', 'EXPIRED']),
   "startsAt": zod.coerce.date().nullish(),
   "endsAt": zod.coerce.date().nullish()
@@ -368,6 +372,8 @@ export const UpdateUserRoleBindingResponse = zod.object({
   "version": zod.string().uuid(),
   "scopeType": zod.enum(['PLATFORM', 'ORGANIZATION', 'PORTFOLIO', 'FACILITY', 'BUILDING', 'SPACE', 'ASSET', 'ASSIGNED', 'TEAM', 'VENDOR_ASSIGNMENT', 'OWNED_REQUEST']),
   "scopeId": zod.string().uuid().nullish(),
+  "scopeTargetName": zod.string().nullable(),
+  "scopeTargetStatus": zod.enum(['RESOLVED', 'MISSING', 'NOT_APPLICABLE']),
   "status": zod.enum(['ACTIVE', 'SUSPENDED', 'EXPIRED']),
   "startsAt": zod.coerce.date().nullish(),
   "endsAt": zod.coerce.date().nullish()
@@ -391,6 +397,8 @@ export const RevokeUserRoleBindingResponse = zod.object({
   "version": zod.string().uuid(),
   "scopeType": zod.enum(['PLATFORM', 'ORGANIZATION', 'PORTFOLIO', 'FACILITY', 'BUILDING', 'SPACE', 'ASSET', 'ASSIGNED', 'TEAM', 'VENDOR_ASSIGNMENT', 'OWNED_REQUEST']),
   "scopeId": zod.string().uuid().nullish(),
+  "scopeTargetName": zod.string().nullable(),
+  "scopeTargetStatus": zod.enum(['RESOLVED', 'MISSING', 'NOT_APPLICABLE']),
   "status": zod.enum(['ACTIVE', 'SUSPENDED', 'EXPIRED']),
   "startsAt": zod.coerce.date().nullish(),
   "endsAt": zod.coerce.date().nullish()
@@ -422,6 +430,8 @@ export const GetMyScopeResponseItem = zod.object({
   "version": zod.string().uuid(),
   "scopeType": zod.enum(['PLATFORM', 'ORGANIZATION', 'PORTFOLIO', 'FACILITY', 'BUILDING', 'SPACE', 'ASSET', 'ASSIGNED', 'TEAM', 'VENDOR_ASSIGNMENT', 'OWNED_REQUEST']),
   "scopeId": zod.string().uuid().nullish(),
+  "scopeTargetName": zod.string().nullable(),
+  "scopeTargetStatus": zod.enum(['RESOLVED', 'MISSING', 'NOT_APPLICABLE']),
   "status": zod.enum(['ACTIVE', 'SUSPENDED', 'EXPIRED']),
   "startsAt": zod.coerce.date().nullish(),
   "endsAt": zod.coerce.date().nullish()

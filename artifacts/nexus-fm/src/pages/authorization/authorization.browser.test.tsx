@@ -248,19 +248,38 @@ describe('authorization administration browser regressions', () => {
       isLoading: false,
     });
     api.bindings.mockReturnValue({
-      data: [{
-        id: 'view-only-binding',
-        userId: member.userId,
-        roleId: role.id,
-        roleCode: 'PLATFORM_ADMIN',
-        version: 'binding-version',
-        organizationId: 'org-1',
-        scopeType: 'ORGANIZATION',
-        scopeId: null,
-        status: 'ACTIVE',
-        startsAt: null,
-        endsAt: null,
-      }],
+      data: [
+        {
+          id: 'view-only-binding',
+          userId: member.userId,
+          roleId: role.id,
+          roleCode: 'PLATFORM_ADMIN',
+          version: 'binding-version',
+          organizationId: 'org-1',
+          scopeType: 'ORGANIZATION',
+          scopeId: null,
+          scopeTargetName: 'Organization One',
+          scopeTargetStatus: 'RESOLVED',
+          status: 'ACTIVE',
+          startsAt: null,
+          endsAt: null,
+        },
+        {
+          id: 'historical-binding',
+          userId: member.userId,
+          roleId: role.id,
+          roleCode: 'PLATFORM_ADMIN',
+          version: 'historical-binding-version',
+          organizationId: 'org-1',
+          scopeType: 'FACILITY',
+          scopeId: 'facility-deleted',
+          scopeTargetName: null,
+          scopeTargetStatus: 'MISSING',
+          status: 'EXPIRED',
+          startsAt: null,
+          endsAt: '2026-01-01T00:00:00.000Z',
+        },
+      ],
       isLoading: false,
     });
     renderPage();
@@ -277,6 +296,10 @@ describe('authorization administration browser regressions', () => {
 
     expect(screen.getByTestId('display-rolename-view-only-binding')).toHaveTextContent('PLATFORM_ADMIN');
     expect(screen.getByTestId('display-roleid-view-only-binding')).toHaveTextContent(role.id);
+    expect(screen.getByTestId('display-scopename-view-only-binding')).toHaveTextContent('ORGANIZATION: Organization One');
+    expect(screen.getByTestId('display-scope-view-only-binding')).toHaveTextContent('Scope ID: None');
+    expect(screen.getByTestId('display-scopename-historical-binding')).toHaveTextContent('FACILITY: Missing or historical target');
+    expect(screen.getByTestId('display-scope-historical-binding')).toHaveTextContent('Scope ID: facility-deleted');
     expect(api.listRoles).toHaveBeenCalledWith(expect.objectContaining({
       query: expect.objectContaining({ enabled: false }),
     }));
