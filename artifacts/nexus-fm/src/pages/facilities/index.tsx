@@ -18,6 +18,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useToast } from '@/hooks/use-toast';
 import { useDebounce } from '@/hooks/use-debounce';
 import { ApiErrorState } from '@/components/api-error-state';
+import { PortfolioImportDialog } from '@/components/registry/portfolio-import-dialog';
 
 export function FacilitiesPage() {
   const queryClient = useQueryClient();
@@ -43,6 +44,7 @@ export function FacilitiesPage() {
   const deleteFacility = useDeleteFacility();
   
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<RegistryRecord | null>(null);
   const [deletingItem, setDeletingItem] = useState<RegistryRecord | null>(null);
   
@@ -105,9 +107,23 @@ export function FacilitiesPage() {
         limit={limit}
         onPageChange={setPage}
         onCreate={data?.collectionCapabilities?.create ? () => setIsCreateOpen(true) : undefined}
+        onImport={data?.collectionCapabilities?.create ? () => setIsImportOpen(true) : undefined}
         onEdit={(item) => setEditingItem(item)}
         onDelete={(item) => setDeletingItem(item)}
         renderItemLink={(item) => `/app/facilities/${item.id}`}
+      />
+
+      <PortfolioImportDialog
+        open={isImportOpen}
+        onOpenChange={setIsImportOpen}
+        onImported={(imported) => {
+          toast({
+            title: 'Portfolio imported successfully',
+            description: `${imported} ${imported === 1 ? 'record was' : 'records were'} created.`,
+          });
+          setPage(1);
+          queryClient.invalidateQueries({ queryKey: getListFacilitiesQueryKey() });
+        }}
       />
       
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>

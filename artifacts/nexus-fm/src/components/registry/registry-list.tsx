@@ -1,5 +1,5 @@
 import { Link } from 'wouter';
-import { Search, Plus, Edit2, Trash2, ArrowRight } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, ArrowRight, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -17,6 +17,7 @@ interface RegistryListProps<T extends RegistryRecord> {
   limit: number;
   onPageChange: (p: number) => void;
   onCreate?: () => void;
+  onImport?: () => void;
   onEdit?: (item: T) => void;
   onDelete?: (item: T) => void;
   renderItemLink: (item: T) => string;
@@ -35,6 +36,7 @@ export function RegistryList<T extends RegistryRecord>({
   limit,
   onPageChange,
   onCreate,
+  onImport,
   onEdit,
   onDelete,
   renderItemLink,
@@ -60,12 +62,20 @@ export function RegistryList<T extends RegistryRecord>({
               data-testid={`input-search-${testIdPrefix}`}
             />
           </div>
-          {onCreate && (
-            <Button onClick={onCreate} data-testid={`button-create-${testIdPrefix}`}>
-              <Plus className="size-4 mr-2" />
-              Create
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {onImport && (
+              <Button variant="outline" onClick={onImport} data-testid={`button-import-${testIdPrefix}`}>
+                <Upload className="size-4 mr-2" />
+                Import CSV
+              </Button>
+            )}
+            {onCreate && (
+              <Button onClick={onCreate} data-testid={`button-create-${testIdPrefix}`}>
+                <Plus className="size-4 mr-2" />
+                Create
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
