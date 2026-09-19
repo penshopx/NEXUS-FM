@@ -56,6 +56,7 @@ import {
   parsePortfolioImport,
   portfolioImportHeaderLine,
   PORTFOLIO_IMPORT_MAX_ROWS,
+  RegistryExportAuthorizationError,
   listAuthorizedRegistryBatch,
   queryAuthorizedRegistryRows,
   resolveRegistryObject,
@@ -1749,6 +1750,113 @@ test("large registry portfolio keeps list, search, nested totals, and export que
     "registry export must use its organization/name/id pagination index",
   );
   assert.ok(exportPlan.executionTime < 250, "registry export query exceeded the 250ms plan budget");
+});
+
+test("registry export snapshot is stable across concurrent rename, insert, and delete", async () => {
+  const facilityId = randomUUID();
+  const actor = await makeFixture("FACILITY_MANAGER", "FACILITY", facilityId);
+  const [facility] = await db.insert(facilitiesTable).values({
+    id: facilityId,
+    organizationId: actor.organizationId,
+    name: "Snapshot Facility",
+  }).returning();
+  const [building] = await db.insert(buildingsTable).values({
+    organizationId: actor.organizationId,
+    facilityId: facility!.id,
+    name: "Snapshot Building",
+  }).returning();
+  const [space] = await db.insert(spacesTable).values({
+    organizationId: actor.organizationId,
+    facilityId: facility!.id,
+    buildingId: building!.id,
+    name: "Snapshot Space",
+  }).returning();
+  const rows = Array.from({ length: 501 }, (_, index) => ({
+    organizationId: actor.organizationId,
+    facilityId: facility!.id,
+    buildingId: building!.id,
+    spaceId: space!.id,
+    name: `Snapshot Asset ${String(index).padStart(3, "0")}`,
+  }));
+  const inserted = await db.insert(assetsTable).values(rows).returning();
+
+  await db.transaction(async (snapshot) => {
+    const first = await listAuthorizedRegistryBatch({
+      database: snapshot,
+      authorizationDatabase: db,
+      kind: "ASSET",
+      organizationId: actor.organizationId,
+      actorUserId: actor.userId,
+      limit: 500,
+    });
+    assert.equal(first.length, 500);
+
+    const lastOriginal = inserted.at(-1)!;
+    await Promise.all([
+      db.update(assetsTable).set({ name: "Snapshot Asset 000 Renamed" })
+        .where(eq(assetsTable.id, lastOriginal.id)),
+      db.delete(assetsTable).where(eq(assetsTable.id, inserted[250]!.id)),
+      db.insert(assetsTable).values({
+        organizationId: actor.organizationId,
+        facilityId: facility!.id,
+        buildingId: building!.id,
+        spaceId: space!.id,
+        name: "Snapshot Asset 999 Inserted",
+      }),
+    ]);
+
+    const boundary = first.at(-1)!;
+    const second = await listAuthorizedRegistryBatch({
+      database: snapshot,
+      authorizationDatabase: db,
+      kind: "ASSET",
+      organizationId: actor.organizationId,
+      actorUserId: actor.userId,
+      limit: 500,
+      after: { name: boundary.name, id: boundary.id },
+    });
+    const exported = [...first, ...second];
+    assert.equal(exported.length, 501);
+    assert.equal(new Set(exported.map((row) => row.id)).size, 501);
+    assert.equal(exported.some((row) => row.id === lastOriginal.id && row.name === lastOriginal.name), true);
+    assert.equal(exported.some((row) => row.name === "Snapshot Asset 999 Inserted"), false);
+  }, { isolationLevel: "repeatable read", accessMode: "read only" });
+});
+
+test("registry export checks current authorization between snapshot batches", async () => {
+  const facilityId = randomUUID();
+  const actor = await makeFixture("FACILITY_MANAGER", "FACILITY", facilityId);
+  await db.insert(facilitiesTable).values({
+    id: facilityId,
+    organizationId: actor.organizationId,
+    name: "Revocation Snapshot Facility",
+  });
+
+  await db.transaction(async (snapshot) => {
+    const first = await listAuthorizedRegistryBatch({
+      database: snapshot,
+      authorizationDatabase: db,
+      kind: "FACILITY",
+      organizationId: actor.organizationId,
+      actorUserId: actor.userId,
+      limit: 1,
+    });
+    assert.equal(first.length, 1);
+    await db.update(userRoleBindingsTable).set({ status: "SUSPENDED" })
+      .where(eq(userRoleBindingsTable.id, actor.bindingId));
+    await assert.rejects(
+      listAuthorizedRegistryBatch({
+        database: snapshot,
+        authorizationDatabase: db,
+        kind: "FACILITY",
+        organizationId: actor.organizationId,
+        actorUserId: actor.userId,
+        limit: 1,
+        after: { name: first[0]!.name, id: first[0]!.id },
+      }),
+      RegistryExportAuthorizationError,
+    );
+  }, { isolationLevel: "repeatable read", accessMode: "read only" });
 });
 
 test("mutation authorization linearizes against concurrent revocation and policy deny", async () => {

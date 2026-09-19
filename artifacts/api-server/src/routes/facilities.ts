@@ -21,6 +21,7 @@ import {
   PORTFOLIO_IMPORT_MAX_BYTES,
   queryAuthorizedRegistryRows,
   REGISTRY_KINDS,
+  RegistryExportAuthorizationError,
   registryCsvHeader,
   resolveRegistryObject,
   validatePortfolioImport,
@@ -403,30 +404,52 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
   async function exportRows(req: import("express").Request, res: import("express").Response, kind: RegistryKind) {
     const actor = await actorContext(req, res, resolveCurrentUser, database);
     if (!actor) return;
-    res.type("text/csv").set("Content-Disposition", `attachment; filename="${plural[kind]}.csv"`);
     const write = async (chunk: string) => {
       if (res.destroyed) throw new Error("CSV export client disconnected");
       if (!res.write(chunk)) await waitForCsvDrain(res);
     };
-    await write(registryCsvHeader);
-    const batchSize = 500;
-    let after: { name: string; id: string } | undefined;
-    for (;;) {
-      const rows = await listAuthorizedRegistryBatch({
-        database,
-        kind,
-        organizationId: actor.organizationId,
-        actorUserId: actor.user.id,
-        query: typeof req.query.q === "string" ? req.query.q : undefined,
-        limit: batchSize,
-        after,
-      });
-      for (const row of rows) await write(csvForRow(row));
-      if (rows.length < batchSize) break;
-      const last = rows.at(-1)!;
-      after = { name: last.name, id: last.id };
+    try {
+      await database.transaction(async (snapshot: any) => {
+        const batchSize = 500;
+        let after: { name: string; id: string } | undefined;
+        let headerWritten = false;
+        for (;;) {
+          const rows = await listAuthorizedRegistryBatch({
+            database: snapshot,
+            // Authorization is deliberately checked against current committed
+            // state before every snapshot batch. Revocation therefore stops a
+            // long export even though registry rows retain their start-time view.
+            authorizationDatabase: database,
+            kind,
+            organizationId: actor.organizationId,
+            actorUserId: actor.user.id,
+            query: typeof req.query.q === "string" ? req.query.q : undefined,
+            limit: batchSize,
+            after,
+          });
+          if (!headerWritten) {
+            res.type("text/csv").set("Content-Disposition", `attachment; filename="${plural[kind]}.csv"`);
+            await write(registryCsvHeader);
+            headerWritten = true;
+          }
+          for (const row of rows) await write(csvForRow(row));
+          if (rows.length < batchSize) break;
+          const last = rows.at(-1)!;
+          after = { name: last.name, id: last.id };
+        }
+      }, { isolationLevel: "repeatable read", accessMode: "read only" });
+      res.end();
+    } catch (error) {
+      if (error instanceof RegistryExportAuthorizationError) {
+        if (!res.headersSent) {
+          res.status(403).json({ error: "Authorization denied", reasonCode: "NO_APPLICABLE_GRANT" });
+        } else {
+          res.destroy(error);
+        }
+        return;
+      }
+      throw error;
     }
-    res.end();
   }
 
   async function create(req: import("express").Request, res: import("express").Response, kind: RegistryKind) {

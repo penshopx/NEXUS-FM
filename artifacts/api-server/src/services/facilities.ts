@@ -211,6 +211,7 @@ type RegistryParent = {
 
 type RegistryQuery = {
   database: Database;
+  authorizationDatabase?: Database;
   kind: RegistryKind;
   organizationId: string;
   actorUserId: string;
@@ -220,6 +221,13 @@ type RegistryQuery = {
   offset?: number;
   after?: { name: string; id: string };
 };
+
+export class RegistryExportAuthorizationError extends Error {
+  constructor() {
+    super("Registry export authorization is no longer valid");
+    this.name = "RegistryExportAuthorizationError";
+  }
+}
 
 function bindingColumn(table: any, kind: RegistryKind, scopeType: string) {
   if (scopeType === "FACILITY") return kind === "FACILITY" ? table.id : table.facilityId;
@@ -320,8 +328,14 @@ export async function queryAuthorizedRegistryRows(input: RegistryQuery) {
 
 export async function listAuthorizedRegistryBatch(input: RegistryQuery) {
   const table = registryTable(input.kind);
-  const authorizationPredicate = await registryAuthorizationPredicate(input, table);
-  if (!authorizationPredicate) return [] as RegistryRow[];
+  const authorizationPredicate = await registryAuthorizationPredicate({
+    ...input,
+    database: input.authorizationDatabase ?? input.database,
+  }, table);
+  if (!authorizationPredicate) {
+    if (input.authorizationDatabase) throw new RegistryExportAuthorizationError();
+    return [] as RegistryRow[];
+  }
   return input.database.select().from(table)
     .where(registryBasePredicate(input, table, authorizationPredicate))
     .orderBy(asc(table.name), asc(table.id))

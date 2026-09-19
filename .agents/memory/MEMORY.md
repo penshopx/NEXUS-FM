@@ -5,3 +5,4 @@
 - [Drizzle composite unique introspection](drizzle-null-unique.md) — keep the PostgreSQL introspection patch until upstream preserves key order and NULL semantics.
 - [Portfolio import bootstrap](portfolio-import-bootstrap.md) — organization-scoped facility creation may authorize descendants only within the same atomic import.
 - [Readable authorization identities](readable-authorization-identities.md) — access-review responses pair canonical labels with stable IDs without widening policy permissions.
+- [Long export consistency](long-export-consistency.md) — registry rows use a start-time snapshot while authorization is rechecked against current committed state between batches.
