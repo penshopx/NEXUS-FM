@@ -232,6 +232,60 @@ test("portfolio import commits the complete hierarchy and audits every mutation 
   }
 });
 
+test("portfolio import preview summarizes the hierarchy without registry or audit writes", async () => {
+  const manager = await makeFixture("FACILITY_MANAGER", "ORGANIZATION");
+  await db.insert(userContextsTable).values({
+    userId: manager.userId,
+    activeOrganizationId: manager.organizationId,
+  });
+  const app = express();
+  app.use(express.text({ type: "text/csv", limit: "2mb" }));
+  app.use(createFacilitiesRouter({
+    currentUser: async () => (await db.select().from(usersTable).where(eq(usersTable.id, manager.userId)))[0] ?? null,
+  }));
+  const server = createServer(app);
+  await new Promise<void>((resolve) => server.listen(0, resolve));
+  const address = server.address();
+  assert.ok(address && typeof address === "object");
+  const csv = portfolioImportHeaderLine
+    + "FACILITY,facility-preview,,,,,Preview Campus,FACILITY-PREVIEW,,ACTIVE\n"
+    + "BUILDING,building-preview,,,facility-preview,,Preview Building,BUILDING-PREVIEW,,ACTIVE\n"
+    + "SPACE,space-preview,,,building-preview,,Preview Space,SPACE-PREVIEW,,ACTIVE\n"
+    + "SYSTEM,system-preview,,,space-preview,,Preview System,SYSTEM-PREVIEW,,ACTIVE\n"
+    + "ASSET,asset-preview,,,space-preview,system-preview,Preview Asset,ASSET-PREVIEW,,ACTIVE\n";
+  try {
+    const auditsBefore = await db.select().from(authorizationAuditLogsTable).where(
+      eq(authorizationAuditLogsTable.actorUserId, manager.userId),
+    );
+    const response = await fetch(`http://127.0.0.1:${address.port}/facilities/import/validate`, {
+      method: "POST",
+      headers: { "content-type": "text/csv" },
+      body: csv,
+    });
+    const responseBody = await response.text();
+    assert.equal(response.status, 200, responseBody);
+    assert.deepEqual(JSON.parse(responseBody), {
+      total: 5,
+      facilities: 1,
+      buildings: 1,
+      spaces: 1,
+      systems: 1,
+      assets: 1,
+    });
+    const [facility] = await db.select().from(facilitiesTable).where(and(
+      eq(facilitiesTable.organizationId, manager.organizationId),
+      eq(facilitiesTable.code, "FACILITY-PREVIEW"),
+    ));
+    assert.equal(facility, undefined);
+    const auditsAfter = await db.select().from(authorizationAuditLogsTable).where(
+      eq(authorizationAuditLogsTable.actorUserId, manager.userId),
+    );
+    assert.equal(auditsAfter.length, auditsBefore.length);
+  } finally {
+    server.close();
+  }
+});
+
 test("portfolio import rolls back earlier rows when a later binding permission is denied", async () => {
   const manager = await makeFixture("FACILITY_MANAGER", "ORGANIZATION");
   const [allowedFacility] = await db.insert(facilitiesTable).values({

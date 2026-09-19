@@ -552,14 +552,41 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
       sendImportErrors(res, [{ row: 1, error: `CSV exceeds the ${PORTFOLIO_IMPORT_MAX_BYTES}-byte limit` }]);
       return;
     }
-    const importId = randomUUID();
     try {
       const outcome = await database.transaction(async (tx: any) => {
         // Duplicate checks and writes must observe prior imports for this
         // organization. The transaction-scoped lock is acquired before any
         // validation reads and is released automatically on commit/rollback.
         await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${actor.organizationId}))`);
-        const validation = await validatePortfolioImport(tx, text, actor.organizationId);
+        return processPortfolioImport(tx, text, actor, String(req.id), true);
+      });
+      if ("validation" in outcome && outcome.validation) {
+        sendImportErrors(res, outcome.validation.errors);
+        return;
+      }
+      res.status(201).json({ imported: outcome.imported, importId: outcome.importId });
+    } catch (error) {
+      if (error instanceof PortfolioImportAuthorizationError) {
+        res.status(403).json({
+          error: "Authorization denied",
+          reasonCode: error.reasonCode,
+          row: error.row,
+          kind: error.kind,
+        });
+        return;
+      }
+      throw error;
+    }
+  }
+
+  async function processPortfolioImport(
+    transaction: any,
+    text: string,
+    actor: { user: { id: string }; organizationId: string },
+    requestId: string,
+    commit: boolean,
+  ) {
+        const validation = await validatePortfolioImport(transaction, text, actor.organizationId);
         if (validation.errors.length) return { validation };
         const references = new Map<string, {
           id: string;
@@ -568,6 +595,9 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
         }>();
         const importedFacilityIds = new Set<string>();
         let createdCount = 0;
+        const summary: Record<RegistryKind, number> = {
+          FACILITY: 0, BUILDING: 0, SPACE: 0, SYSTEM: 0, ASSET: 0,
+        };
         for (const record of validation.records) {
           const parentKind = record.kind === "BUILDING" ? "FACILITY"
             : record.kind === "SPACE" ? "BUILDING"
@@ -582,7 +612,7 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
             if (inFileParent) {
               parentContext = inFileParent.context;
             } else {
-              const parent = await resolveRegistryObject(tx, parentKind, record.parentRef, actor.organizationId);
+              const parent = await resolveRegistryObject(transaction, parentKind, record.parentRef, actor.organizationId);
               if (!parent.found) throw new Error("Validated ancestor changed before import");
               parentContext = parent.value.verifiedContext;
             }
@@ -596,7 +626,7 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
                 throw new Error("Validated system ancestry changed before import");
               }
             } else {
-              const system = await resolveRegistryObject(tx, "SYSTEM", record.systemRef, actor.organizationId);
+              const system = await resolveRegistryObject(transaction, "SYSTEM", record.systemRef, actor.organizationId);
               if (!system.found || system.value.verifiedContext.spaceId !== parentContext.spaceId) {
                 throw new Error("Validated system ancestry changed before import");
               }
@@ -628,14 +658,15 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
               ...(record.kind === "ASSET" ? { assetId: id, ...(systemId ? { systemId } : {}) } : {}),
             };
           const decision = await authorize({
-            database: tx,
+            database: transaction,
             actorUserId: actor.user.id,
             organizationId: actor.organizationId,
             permission: `${record.kind}.CREATE`,
             resourceType: record.kind,
             resourceId: id,
             verifiedContext,
-            requestId: String(req.id),
+            requestId,
+            auditDecision: commit,
             allowImportedFacilityDescendantBootstrap:
               record.kind !== "FACILITY" &&
               typeof verifiedContext.facilityId === "string" &&
@@ -644,18 +675,20 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
           if (!decision.allowed) {
             throw new PortfolioImportAuthorizationError(decision.reasonCode, record.kind, record.rowNumber);
           }
-          const created = await insertRegistryRow(tx, record.kind, values);
+          const created = commit ? await insertRegistryRow(transaction, record.kind, values) : { id };
           if (!created) throw new Error(`Failed to create ${record.kind} row`);
-          await tx.insert(authorizationAuditLogsTable).values({
-            actorUserId: actor.user.id,
-            organizationId: actor.organizationId,
-            action: "CREATE",
-            resource: record.kind,
-            resourceId: created.id,
-            decision: "ALLOW",
-            reasonCode: "ALLOWED",
-            requestId: String(req.id),
-          });
+          if (commit) {
+            await transaction.insert(authorizationAuditLogsTable).values({
+              actorUserId: actor.user.id,
+              organizationId: actor.organizationId,
+              action: "CREATE",
+              resource: record.kind,
+              resourceId: created.id,
+              decision: "ALLOW",
+              reasonCode: "ALLOWED",
+              requestId,
+            });
+          }
           references.set(`${record.kind}:${record.clientRef.toLowerCase()}`, {
             id: created.id,
             kind: record.kind,
@@ -665,8 +698,20 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
           });
           if (record.kind === "FACILITY") importedFacilityIds.add(created.id);
           createdCount += 1;
+          summary[record.kind] += 1;
         }
-        await tx.insert(authorizationAuditLogsTable).values({
+        if (!commit) {
+          return {
+            total: createdCount,
+            facilities: summary.FACILITY,
+            buildings: summary.BUILDING,
+            spaces: summary.SPACE,
+            systems: summary.SYSTEM,
+            assets: summary.ASSET,
+          };
+        }
+        const importId = randomUUID();
+        await transaction.insert(authorizationAuditLogsTable).values({
           actorUserId: actor.user.id,
           organizationId: actor.organizationId,
           action: "IMPORT",
@@ -674,16 +719,33 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
           resourceId: importId,
           decision: "ALLOW",
           reasonCode: "ALLOWED",
-          requestId: String(req.id),
+          requestId,
           afterState: { rows: createdCount },
         });
         return { imported: createdCount, importId };
-      });
+  }
+
+  async function validatePortfolio(req: import("express").Request, res: import("express").Response) {
+    const actor = await actorContext(req, res, resolveCurrentUser, database);
+    if (!actor) return;
+    const text = typeof req.body === "string"
+      ? req.body
+      : Buffer.isBuffer(req.body) ? req.body.toString("utf8") : null;
+    if (text === null) {
+      sendImportErrors(res, [{ row: 1, error: "Request body must be text/csv" }]);
+      return;
+    }
+    if (Buffer.byteLength(text, "utf8") > PORTFOLIO_IMPORT_MAX_BYTES) {
+      sendImportErrors(res, [{ row: 1, error: `CSV exceeds the ${PORTFOLIO_IMPORT_MAX_BYTES}-byte limit` }]);
+      return;
+    }
+    try {
+      const outcome = await processPortfolioImport(database, text, actor, String(req.id), false);
       if ("validation" in outcome && outcome.validation) {
         sendImportErrors(res, outcome.validation.errors);
         return;
       }
-      res.status(201).json({ imported: outcome.imported, importId: outcome.importId });
+      res.json(outcome);
     } catch (error) {
       if (error instanceof PortfolioImportAuthorizationError) {
         res.status(403).json({
@@ -821,6 +883,7 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
       .send(portfolioImportHeaderLine);
   });
   router.post("/facilities/import", (req, res) => importPortfolio(req, res));
+  router.post("/facilities/import/validate", (req, res) => validatePortfolio(req, res));
 
   for (const kind of REGISTRY_KINDS) {
     const path = `/${plural[kind]}`;

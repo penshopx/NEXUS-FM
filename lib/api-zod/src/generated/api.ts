@@ -533,6 +533,33 @@ export const ImportFacilityPortfolioResponse = zod.object({
 
 
 /**
+ * Uses the same parsing, hierarchy, duplicate, and authorization rules as commit. No registry or audit mutation records are written.
+ * @summary Validate and preview a facility portfolio CSV without writing records
+ */
+
+export const validateFacilityPortfolioImportResponseFacilitiesMin = 0;
+
+export const validateFacilityPortfolioImportResponseBuildingsMin = 0;
+
+export const validateFacilityPortfolioImportResponseSpacesMin = 0;
+
+export const validateFacilityPortfolioImportResponseSystemsMin = 0;
+
+export const validateFacilityPortfolioImportResponseAssetsMin = 0;
+
+
+
+export const ValidateFacilityPortfolioImportResponse = zod.object({
+  "total": zod.number().int().min(1),
+  "facilities": zod.number().int().min(validateFacilityPortfolioImportResponseFacilitiesMin),
+  "buildings": zod.number().int().min(validateFacilityPortfolioImportResponseBuildingsMin),
+  "spaces": zod.number().int().min(validateFacilityPortfolioImportResponseSpacesMin),
+  "systems": zod.number().int().min(validateFacilityPortfolioImportResponseSystemsMin),
+  "assets": zod.number().int().min(validateFacilityPortfolioImportResponseAssetsMin)
+})
+
+
+/**
  * @summary Search facilities in the active organization
  */
 export const SearchFacilitiesQueryParams = zod.object({

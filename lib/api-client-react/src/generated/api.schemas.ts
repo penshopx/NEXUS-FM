@@ -38,6 +38,21 @@ export interface PortfolioImportResult {
   importId: string;
 }
 
+export interface PortfolioImportPreview {
+  /** @minimum 1 */
+  total: number;
+  /** @minimum 0 */
+  facilities: number;
+  /** @minimum 0 */
+  buildings: number;
+  /** @minimum 0 */
+  spaces: number;
+  /** @minimum 0 */
+  systems: number;
+  /** @minimum 0 */
+  assets: number;
+}
+
 export type BuildingInput = RegistryInput & {
   facilityId: string;
 };

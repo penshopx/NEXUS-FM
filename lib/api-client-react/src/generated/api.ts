@@ -51,6 +51,7 @@ import type {
   OrganizationMemberSearchPage,
   OrganizationSelection,
   Permission,
+  PortfolioImportPreview,
   PortfolioImportResult,
   PreconditionRequiredResponse,
   RegistryInput,
@@ -1901,6 +1902,95 @@ export const useImportFacilityPortfolio = <TError = ErrorType<string | Unauthori
         TContext
       > => {
       return useMutation(getImportFacilityPortfolioMutationOptions(options));
+    }
+
+export const getValidateFacilityPortfolioImportUrl = () => {
+
+
+
+
+  return `/api/facilities/import/validate`
+}
+
+/**
+ * Uses the same parsing, hierarchy, duplicate, and authorization rules as commit. No registry or audit mutation records are written.
+ * @summary Validate and preview a facility portfolio CSV without writing records
+ */
+export const validateFacilityPortfolioImport = async (validateFacilityPortfolioImportBody: Blob, options?: Parameters<typeof customFetch>[1]): Promise<PortfolioImportPreview> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<PortfolioImportPreview>(getValidateFacilityPortfolioImportUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'text/csv', ...getHeaders(options?.headers) },
+    body: validateFacilityPortfolioImportBody
+  }
+);}
+
+
+
+
+
+export const getValidateFacilityPortfolioImportMutationKey = () => ['validateFacilityPortfolioImport'] as const;
+
+export const getValidateFacilityPortfolioImportMutationOptions = <TError = ErrorType<string | UnauthorizedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof validateFacilityPortfolioImport>>, TError,ValidateFacilityPortfolioImportMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof validateFacilityPortfolioImport>>, TError,ValidateFacilityPortfolioImportMutationVariables, TContext> => {
+
+const mutationKey = getValidateFacilityPortfolioImportMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof validateFacilityPortfolioImport>>, ValidateFacilityPortfolioImportMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  validateFacilityPortfolioImport(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ValidateFacilityPortfolioImportMutationResult = NonNullable<Awaited<ReturnType<typeof validateFacilityPortfolioImport>>>
+    export type ValidateFacilityPortfolioImportMutationBody = BodyType<Blob>
+    export type ValidateFacilityPortfolioImportMutationError = ErrorType<string | UnauthorizedResponse | ForbiddenResponse>
+    export type ValidateFacilityPortfolioImportMutationVariables = {data: BodyType<Blob>}
+
+    /**
+ * @summary Validate and preview a facility portfolio CSV without writing records
+ */
+export const useValidateFacilityPortfolioImport = <TError = ErrorType<string | UnauthorizedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof validateFacilityPortfolioImport>>, TError,ValidateFacilityPortfolioImportMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof validateFacilityPortfolioImport>>,
+        TError,
+        ValidateFacilityPortfolioImportMutationVariables,
+        TContext
+      > => {
+      return useMutation(getValidateFacilityPortfolioImportMutationOptions(options));
     }
 
 export const getSearchFacilitiesUrl = (params: SearchFacilitiesParams,) => {

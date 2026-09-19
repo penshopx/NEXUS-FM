@@ -1,9 +1,11 @@
 import { useRef, useState } from 'react';
-import { Download, FileWarning, Upload } from 'lucide-react';
+import { CheckCircle2, Download, FileWarning, Upload } from 'lucide-react';
 import {
   downloadFacilityPortfolioImportTemplate,
   useImportFacilityPortfolio,
+  useValidateFacilityPortfolioImport,
 } from '@workspace/api-client-react';
+import type { PortfolioImportPreview } from '@workspace/api-client-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
@@ -81,17 +83,21 @@ export function PortfolioImportDialog({
   const [file, setFile] = useState<File | null>(null);
   const [failure, setFailure] = useState<ImportFailure | null>(null);
   const [isDownloadingTemplate, setIsDownloadingTemplate] = useState(false);
+  const [preview, setPreview] = useState<PortfolioImportPreview | null>(null);
   const importPortfolio = useImportFacilityPortfolio();
+  const validatePortfolio = useValidateFacilityPortfolioImport();
 
   const reset = () => {
     setFile(null);
     setFailure(null);
+    setPreview(null);
     importPortfolio.reset();
+    validatePortfolio.reset();
     if (inputRef.current) inputRef.current.value = '';
   };
 
   const handleOpenChange = (nextOpen: boolean) => {
-    if (!nextOpen && !importPortfolio.isPending) reset();
+    if (!nextOpen && !importPortfolio.isPending && !validatePortfolio.isPending) reset();
     onOpenChange(nextOpen);
   };
 
@@ -108,7 +114,7 @@ export function PortfolioImportDialog({
     }
   };
 
-  const handleImport = () => {
+  const handleValidate = () => {
     if (!file) return;
     if (file.size > MAX_IMPORT_BYTES) {
       setFailure({ message: 'This CSV is larger than the 2 MB upload limit. Split it into smaller files and try again.' });
@@ -116,21 +122,33 @@ export function PortfolioImportDialog({
     }
 
     setFailure(null);
-    importPortfolio.mutate(
+    validatePortfolio.mutate(
       { data: file },
       {
-        onSuccess: (result) => {
-          onImported(result.imported);
-          handleOpenChange(false);
-        },
+        onSuccess: setPreview,
         onError: (error) => setFailure(describeImportFailure(error)),
       },
     );
   };
 
+  const handleImport = () => {
+    if (!file || !preview) return;
+    setFailure(null);
+    importPortfolio.mutate({ data: file }, {
+      onSuccess: (result) => {
+        onImported(result.imported);
+        handleOpenChange(false);
+      },
+      onError: (error) => {
+        setPreview(null);
+        setFailure(describeImportFailure(error));
+      },
+    });
+  };
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[560px]" data-testid="dialog-portfolio-import">
+      <DialogContent className="sm:max-w-[640px]" data-testid="dialog-portfolio-import">
         <DialogHeader>
           <DialogTitle>Import portfolio from CSV</DialogTitle>
           <DialogDescription>
@@ -165,10 +183,11 @@ export function PortfolioImportDialog({
               id="portfolio-import-file"
               type="file"
               accept=".csv,text/csv"
-              disabled={importPortfolio.isPending}
+               disabled={importPortfolio.isPending || validatePortfolio.isPending}
               onChange={(event) => {
                 setFile(event.target.files?.[0] ?? null);
                 setFailure(null);
+                 setPreview(null);
               }}
               data-testid="input-portfolio-import-file"
             />
@@ -179,6 +198,33 @@ export function PortfolioImportDialog({
             <p className="text-sm text-foreground" data-testid="text-selected-import-file">
               Selected: <span className="font-medium">{file.name}</span>
             </p>
+          )}
+
+          {preview && (
+            <Alert data-testid="alert-import-preview">
+              <CheckCircle2 className="size-4" />
+              <AlertTitle>Review changes before import</AlertTitle>
+              <AlertDescription>
+                <p className="mb-3">Validation passed. Committing will create {preview.total} records.</p>
+                <dl className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+                  {[
+                    ['Facilities', preview.facilities],
+                    ['Buildings', preview.buildings],
+                    ['Spaces', preview.spaces],
+                    ['Systems', preview.systems],
+                    ['Assets', preview.assets],
+                  ].map(([label, count]) => (
+                    <div key={label} className="rounded-md border bg-background p-2 text-center">
+                      <dt className="text-xs text-muted-foreground">{label}</dt>
+                      <dd className="text-lg font-semibold">{count}</dd>
+                    </div>
+                  ))}
+                </dl>
+                <p className="mt-3 text-xs text-muted-foreground">
+                  The file will be validated again when you commit.
+                </p>
+              </AlertDescription>
+            </Alert>
           )}
 
           {failure && (
@@ -210,19 +256,25 @@ export function PortfolioImportDialog({
             type="button"
             variant="outline"
             onClick={() => handleOpenChange(false)}
-            disabled={importPortfolio.isPending}
+            disabled={importPortfolio.isPending || validatePortfolio.isPending}
             data-testid="button-cancel-portfolio-import"
           >
             Cancel
           </Button>
           <Button
             type="button"
-            onClick={handleImport}
-            disabled={!file || importPortfolio.isPending}
+            onClick={preview ? handleImport : handleValidate}
+            disabled={!file || importPortfolio.isPending || validatePortfolio.isPending}
             data-testid="button-submit-portfolio-import"
           >
             <Upload className="mr-2 size-4" />
-            {importPortfolio.isPending ? 'Importing...' : 'Import portfolio'}
+            {importPortfolio.isPending
+              ? 'Importing...'
+              : validatePortfolio.isPending
+                ? 'Validating...'
+                : preview
+                  ? 'Commit import'
+                  : 'Validate and review'}
           </Button>
         </DialogFooter>
       </DialogContent>

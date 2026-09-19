@@ -31,6 +31,8 @@ export type AuthorizationRequest = {
   /** Only populated by trusted server-side resource resolvers. */
   verifiedContext?: Record<string, unknown>;
   requestId?: string;
+  /** Trusted read-only checks can suppress decision auditing when no action is taken. */
+  auditDecision?: boolean;
   /** Trusted transaction connection used by mutation services. */
   database?: any;
   /**
@@ -210,7 +212,7 @@ function stringValue(context: Record<string, unknown>, ...keys: string[]) {
 async function auditDecision(request: AuthorizationRequest, decision: AuthorizationDecision) {
   // Only authorization-safe fields are persisted. Request bodies, credentials,
   // tokens and arbitrary client context are intentionally never recorded.
-  if (!request.actorUserId) return;
+  if (!request.actorUserId || request.auditDecision === false) return;
   await (request.database ?? db).insert(authorizationAuditLogsTable).values({
     actorUserId: request.actorUserId,
     organizationId: request.organizationId ?? null,

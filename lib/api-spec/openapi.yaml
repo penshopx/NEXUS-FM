@@ -468,6 +468,39 @@ paths:
           content:
             text/csv:
               schema: {type: string}
+  /facilities/import/validate:
+    post:
+      operationId: validateFacilityPortfolioImport
+      tags: [registry]
+      summary: Validate and preview a facility portfolio CSV without writing records
+      description: Uses the same parsing, hierarchy, duplicate, and authorization rules as commit. No registry or audit mutation records are written.
+      requestBody:
+        required: true
+        content:
+          text/csv:
+            schema:
+              type: string
+              format: binary
+              maxLength: 2097152
+      responses:
+        "200":
+          description: Valid portfolio import preview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortfolioImportPreview"
+        "400":
+          description: CSV validation failed; response is a downloadable error report
+          content:
+            text/csv:
+              schema: {type: string}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "413":
+          description: CSV exceeds the upload byte limit
+          content:
+            text/csv:
+              schema: {type: string}
   /facilities/search:
     get:
       operationId: searchFacilities
@@ -985,6 +1018,17 @@ components:
       properties:
         imported: {type: integer, minimum: 1}
         importId: {type: string, format: uuid}
+    PortfolioImportPreview:
+      type: object
+      additionalProperties: false
+      required: [total, facilities, buildings, spaces, systems, assets]
+      properties:
+        total: {type: integer, minimum: 1}
+        facilities: {type: integer, minimum: 0}
+        buildings: {type: integer, minimum: 0}
+        spaces: {type: integer, minimum: 0}
+        systems: {type: integer, minimum: 0}
+        assets: {type: integer, minimum: 0}
     BuildingInput:
       allOf:
         - $ref: "#/components/schemas/RegistryInput"
