@@ -266,6 +266,31 @@ export const SearchOrganizationMembersResponse = zod.object({
 
 
 /**
+ * Searches active organizations by name or slug. This directory is available only to administrators whose USER.VIEW permission has platform scope.
+ * @summary Search the platform organization directory
+ */
+export const searchPlatformOrganizationsQueryQueryMin = 2;
+export const searchPlatformOrganizationsQueryQueryMax = 100;
+
+export const searchPlatformOrganizationsQueryLimitDefault = 20;
+export const searchPlatformOrganizationsQueryLimitMax = 50;
+
+
+
+export const SearchPlatformOrganizationsQueryParams = zod.object({
+  "query": zod.coerce.string().min(searchPlatformOrganizationsQueryQueryMin).max(searchPlatformOrganizationsQueryQueryMax),
+  "limit": zod.coerce.number().int().min(1).max(searchPlatformOrganizationsQueryLimitMax).default(searchPlatformOrganizationsQueryLimitDefault)
+})
+
+export const SearchPlatformOrganizationsResponseItem = zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "slug": zod.string()
+})
+export const SearchPlatformOrganizationsResponse = zod.array(SearchPlatformOrganizationsResponseItem)
+
+
+/**
  * @summary Read a user's scoped role bindings
  */
 export const GetUserRoleBindingsParams = zod.object({

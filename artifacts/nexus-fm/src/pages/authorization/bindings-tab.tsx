@@ -8,8 +8,10 @@ import {
   useGetSession,
   useGetMyPermissions,
   useSearchOrganizationMembers,
+  useSearchPlatformOrganizations,
   UserRoleBinding,
   OrganizationMemberSearchResult,
+  PlatformOrganizationSearchResult,
   ScopeType,
   UserRoleBindingUpdateStatus,
   Role,
@@ -22,6 +24,7 @@ import {
   getGetUserRoleBindingsQueryKey,
   getGetAuthorizationAuditLogsQueryKey,
   getSearchOrganizationMembersQueryKey,
+  getSearchPlatformOrganizationsQueryKey,
   getListRolesQueryKey
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -35,8 +38,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Search, UserPlus, Trash2, Calendar, Edit2, Play, Pause, AlertTriangle, Mail, Building2, UserRound, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, UserPlus, Trash2, Calendar, Edit2, Play, Pause, AlertTriangle, Mail, Building2, UserRound, ChevronLeft, ChevronRight, Check, ChevronsUpDown, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -52,7 +57,10 @@ import {
 export function BindingsTab({ canManage }: { canManage: boolean }) {
   const [searchInput, setSearchInput] = useState('');
   const [submittedQuery, setSubmittedQuery] = useState('');
-  const [organizationInput, setOrganizationInput] = useState('');
+  const [organizationPickerOpen, setOrganizationPickerOpen] = useState(false);
+  const [organizationQuery, setOrganizationQuery] = useState('');
+  const [selectedOrganization, setSelectedOrganization] = useState<PlatformOrganizationSearchResult | null>(null);
+  const [submittedOrganization, setSubmittedOrganization] = useState<PlatformOrganizationSearchResult | null>(null);
   const [submittedOrganizationId, setSubmittedOrganizationId] = useState('');
   const [page, setPage] = useState(1);
   const [selectedMember, setSelectedMember] = useState<OrganizationMemberSearchResult | null>(null);
@@ -62,6 +70,15 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
       permission.effect === 'ALLOW' &&
       permission.scopeType === 'PLATFORM',
   ) ?? false;
+  const organizationSearch = useSearchPlatformOrganizations(
+    { query: organizationQuery, limit: 20 },
+    {
+      query: {
+        enabled: isPlatformAdmin && organizationQuery.trim().length >= 2,
+        queryKey: getSearchPlatformOrganizationsQueryKey({ query: organizationQuery, limit: 20 }),
+      },
+    },
+  );
   const searchParams = {
     query: submittedQuery,
     organizationId: submittedOrganizationId || undefined,
@@ -83,7 +100,8 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
     const query = searchInput.trim();
     if (query.length >= 2) {
       setSubmittedQuery(query);
-      setSubmittedOrganizationId(isPlatformAdmin ? organizationInput.trim() : '');
+      setSubmittedOrganizationId(isPlatformAdmin ? selectedOrganization?.id ?? '' : '');
+      setSubmittedOrganization(isPlatformAdmin ? selectedOrganization : null);
       setPage(1);
     }
   };
@@ -111,16 +129,86 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
             {isPlatformAdmin && (
               <div>
                 <label className="text-sm font-medium" htmlFor="member-organization-filter">
-                  Organization ID <span className="font-normal text-muted-foreground">(optional)</span>
+                  Organization <span className="font-normal text-muted-foreground">(optional)</span>
                 </label>
-                <Input
-                  id="member-organization-filter"
-                  className="mt-1"
-                  placeholder="Limit this search to one organization"
-                  value={organizationInput}
-                  onChange={(event) => setOrganizationInput(event.target.value)}
-                  data-testid="input-member-organization"
-                />
+                <div className="mt-1 flex gap-2">
+                  <Popover open={organizationPickerOpen} onOpenChange={setOrganizationPickerOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        id="member-organization-filter"
+                        type="button"
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={organizationPickerOpen}
+                        className="flex-1 justify-between font-normal"
+                        data-testid="button-member-organization"
+                      >
+                        {selectedOrganization ? (
+                          <span className="truncate">
+                            {selectedOrganization.name} <span className="text-muted-foreground">({selectedOrganization.slug})</span>
+                          </span>
+                        ) : 'All organizations'}
+                        <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                      <Command shouldFilter={false}>
+                        <CommandInput
+                          placeholder="Search by name or slug"
+                          value={organizationQuery}
+                          onValueChange={setOrganizationQuery}
+                          data-testid="input-member-organization"
+                        />
+                        <CommandList>
+                          {organizationQuery.trim().length < 2 ? (
+                            <div className="py-6 text-center text-sm text-muted-foreground">
+                              Enter at least 2 characters.
+                            </div>
+                          ) : organizationSearch.isFetching ? (
+                            <div className="py-6 text-center text-sm text-muted-foreground">Searching...</div>
+                          ) : (
+                            <>
+                              <CommandEmpty>No organizations found.</CommandEmpty>
+                              <CommandGroup>
+                                {organizationSearch.data?.map((organization) => (
+                                  <CommandItem
+                                    key={organization.id}
+                                    value={organization.id}
+                                    onSelect={() => {
+                                      setSelectedOrganization(organization);
+                                      setOrganizationPickerOpen(false);
+                                    }}
+                                    data-testid={`organization-option-${organization.id}`}
+                                  >
+                                    <Check className={selectedOrganization?.id === organization.id ? 'opacity-100' : 'opacity-0'} />
+                                    <span className="min-w-0">
+                                      <span className="block truncate">{organization.name}</span>
+                                      <span className="block truncate text-xs text-muted-foreground">{organization.slug}</span>
+                                    </span>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </>
+                          )}
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  {selectedOrganization && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      aria-label="Clear organization filter"
+                      onClick={() => {
+                        setSelectedOrganization(null);
+                        setOrganizationQuery('');
+                      }}
+                    >
+                      <X className="size-4" />
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
           </form>
@@ -186,7 +274,11 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
               <div className="p-3 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm">
                 <div className="text-muted-foreground" data-testid="member-search-page-summary">
                   Page {search.data.page} of {totalPages} · {search.data.total} results
-                  {submittedOrganizationId && <> · Organization <code>{submittedOrganizationId}</code></>}
+                   {submittedOrganization && (
+                     <> · Organization <strong className="font-medium text-foreground">{submittedOrganization.name}</strong>{' '}
+                       <span>({submittedOrganization.slug})</span>
+                     </>
+                   )}
                 </div>
                 <div className="flex gap-2">
                   <Button

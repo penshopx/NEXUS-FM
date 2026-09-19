@@ -2,6 +2,10 @@ import { Router, type IRouter } from "express";
 import { randomUUID } from "node:crypto";
 import { and, asc, count, desc, eq, gt, ilike, isNull, lte, or } from "drizzle-orm";
 import {
+  SearchPlatformOrganizationsQueryParams,
+  SearchPlatformOrganizationsResponse,
+} from "@workspace/api-zod";
+import {
   authorizationAuditLogsTable,
   canonicalRoleValues,
   db,
@@ -269,6 +273,43 @@ router.get("/audit-logs", async (req, res): Promise<void> => {
     .where(filters.length ? and(...filters) : undefined)
     .orderBy(desc(authorizationAuditLogsTable.createdAt), desc(authorizationAuditLogsTable.id));
   res.json(rows);
+});
+
+router.get("/organizations/search", async (req, res): Promise<void> => {
+  const admin = await requireAdmin(req, res, "USER.VIEW", resolveCurrentUser, database);
+  if (!admin) return;
+  if (admin.scopeType !== "PLATFORM") {
+    res.status(403).json({ error: "Platform organization directory access required" });
+    return;
+  }
+
+  const parsed = SearchPlatformOrganizationsQueryParams.safeParse(req.query);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const query = parsed.data.query.trim();
+  if (query.length < 2) {
+    res.status(400).json({ error: "query must contain at least 2 non-whitespace characters" });
+    return;
+  }
+  const rows = await database.select({
+    id: organizationsTable.id,
+    name: organizationsTable.name,
+    slug: organizationsTable.slug,
+  }).from(organizationsTable)
+    .where(and(
+      eq(organizationsTable.isActive, true),
+      or(
+        ilike(organizationsTable.name, `%${query}%`),
+        ilike(organizationsTable.slug, `%${query}%`),
+      ),
+    ))
+    .orderBy(asc(organizationsTable.name), asc(organizationsTable.slug), asc(organizationsTable.id))
+    .limit(parsed.data.limit ?? 20);
+
+  res.json(SearchPlatformOrganizationsResponse.parse(rows));
 });
 
 router.get("/users/search", async (req, res): Promise<void> => {

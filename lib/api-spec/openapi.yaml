@@ -277,6 +277,36 @@ paths:
         "400": {$ref: "#/components/responses/BadRequest"}
         "401": {$ref: "#/components/responses/Unauthorized"}
         "403": {$ref: "#/components/responses/Forbidden"}
+  /organizations/search:
+    get:
+      operationId: searchPlatformOrganizations
+      tags: [authorization]
+      summary: Search the platform organization directory
+      description: >-
+        Searches active organizations by name or slug. This directory is
+        available only to administrators whose USER.VIEW permission has
+        platform scope.
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema: {type: string, minLength: 2, maxLength: 100}
+        - name: limit
+          in: query
+          required: false
+          schema: {type: integer, minimum: 1, maximum: 50, default: 20}
+      responses:
+        "200":
+          description: Matching active organizations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PlatformOrganizationSearchResult"
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
   /users/{userId}/role-bindings:
     parameters:
       - {$ref: "#/components/parameters/UserId"}
@@ -1328,6 +1358,13 @@ components:
         page: {type: integer}
         limit: {type: integer}
         total: {type: integer}
+    PlatformOrganizationSearchResult:
+      type: object
+      required: [id, name, slug]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        slug: {type: string}
     UserRoleBinding:
       type: object
       required: [id, userId, organizationId, roleId, roleCode, version, scopeType, status]

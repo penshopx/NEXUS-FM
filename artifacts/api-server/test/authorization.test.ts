@@ -661,12 +661,31 @@ test("authorization routes run through a real HTTP app with injected currentUser
       (platformFilteredSearch.body as { items: Array<{ organizationId: string }> }).items.map((row) => row.organizationId),
       [target.organizationId],
     );
+    const [targetOrganization] = await db.select().from(organizationsTable)
+      .where(eq(organizationsTable.id, target.organizationId));
+    assert.ok(targetOrganization);
+    const organizationByName = await request(
+      `/organizations/search?query=${encodeURIComponent(targetOrganization.name.slice(0, 4))}`,
+    );
+    assert.equal(organizationByName.response.status, 200);
+    assert.ok((organizationByName.body as Array<{ id: string; name: string; slug: string }>)
+      .some((row) => row.id === target.organizationId && row.slug === targetOrganization.slug));
+    const organizationBySlug = await request(
+      `/organizations/search?query=${encodeURIComponent(targetOrganization.slug)}`,
+    );
+    assert.equal(organizationBySlug.response.status, 200);
+    assert.ok((organizationBySlug.body as Array<{ id: string }>)
+      .some((row) => row.id === target.organizationId));
+    const invalidOrganizationSearch = await request("/organizations/search?query=x");
+    assert.equal(invalidOrganizationSearch.response.status, 400);
     const platformEmptySecondPage = await request(
       `/users/search?query=${encodeURIComponent(targetUser.email)}&organizationId=${target.organizationId}&page=2&limit=1`,
     );
     assert.deepEqual((platformEmptySecondPage.body as { items: unknown[] }).items, []);
 
     actorId = manager.userId;
+    const forbiddenOrganizationDirectory = await request("/organizations/search?query=org");
+    assert.equal(forbiddenOrganizationDirectory.response.status, 403);
     const scopedOwnSearch = await request(
       `/users/search?query=${encodeURIComponent(managerUser.email)}&organizationId=${target.organizationId}`,
     );

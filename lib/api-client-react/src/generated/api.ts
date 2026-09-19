@@ -51,6 +51,7 @@ import type {
   OrganizationMemberSearchPage,
   OrganizationSelection,
   Permission,
+  PlatformOrganizationSearchResult,
   PortfolioImportPreview,
   PortfolioImportResult,
   PreconditionRequiredResponse,
@@ -64,6 +65,7 @@ import type {
   SearchBuildingsParams,
   SearchFacilitiesParams,
   SearchOrganizationMembersParams,
+  SearchPlatformOrganizationsParams,
   SearchSpacesParams,
   SearchSystemsParams,
   Space,
@@ -978,6 +980,91 @@ export function useSearchOrganizationMembers<TData = Awaited<ReturnType<typeof s
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getSearchOrganizationMembersQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSearchPlatformOrganizationsUrl = (params: SearchPlatformOrganizationsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/organizations/search?${stringifiedParams}` : `/api/organizations/search`
+}
+
+/**
+ * Searches active organizations by name or slug. This directory is available only to administrators whose USER.VIEW permission has platform scope.
+ * @summary Search the platform organization directory
+ */
+export const searchPlatformOrganizations = async (params: SearchPlatformOrganizationsParams, options?: Parameters<typeof customFetch>[1]): Promise<PlatformOrganizationSearchResult[]> => {
+
+  return customFetch<PlatformOrganizationSearchResult[]>(getSearchPlatformOrganizationsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getSearchPlatformOrganizationsQueryKey = (params?: SearchPlatformOrganizationsParams,) => {
+    return [
+    `/api/organizations/search`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getSearchPlatformOrganizationsQueryOptions = <TData = Awaited<ReturnType<typeof searchPlatformOrganizations>>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(params: SearchPlatformOrganizationsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof searchPlatformOrganizations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getSearchPlatformOrganizationsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof searchPlatformOrganizations>>> = ({ signal }) => searchPlatformOrganizations(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof searchPlatformOrganizations>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type SearchPlatformOrganizationsQueryResult = NonNullable<Awaited<ReturnType<typeof searchPlatformOrganizations>>>
+export type SearchPlatformOrganizationsQueryError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>
+
+
+/**
+ * @summary Search the platform organization directory
+ */
+
+export function useSearchPlatformOrganizations<TData = Awaited<ReturnType<typeof searchPlatformOrganizations>>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(
+ params: SearchPlatformOrganizationsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof searchPlatformOrganizations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getSearchPlatformOrganizationsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

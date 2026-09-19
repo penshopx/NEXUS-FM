@@ -329,6 +329,12 @@ export interface OrganizationMemberSearchPage {
   total: number;
 }
 
+export interface PlatformOrganizationSearchResult {
+  id: string;
+  name: string;
+  slug: string;
+}
+
 export type UserRoleBindingStatus = typeof UserRoleBindingStatus[keyof typeof UserRoleBindingStatus];
 
 
@@ -507,6 +513,19 @@ organizationId?: string;
  * @minimum 1
  */
 page?: PageParameter;
+/**
+ * @minimum 1
+ * @maximum 50
+ */
+limit?: number;
+};
+
+export type SearchPlatformOrganizationsParams = {
+/**
+ * @minLength 2
+ * @maxLength 100
+ */
+query: string;
 /**
  * @minimum 1
  * @maximum 50

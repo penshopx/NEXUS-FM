@@ -9,6 +9,7 @@ const api = vi.hoisted(() => ({
   rolePermissions: vi.fn(),
   updateRolePermissions: vi.fn(),
   searchMembers: vi.fn(),
+  searchOrganizations: vi.fn(),
   bindings: vi.fn(),
   createBinding: vi.fn(),
   updateBinding: vi.fn(),
@@ -36,6 +37,7 @@ vi.mock('@workspace/api-client-react', () => ({
   useGetRolePermissions: api.rolePermissions,
   useUpdateRolePermissions: api.updateRolePermissions,
   useSearchOrganizationMembers: api.searchMembers,
+  useSearchPlatformOrganizations: api.searchOrganizations,
   useGetUserRoleBindings: api.bindings,
   useCreateUserRoleBinding: api.createBinding,
   useUpdateUserRoleBinding: api.updateBinding,
@@ -47,6 +49,7 @@ vi.mock('@workspace/api-client-react', () => ({
   getGetMyPermissionsQueryKey: () => ['my-permissions'],
   getGetUserRoleBindingsQueryKey: (id: string) => ['bindings', id],
   getSearchOrganizationMembersQueryKey: (params: unknown) => ['members', params],
+  getSearchPlatformOrganizationsQueryKey: (params: unknown) => ['organizations', params],
   getListRolesQueryKey: () => ['roles'],
 }));
 
@@ -126,6 +129,11 @@ describe('authorization administration browser regressions', () => {
       isFetching: false,
       isError: false,
     });
+    api.searchOrganizations.mockReturnValue({
+      data: [{ id: 'org-2', name: 'Acme Facilities', slug: 'acme-facilities' }],
+      isFetching: false,
+      isError: false,
+    });
     api.bindings.mockReturnValue({ data: [], isLoading: false });
     api.createBinding.mockReturnValue(mutation());
     api.updateBinding.mockReturnValue(mutation());
@@ -147,6 +155,26 @@ describe('authorization administration browser regressions', () => {
     expect(screen.getByText('Find a member')).toBeVisible();
     await user.click(screen.getByTestId('tab-audit'));
     expect(screen.getByText(/Audit records are immutable/)).toBeVisible();
+  });
+
+  it('lets platform administrators choose and retain an organization by name', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(screen.getByTestId('tab-bindings'));
+    await user.click(screen.getByTestId('button-member-organization'));
+    await user.type(screen.getByTestId('input-member-organization'), 'Acme');
+    await user.click(await screen.findByTestId('organization-option-org-2'));
+    await user.type(screen.getByTestId('input-target-user'), 'Target');
+    await user.click(screen.getByTestId('button-search-user'));
+
+    expect(api.searchMembers).toHaveBeenLastCalledWith(
+      expect.objectContaining({ organizationId: 'org-2' }),
+      expect.anything(),
+    );
+    expect(screen.getByTestId('member-search-page-summary')).toHaveTextContent(
+      'Organization Acme Facilities (acme-facilities)',
+    );
   });
 
   it('renders the in-app 403 state when no administration permission is granted', async () => {
@@ -188,6 +216,11 @@ describe('authorization administration browser regressions', () => {
     renderPage();
 
     expect(screen.queryByTestId('tab-roles')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('button-member-organization')).not.toBeInTheDocument();
+    expect(api.searchOrganizations).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ query: expect.objectContaining({ enabled: false }) }),
+    );
     await user.type(screen.getByTestId('input-target-user'), 'Target');
     await user.click(screen.getByTestId('button-search-user'));
     await user.click(await screen.findByTestId('member-result-target-user-org-1'));
