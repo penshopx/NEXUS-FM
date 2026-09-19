@@ -5,6 +5,7 @@
   "compilerOptions": {
     "noEmit": true,
     "jsx": "preserve",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "resolveJsonModule": true,
     "allowImportingTsExtensions": true,
     "moduleResolution": "bundler",

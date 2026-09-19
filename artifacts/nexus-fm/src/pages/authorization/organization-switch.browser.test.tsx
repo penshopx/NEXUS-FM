@@ -110,10 +110,12 @@ vi.mock('@workspace/api-client-react', async () => {
       queryKey: actual.getGetRolePermissionsQueryKey(roleId),
       queryFn: async () => ({ policyVersion: `${activeOrganizationId}-policy`, permissions: [] }),
     }),
-    useSearchOrganizationMembers: (params: { query?: string }) => useQuery({
+    useSearchOrganizationMembers: (
+      params: Parameters<typeof actual.getSearchOrganizationMembersQueryKey>[0],
+    ) => useQuery({
       queryKey: actual.getSearchOrganizationMembersQueryKey(params),
       queryFn: async () => ({ items: tenant().members, page: 1, limit: 20, total: 1 }),
-      enabled: (params.query?.length ?? 0) >= 2,
+      enabled: (params?.query.length ?? 0) >= 2,
     }),
     useGetUserRoleBindings: (userId: string) => useQuery({
       queryKey: actual.getGetUserRoleBindingsQueryKey(userId),
@@ -125,7 +127,9 @@ vi.mock('@workspace/api-client-react', async () => {
         activeOrganization: { organization: { id: activeOrganizationId } },
       }),
     }),
-    useGetAuthorizationAuditLogs: (params?: unknown) => useQuery({
+    useGetAuthorizationAuditLogs: (
+      params: Parameters<typeof actual.getGetAuthorizationAuditLogsQueryKey>[0],
+    ) => useQuery({
       queryKey: actual.getGetAuthorizationAuditLogsQueryKey(params),
       queryFn: async () => tenant().audit,
     }),
