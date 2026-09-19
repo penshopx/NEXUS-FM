@@ -104,6 +104,7 @@ async function openBindingsForMember(user: ReturnType<typeof userEvent.setup>) {
 
 describe('authorization administration browser regressions', () => {
   beforeEach(() => {
+    window.history.replaceState(null, '', '/authorization');
     api.myPermissions.mockReturnValue({
       data: { organizationId: 'org-1', permissions: allPermissions },
       isLoading: false,
@@ -144,7 +145,10 @@ describe('authorization administration browser regressions', () => {
     api.auditLogs.mockReturnValue({ data: [], isLoading: false });
   });
 
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+    window.history.replaceState(null, '', '/authorization');
+  });
 
   it('lets an authorized administrator open every permitted tab', async () => {
     const user = userEvent.setup();
@@ -174,6 +178,52 @@ describe('authorization administration browser regressions', () => {
     );
     expect(screen.getByTestId('member-search-page-summary')).toHaveTextContent(
       'Organization Acme Facilities (acme-facilities)',
+    );
+    expect(window.location.search).toContain('query=Target');
+    expect(window.location.search).toContain('organizationId=org-2');
+  });
+
+  it('restores member search filters and pagination from the URL', async () => {
+    window.history.replaceState(
+      null,
+      '',
+      '/authorization?query=Target&organizationId=org-2&organizationName=Acme+Facilities&organizationSlug=acme-facilities&page=2',
+    );
+    api.searchMembers.mockReturnValue({
+      data: { items: [member], page: 2, limit: 20, total: 41 },
+      isFetching: false,
+      isError: false,
+    });
+
+    renderPage();
+
+    expect(await screen.findByTestId('tab-bindings')).toHaveAttribute('data-state', 'active');
+    expect(screen.getByTestId('input-target-user')).toHaveValue('Target');
+    expect(screen.getByTestId('button-member-organization')).toHaveTextContent('Acme Facilities');
+    expect(api.searchMembers).toHaveBeenLastCalledWith(
+      expect.objectContaining({ query: 'Target', organizationId: 'org-2', page: 2 }),
+      expect.anything(),
+    );
+  });
+
+  it('restores earlier search state through browser navigation', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(screen.getByTestId('tab-bindings'));
+    await user.type(screen.getByTestId('input-target-user'), 'First');
+    await user.click(screen.getByTestId('button-search-user'));
+    await user.clear(screen.getByTestId('input-target-user'));
+    await user.type(screen.getByTestId('input-target-user'), 'Second');
+    await user.click(screen.getByTestId('button-search-user'));
+
+    window.history.back();
+
+    await waitFor(() => expect(window.location.search).toContain('query=First'));
+    await waitFor(() => expect(screen.getByTestId('input-target-user')).toHaveValue('First'));
+    expect(api.searchMembers).toHaveBeenLastCalledWith(
+      expect.objectContaining({ query: 'First', page: 1 }),
+      expect.anything(),
     );
   });
 

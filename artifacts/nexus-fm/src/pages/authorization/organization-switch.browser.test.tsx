@@ -214,18 +214,21 @@ describe('organization switching authorization isolation', () => {
     expect(screen.queryByTestId('row-binding-admin-binding')).not.toBeInTheDocument();
     expect(screen.queryByTestId('row-audit-admin-audit')).not.toBeInTheDocument();
 
-    await user.type(screen.getByTestId('input-target-user'), 'member');
-    await user.click(screen.getByTestId('button-search-user'));
+    expect(screen.getByTestId('input-target-user')).toHaveValue('member');
     await user.click(await screen.findByTestId('member-result-viewer-member-org-viewer'));
     expect(await screen.findByTestId('row-binding-viewer-binding')).toBeVisible();
     expect(screen.queryByText('ADMIN_ORG_ROLE')).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Switch to admin organization' }));
 
-    await waitFor(() => expect(screen.getByTestId('tab-roles')).toBeVisible());
-    expect(await screen.findByTestId('role-select-ADMIN_ORG_ROLE')).toBeVisible();
-    expect(screen.queryByText('VIEWER_ORG_ROLE')).not.toBeInTheDocument();
+    expect(await screen.findByTestId('tab-bindings')).toHaveAttribute('data-state', 'active');
+    expect(screen.getByTestId('input-target-user')).toHaveValue('member');
     expect(screen.queryByTestId('member-result-viewer-member-org-viewer')).not.toBeInTheDocument();
     expect(screen.queryByTestId('row-binding-viewer-binding')).not.toBeInTheDocument();
+
+    await user.click(screen.getByTestId('tab-roles'));
+    await waitFor(() => expect(screen.getByTestId('tab-roles')).toHaveAttribute('data-state', 'active'));
+    expect(await screen.findByTestId('role-select-ADMIN_ORG_ROLE')).toBeVisible();
+    expect(screen.queryByText('VIEWER_ORG_ROLE')).not.toBeInTheDocument();
   });
 });

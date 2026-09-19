@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { AuthGate } from '@/components/auth-gate';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RolesTab } from './roles-tab';
@@ -7,9 +7,13 @@ import { AuditTab } from './audit-tab';
 import { ShieldCheck } from 'lucide-react';
 import { useGetMyPermissions } from '@workspace/api-client-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useSearchParams } from 'wouter';
 
 export function AuthorizationPage() {
   const { data: myPermissions, isLoading } = useGetMyPermissions();
+  const [searchParams] = useSearchParams();
+  const hasMemberSearch = (searchParams.get('query') ?? '').trim().length >= 2;
+  const shouldOpenInitialMemberSearch = useRef(hasMemberSearch);
   const [activeTab, setActiveTab] = useState<string | undefined>(undefined);
 
   const hasAll = (perms: string[]) => {
@@ -38,7 +42,10 @@ export function AuthorizationPage() {
       } else if (activeTab === 'audit' && !showAudit) {
         setActiveTab(showRoles ? 'roles' : showBindings ? 'bindings' : undefined);
       } else if (activeTab === undefined && !hasNoAccess) {
-        if (showRoles) setActiveTab('roles');
+        if (shouldOpenInitialMemberSearch.current && showBindings) {
+          shouldOpenInitialMemberSearch.current = false;
+          setActiveTab('bindings');
+        } else if (showRoles) setActiveTab('roles');
         else if (showBindings) setActiveTab('bindings');
         else if (showAudit) setActiveTab('audit');
       }

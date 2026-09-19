@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'wouter';
 import { 
   useGetUserRoleBindings,
   useCreateUserRoleBinding,
@@ -55,14 +56,22 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export function BindingsTab({ canManage }: { canManage: boolean }) {
-  const [searchInput, setSearchInput] = useState('');
-  const [submittedQuery, setSubmittedQuery] = useState('');
+  const [urlSearchParams, setUrlSearchParams] = useSearchParams();
+  const submittedQuery = (urlSearchParams.get('query') ?? '').trim();
+  const submittedOrganizationId = urlSearchParams.get('organizationId') ?? '';
+  const parsedPage = Number.parseInt(urlSearchParams.get('page') ?? '1', 10);
+  const page = Number.isSafeInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+  const urlOrganization = submittedOrganizationId
+    ? {
+        id: submittedOrganizationId,
+        name: urlSearchParams.get('organizationName') ?? submittedOrganizationId,
+        slug: urlSearchParams.get('organizationSlug') ?? submittedOrganizationId,
+      }
+    : null;
+  const [searchInput, setSearchInput] = useState(submittedQuery);
   const [organizationPickerOpen, setOrganizationPickerOpen] = useState(false);
   const [organizationQuery, setOrganizationQuery] = useState('');
-  const [selectedOrganization, setSelectedOrganization] = useState<PlatformOrganizationSearchResult | null>(null);
-  const [submittedOrganization, setSubmittedOrganization] = useState<PlatformOrganizationSearchResult | null>(null);
-  const [submittedOrganizationId, setSubmittedOrganizationId] = useState('');
-  const [page, setPage] = useState(1);
+  const [selectedOrganization, setSelectedOrganization] = useState<PlatformOrganizationSearchResult | null>(urlOrganization);
   const [selectedMember, setSelectedMember] = useState<OrganizationMemberSearchResult | null>(null);
   const { data: myPermissions } = useGetMyPermissions();
   const isPlatformAdmin = myPermissions?.permissions.some(
@@ -94,15 +103,47 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
       },
     },
   );
+
+  useEffect(() => {
+    setSearchInput(submittedQuery);
+    setSelectedOrganization(urlOrganization);
+    setSelectedMember(null);
+  }, [
+    submittedQuery,
+    submittedOrganizationId,
+    urlOrganization?.name,
+    urlOrganization?.slug,
+    page,
+  ]);
+
+  const updatePage = (nextPage: number) => {
+    setUrlSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      if (nextPage > 1) next.set('page', String(nextPage));
+      else next.delete('page');
+      return next;
+    });
+  };
   
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     const query = searchInput.trim();
     if (query.length >= 2) {
-      setSubmittedQuery(query);
-      setSubmittedOrganizationId(isPlatformAdmin ? selectedOrganization?.id ?? '' : '');
-      setSubmittedOrganization(isPlatformAdmin ? selectedOrganization : null);
-      setPage(1);
+      setUrlSearchParams((current) => {
+        const next = new URLSearchParams(current);
+        next.set('query', query);
+        next.delete('page');
+        if (isPlatformAdmin && selectedOrganization) {
+          next.set('organizationId', selectedOrganization.id);
+          next.set('organizationName', selectedOrganization.name);
+          next.set('organizationSlug', selectedOrganization.slug);
+        } else {
+          next.delete('organizationId');
+          next.delete('organizationName');
+          next.delete('organizationSlug');
+        }
+        return next;
+      });
     }
   };
 
@@ -274,9 +315,9 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
               <div className="p-3 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm">
                 <div className="text-muted-foreground" data-testid="member-search-page-summary">
                   Page {search.data.page} of {totalPages} · {search.data.total} results
-                   {submittedOrganization && (
-                     <> · Organization <strong className="font-medium text-foreground">{submittedOrganization.name}</strong>{' '}
-                       <span>({submittedOrganization.slug})</span>
+                    {urlOrganization && (
+                      <> · Organization <strong className="font-medium text-foreground">{urlOrganization.name}</strong>{' '}
+                        <span>({urlOrganization.slug})</span>
                      </>
                    )}
                 </div>
@@ -285,7 +326,7 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => setPage((current) => Math.max(1, current - 1))}
+                    onClick={() => updatePage(Math.max(1, page - 1))}
                     disabled={search.isFetching || page <= 1}
                     data-testid="button-member-previous-page"
                   >
@@ -295,7 +336,7 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => setPage((current) => current + 1)}
+                    onClick={() => updatePage(page + 1)}
                     disabled={search.isFetching || page >= totalPages}
                     data-testid="button-member-next-page"
                   >
