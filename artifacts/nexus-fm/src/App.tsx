@@ -144,8 +144,9 @@ function ClerkProviderWithRoutes() {
     >
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
-          <AuthStateSync />
-          <Routes />
+          <AuthStateSync>
+            <Routes />
+          </AuthStateSync>
           <Toaster />
         </TooltipProvider>
       </QueryClientProvider>
