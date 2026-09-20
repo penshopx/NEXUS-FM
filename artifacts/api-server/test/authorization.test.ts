@@ -5,7 +5,7 @@ import express from "express";
 import { createServer } from "node:http";
 import { setTimeout as delay } from "node:timers/promises";
 import { EventEmitter } from "node:events";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import {
   authorizationAuditLogsTable,
   assetsTable,
@@ -1331,6 +1331,52 @@ test("facility registry resolves trusted ancestors and enforces every route surf
     const pagedAssetsBody = JSON.parse(pagedAssets.text) as { items: unknown[]; total: number };
     assert.equal(pagedAssetsBody.items.length, 1);
     assert.equal(pagedAssetsBody.total, 502);
+    const firstCursorPage = await request("/assets?limit=2");
+    assert.equal(firstCursorPage.response.status, 200);
+    const firstCursorBody = JSON.parse(firstCursorPage.text) as {
+      items: Array<{ id: string }>;
+      total: number;
+      nextCursor: string | null;
+    };
+    assert.equal(firstCursorBody.items.length, 2);
+    assert.equal(firstCursorBody.total, 502);
+    assert.ok(firstCursorBody.nextCursor);
+    const secondCursorPage = await request(`/assets?limit=2&cursor=${encodeURIComponent(firstCursorBody.nextCursor)}`);
+    assert.equal(secondCursorPage.response.status, 200);
+    const secondCursorBody = JSON.parse(secondCursorPage.text) as {
+      items: Array<{ id: string }>;
+      total: number;
+      nextCursor: string | null;
+    };
+    assert.equal(secondCursorBody.items.length, 2);
+    assert.equal(secondCursorBody.total, 502);
+    assert.deepEqual(
+      new Set([...firstCursorBody.items, ...secondCursorBody.items].map((item) => item.id)).size,
+      4,
+    );
+    const searchedCursorPage = await request("/assets/search?q=Bulk&limit=2");
+    const searchedCursorBody = JSON.parse(searchedCursorPage.text) as { nextCursor: string | null };
+    assert.ok(searchedCursorBody.nextCursor);
+    const continuedSearch = await request(
+      `/assets/search?q=Bulk&limit=2&cursor=${encodeURIComponent(searchedCursorBody.nextCursor)}`,
+    );
+    assert.equal(continuedSearch.response.status, 200);
+    assert.equal((JSON.parse(continuedSearch.text) as { total: number }).total, 501);
+    const invalidCursor = await request("/assets?cursor=not-a-cursor");
+    assert.equal(invalidCursor.response.status, 400);
+    const nestedCursorPage = await request(`/spaces/${space.id}/assets?limit=2`);
+    assert.equal(nestedCursorPage.response.status, 200);
+    const nestedCursorBody = JSON.parse(nestedCursorPage.text) as {
+      total: number;
+      nextCursor: string | null;
+    };
+    assert.equal(nestedCursorBody.total, 502);
+    assert.ok(nestedCursorBody.nextCursor);
+    const continuedNestedPage = await request(
+      `/spaces/${space.id}/assets?limit=2&cursor=${encodeURIComponent(nestedCursorBody.nextCursor)}`,
+    );
+    assert.equal(continuedNestedPage.response.status, 200);
+    assert.equal((JSON.parse(continuedNestedPage.text) as { total: number }).total, 502);
     const batchedExport = await request("/assets/export");
     assert.equal(batchedExport.response.status, 200);
     assert.match(batchedExport.text, /Bulk Asset 500/);
@@ -1773,17 +1819,43 @@ test("large registry portfolio keeps list, search, nested totals, and export que
   }
   await pool.query("ANALYZE assets");
 
-  const startedAt = performance.now();
-  const list = await queryAuthorizedRegistryRows({
+  const earlyStartedAt = performance.now();
+  const early = await queryAuthorizedRegistryRows({
     database: db,
     kind: "ASSET",
     organizationId: actor.organizationId,
     actorUserId: actor.userId,
     limit: 25,
-    offset: 4_000,
   });
-  assert.equal(list.rows.length, 25);
-  assert.equal(list.total, 32_768);
+  const earlyDuration = performance.now() - earlyStartedAt;
+  assert.equal(early.rows.length, 25);
+  assert.equal(early.total, 32_768);
+  assert.equal(early.hasMore, true);
+
+  const [lateBoundary] = await db.select({ id: assetsTable.id, name: assetsTable.name })
+    .from(assetsTable)
+    .where(eq(assetsTable.organizationId, actor.organizationId))
+    .orderBy(asc(assetsTable.name), asc(assetsTable.id))
+    .limit(1)
+    .offset(30_999);
+  assert.ok(lateBoundary);
+  const lateStartedAt = performance.now();
+  const late = await queryAuthorizedRegistryRows({
+    database: db,
+    kind: "ASSET",
+    organizationId: actor.organizationId,
+    actorUserId: actor.userId,
+    limit: 25,
+    after: { name: lateBoundary.name, id: lateBoundary.id },
+  });
+  const lateDuration = performance.now() - lateStartedAt;
+  assert.equal(late.rows.length, 25);
+  assert.equal(late.total, 32_768);
+  assert.equal(late.hasMore, true);
+  assert.ok(
+    lateDuration < Math.max(earlyDuration * 20, 500),
+    `late cursor query (${lateDuration.toFixed(1)}ms) regressed against early query (${earlyDuration.toFixed(1)}ms)`,
+  );
 
   const search = await queryAuthorizedRegistryRows({
     database: db,
@@ -1827,7 +1899,7 @@ test("large registry portfolio keeps list, search, nested totals, and export que
     if (batch.length < 500) break;
   } while (after);
   assert.equal(exported, 32_768);
-  assert.ok(performance.now() - startedAt < 5_000, "large registry query set exceeded the 5s CI budget");
+  assert.ok(earlyDuration < 1_000, "early registry cursor query exceeded the 1s CI budget");
 
   type PlanNode = {
     "Node Type": string;
@@ -1866,19 +1938,37 @@ test("large registry portfolio keeps list, search, nested totals, and export que
   );
   assert.ok(nestedPlan.executionTime < 250, "nested registry query exceeded the 250ms plan budget");
 
-  const exportPlan = await explain(
+  const earlyCursorPlan = await explain(
+    `SELECT id, name FROM assets
+       WHERE organization_id = $1
+       ORDER BY name, id LIMIT 25`,
+    [actor.organizationId],
+  );
+  const lateCursorPlan = await explain(
     `SELECT id, name FROM assets
        WHERE organization_id = $1 AND (name > $2 OR (name = $2 AND id > $3))
-       ORDER BY name, id LIMIT 500`,
+       ORDER BY name, id LIMIT 25`,
     [actor.organizationId, "Asset 31-063", "00000000-0000-4000-8000-000000000000"],
   );
+  for (const plan of [earlyCursorPlan, lateCursorPlan]) {
+    assert.ok(
+      plan.nodes.some((node) =>
+        node["Relation Name"] === "assets" &&
+        node["Index Name"] === "assets_organization_name_id_idx"),
+      "registry cursor traversal must use its organization/name/id pagination index",
+    );
+  }
   assert.ok(
-    exportPlan.nodes.some((node) =>
+    lateCursorPlan.executionTime < Math.max(earlyCursorPlan.executionTime * 20, 50),
+    `late cursor plan (${lateCursorPlan.executionTime}ms) regressed against early cursor plan (${earlyCursorPlan.executionTime}ms)`,
+  );
+  assert.ok(
+    lateCursorPlan.nodes.some((node) =>
       node["Relation Name"] === "assets" &&
       node["Index Name"] === "assets_organization_name_id_idx"),
-    "registry export must use its organization/name/id pagination index",
+    "late registry cursor must use its pagination index",
   );
-  assert.ok(exportPlan.executionTime < 250, "registry export query exceeded the 250ms plan budget");
+  assert.ok(lateCursorPlan.executionTime < 250, "late registry cursor query exceeded the 250ms plan budget");
 
   const assertTrigramSearchPlan = async (search: string, expectedIndex: string) => {
     const searchPlan = await explain(

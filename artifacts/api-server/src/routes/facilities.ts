@@ -106,6 +106,28 @@ function parsePage(value: unknown, fallback: number, max: number) {
   return Number.isInteger(parsed) && parsed > 0 ? Math.min(parsed, max) : fallback;
 }
 
+const registryCursorSchema = z.object({
+  v: z.literal(1),
+  name: z.string().max(200),
+  id: z.string().uuid(),
+}).strict();
+
+type RegistryCursor = z.infer<typeof registryCursorSchema>;
+
+function encodeRegistryCursor(cursor: Omit<RegistryCursor, "v">) {
+  return Buffer.from(JSON.stringify({ v: 1, ...cursor }), "utf8").toString("base64url");
+}
+
+function parseRegistryCursor(value: unknown): RegistryCursor | undefined | null {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string" || value.length === 0 || value.length > 1_000) return null;
+  try {
+    return registryCursorSchema.parse(JSON.parse(Buffer.from(value, "base64url").toString("utf8")));
+  } catch {
+    return null;
+  }
+}
+
 async function actorContext(
   req: import("express").Request,
   res: import("express").Response,
@@ -237,6 +259,7 @@ async function authorizedRows(
   page: number,
   limit: number,
   parent?: { kind: "FACILITY" | "BUILDING" | "SPACE" | "SYSTEM"; id: string },
+  after?: { name: string; id: string },
 ) {
   const result = await queryAuthorizedRegistryRows({
     database,
@@ -246,7 +269,8 @@ async function authorizedRows(
     query,
     parent,
     limit,
-    offset: (page - 1) * limit,
+    offset: after ? undefined : (page - 1) * limit,
+    after,
   });
   const rows: AuthorizedRegistryRow[] = [];
   for (const candidate of result.rows) {
@@ -261,7 +285,12 @@ async function authorizedRows(
       capabilities,
     });
   }
-  return { rows, total: result.total };
+  const last = result.rows.at(-1);
+  return {
+    rows,
+    total: result.total,
+    nextCursor: result.hasMore && last ? encodeRegistryCursor({ name: last.name, id: last.id }) : null,
+  };
 }
 
 async function insertRegistryRow(database: any, kind: RegistryKind, values: Record<string, unknown>) {
@@ -390,13 +419,20 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
       : { create: false };
     const page = parsePage(req.query.page, 1, 1_000_000);
     const limit = parsePage(req.query.limit, 50, 100);
+    const cursor = parseRegistryCursor(req.query.cursor);
+    if (cursor === null) {
+      res.status(400).json({ error: "Invalid registry cursor" });
+      return;
+    }
     const result = await authorizedRows(database, kind, actor.organizationId, actor.user.id,
-      typeof req.query.q === "string" ? req.query.q : undefined, String(req.id), page, limit);
+      typeof req.query.q === "string" ? req.query.q : undefined, String(req.id), page, limit,
+      undefined, cursor);
     res.json({
       items: result.rows,
       page,
       limit,
       total: result.total,
+      nextCursor: result.nextCursor,
       collectionCapabilities,
     });
   }
@@ -946,6 +982,11 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
       }
       const page = parsePage(req.query.page, 1, 1_000_000);
       const limit = parsePage(req.query.limit, 50, 100);
+      const cursor = parseRegistryCursor(req.query.cursor);
+      if (cursor === null) {
+        res.status(400).json({ error: "Invalid registry cursor" });
+        return;
+      }
       const result = await authorizedRows(
         database,
         childKind,
@@ -956,6 +997,7 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
         page,
         limit,
         { kind: parentKind as "FACILITY" | "BUILDING" | "SPACE" | "SYSTEM", id: req.params.parentId },
+        cursor,
       );
       const collectionCapabilities = await collectionCreateCapability(
         database,
@@ -971,6 +1013,7 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
         page,
         limit,
         total: result.total,
+        nextCursor: result.nextCursor,
         collectionCapabilities,
       });
     });

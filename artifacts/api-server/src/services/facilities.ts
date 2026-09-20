@@ -305,6 +305,11 @@ function registryBasePredicate(input: RegistryQuery, table: any, authorizationPr
     authorizationPredicate,
     parentPredicate(table, input.kind, input.parent),
     search ? or(ilike(table.name, `%${search}%`), ilike(table.code, `%${search}%`)) : undefined,
+  );
+}
+
+function registryCursorPredicate(input: RegistryQuery, table: any) {
+  return and(
     input.after ? or(
       gt(table.name, input.after.name),
       and(eq(table.name, input.after.name), gt(table.id, input.after.id)),
@@ -315,15 +320,18 @@ function registryBasePredicate(input: RegistryQuery, table: any, authorizationPr
 export async function queryAuthorizedRegistryRows(input: RegistryQuery) {
   const table = registryTable(input.kind);
   const authorizationPredicate = await registryAuthorizationPredicate(input, table);
-  if (!authorizationPredicate) return { rows: [] as RegistryRow[], total: 0 };
-  const where = registryBasePredicate(input, table, authorizationPredicate);
-  const rowsQuery = input.database.select().from(table).where(where)
+  if (!authorizationPredicate) return { rows: [] as RegistryRow[], total: 0, hasMore: false };
+  const baseWhere = registryBasePredicate(input, table, authorizationPredicate);
+  const rowsWhere = and(baseWhere, registryCursorPredicate(input, table));
+  const rowsQuery = input.database.select().from(table).where(rowsWhere)
     .orderBy(asc(table.name), asc(table.id));
-  const rows = input.limit === undefined
+  const requestedRows = input.limit === undefined
     ? await rowsQuery
-    : await rowsQuery.limit(input.limit).offset(input.offset ?? 0);
-  const [total] = await input.database.select({ value: count() }).from(table).where(where);
-  return { rows: rows as RegistryRow[], total: Number(total?.value ?? 0) };
+    : await rowsQuery.limit(input.limit + 1).offset(input.after ? 0 : input.offset ?? 0);
+  const hasMore = input.limit !== undefined && requestedRows.length > input.limit;
+  const rows = hasMore ? requestedRows.slice(0, input.limit) : requestedRows;
+  const [total] = await input.database.select({ value: count() }).from(table).where(baseWhere);
+  return { rows: rows as RegistryRow[], total: Number(total?.value ?? 0), hasMore };
 }
 
 export async function listAuthorizedRegistryBatch(input: RegistryQuery) {
@@ -337,7 +345,10 @@ export async function listAuthorizedRegistryBatch(input: RegistryQuery) {
     return [] as RegistryRow[];
   }
   return input.database.select().from(table)
-    .where(registryBasePredicate(input, table, authorizationPredicate))
+    .where(and(
+      registryBasePredicate(input, table, authorizationPredicate),
+      registryCursorPredicate(input, table),
+    ))
     .orderBy(asc(table.name), asc(table.id))
     .limit(input.limit ?? 500) as Promise<RegistryRow[]>;
 }
