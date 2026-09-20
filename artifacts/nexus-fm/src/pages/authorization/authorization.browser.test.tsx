@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import axe, { type Result } from 'axe-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const api = vi.hoisted(() => ({
@@ -102,6 +103,27 @@ async function openBindingsForMember(user: ReturnType<typeof userEvent.setup>) {
   await user.click(await screen.findByTestId('member-result-target-user-org-1'));
 }
 
+async function expectNoHighImpactAccessibilityViolations() {
+  const { violations } = await axe.run(document.body, {
+    resultTypes: ['violations'],
+  });
+  const highImpactViolations = violations.filter(
+    (violation) => violation.impact === 'serious' || violation.impact === 'critical',
+  );
+
+  expect(
+    highImpactViolations,
+    highImpactViolations.map(formatAccessibilityViolation).join('\n\n'),
+  ).toEqual([]);
+}
+
+function formatAccessibilityViolation(violation: Result) {
+  const affectedNodes = violation.nodes
+    .map((node) => `  ${node.target.join(' ')}: ${node.failureSummary}`)
+    .join('\n');
+  return `${violation.id} (${violation.impact}): ${violation.help}\n${affectedNodes}`;
+}
+
 describe('authorization administration browser regressions', () => {
   beforeEach(() => {
     HTMLElement.prototype.hasPointerCapture ??= () => false;
@@ -163,6 +185,75 @@ describe('authorization administration browser regressions', () => {
     expect(screen.getByText('Find a member')).toBeVisible();
     await user.click(screen.getByTestId('tab-audit'));
     expect(screen.getByText(/Audit records are immutable/)).toBeVisible();
+  });
+
+  it('has no serious or critical accessibility violations on administration tabs and dialogs', async () => {
+    const user = userEvent.setup();
+    api.bindings.mockReturnValue({
+      data: [{
+        id: 'active',
+        userId: member.userId,
+        roleId: role.id,
+        roleCode: role.code,
+        version: 'active-version',
+        organizationId: 'org-1',
+        scopeType: 'ORGANIZATION',
+        scopeId: null,
+        scopeTargetName: 'Nexus Operations',
+        scopeTargetStatus: 'RESOLVED',
+        status: 'ACTIVE',
+        startsAt: null,
+        endsAt: null,
+      }],
+      isLoading: false,
+    });
+    api.auditLogs.mockReturnValue({
+      data: [{
+        id: 'audit-1',
+        actorUserId: 'admin-1',
+        organizationId: 'org-1',
+        action: 'ROLE_REVOKED',
+        resource: 'USER_ROLE_BINDING',
+        resourceId: 'active',
+        decision: 'ALLOW',
+        reasonCode: 'AUTHORIZED',
+        scopeEvaluated: 'ORGANIZATION',
+        requestId: 'request-1',
+        beforeState: '{"status":"ACTIVE"}',
+        afterState: '{"status":"REVOKED"}',
+        createdAt: '2026-09-12T12:00:00.000Z',
+      }],
+      isLoading: false,
+    });
+    renderPage();
+
+    await screen.findByTestId('tab-roles');
+    await expectNoHighImpactAccessibilityViolations();
+
+    await openBindingsForMember(user);
+    await expectNoHighImpactAccessibilityViolations();
+
+    await user.click(screen.getByTestId('button-new-binding'));
+    expect(screen.getByRole('dialog', { name: 'Create Role Binding' })).toBeVisible();
+    await expectNoHighImpactAccessibilityViolations();
+    await user.keyboard('{Escape}');
+
+    await user.click(screen.getByTestId('button-edit-binding-active'));
+    expect(screen.getByRole('dialog', { name: /Edit Role Binding/i })).toBeVisible();
+    await expectNoHighImpactAccessibilityViolations();
+    await user.keyboard('{Escape}');
+
+    await user.click(screen.getByTestId('button-revoke-binding-active'));
+    expect(screen.getByRole('alertdialog', { name: 'Revoke Binding Permanently?' })).toBeVisible();
+    await expectNoHighImpactAccessibilityViolations();
+    await user.keyboard('{Escape}');
+
+    await user.click(screen.getByTestId('tab-audit'));
+    await expectNoHighImpactAccessibilityViolations();
+
+    await user.click(await screen.findByTestId('button-audit-details-audit-1'));
+    expect(screen.getByRole('dialog', { name: 'Audit Record Details' })).toBeVisible();
+    await expectNoHighImpactAccessibilityViolations();
   });
 
   it('lets platform administrators choose and retain an organization by name', async () => {

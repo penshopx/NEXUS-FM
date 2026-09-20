@@ -115,7 +115,14 @@ export function AuditTab() {
                     </Badge>
                   </div>
                   <div className="col-span-1 text-right">
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setSelectedLog(log)} data-testid={`button-audit-details-${log.id}`}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={() => setSelectedLog(log)}
+                      aria-label={`View details for ${log.action} audit record`}
+                      data-testid={`button-audit-details-${log.id}`}
+                    >
                       <Eye className="size-4" />
                     </Button>
                   </div>
