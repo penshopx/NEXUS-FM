@@ -1757,7 +1757,7 @@ test("large registry portfolio keeps list, search, nested totals, and export que
   assert.equal(spaces.length, 64);
 
   const assetRows = spaces.flatMap((space, spaceIndex) =>
-    Array.from({ length: 128 }, (_, assetIndex) => ({
+    Array.from({ length: 512 }, (_, assetIndex) => ({
       organizationId: actor.organizationId,
       facilityId: facility.id,
       buildingId: building.id,
@@ -1783,7 +1783,7 @@ test("large registry portfolio keeps list, search, nested totals, and export que
     offset: 4_000,
   });
   assert.equal(list.rows.length, 25);
-  assert.equal(list.total, 8_192);
+  assert.equal(list.total, 32_768);
 
   const search = await queryAuthorizedRegistryRows({
     database: db,
@@ -1808,7 +1808,7 @@ test("large registry portfolio keeps list, search, nested totals, and export que
     offset: 51,
   });
   assert.equal(nested.rows.length, 17);
-  assert.equal(nested.total, 128);
+  assert.equal(nested.total, 512);
 
   let exported = 0;
   let after: { name: string; id: string } | undefined;
@@ -1826,7 +1826,7 @@ test("large registry portfolio keeps list, search, nested totals, and export que
     after = last ? { name: last.name, id: last.id } : undefined;
     if (batch.length < 500) break;
   } while (after);
-  assert.equal(exported, 8_192);
+  assert.equal(exported, 32_768);
   assert.ok(performance.now() - startedAt < 5_000, "large registry query set exceeded the 5s CI budget");
 
   type PlanNode = {
@@ -1879,6 +1879,27 @@ test("large registry portfolio keeps list, search, nested totals, and export que
     "registry export must use its organization/name/id pagination index",
   );
   assert.ok(exportPlan.executionTime < 250, "registry export query exceeded the 250ms plan budget");
+
+  const assertTrigramSearchPlan = async (search: string, expectedIndex: string) => {
+    const searchPlan = await explain(
+      `SELECT count(*) FROM assets
+         WHERE organization_id = $1 AND (name ILIKE $2 OR code ILIKE $2)`,
+      [actor.organizationId, `%${search}%`],
+    );
+    assert.ok(
+      searchPlan.nodes.some((node) => node["Index Name"] === expectedIndex),
+      `registry search must use ${expectedIndex}`,
+    );
+    assert.ok(
+      !searchPlan.nodes.some((node) =>
+        node["Relation Name"] === "assets" &&
+        node["Node Type"] === "Seq Scan"),
+      "registry search must not scan every asset",
+    );
+    assert.ok(searchPlan.executionTime < 250, "registry search query exceeded the 250ms plan budget");
+  };
+  await assertTrigramSearchPlan("Needle", "assets_name_trgm_idx");
+  await assertTrigramSearchPlan("PERF-31-073", "assets_code_trgm_idx");
 });
 
 test("registry export snapshot is stable across concurrent rename, insert, and delete", async () => {

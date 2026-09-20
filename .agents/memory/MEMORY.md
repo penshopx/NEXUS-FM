@@ -8,3 +8,4 @@
 - [Long export consistency](long-export-consistency.md) — registry rows use a start-time snapshot while authorization is rechecked against current committed state between batches.
 - [Read-only authorization previews](read-only-authorization-previews.md) — previews run real permission checks but suppress decision audits until an action is committed.
 - [Member search URL state](member-search-url-state.md) — bookmarked member filters persist across organization switches; server authorization always constrains results.
+- [PostgreSQL bitmap plan assertions](postgres-bitmap-plan-assertions.md) — GIN bitmap index nodes identify the index but may omit the relation name.
