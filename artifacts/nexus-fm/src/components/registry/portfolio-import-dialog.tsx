@@ -24,8 +24,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { trackEvent } from '@/lib/analytics';
 
 const MAX_IMPORT_BYTES = 2 * 1024 * 1024;
+const MAX_ANALYTICS_COUNT = 100_000;
 
 type ImportFailure = {
   message: string;
@@ -190,6 +192,18 @@ function getErrorReport(error: unknown) {
   return typeof data === 'string' && data.trim() ? data : undefined;
 }
 
+function boundedCount(count: number) {
+  return Math.min(Math.max(Math.trunc(count), 0), MAX_ANALYTICS_COUNT);
+}
+
+function validationFailureReason(error: unknown) {
+  const status = getErrorStatus(error);
+  if (status === 400) return 'invalid_csv';
+  if (status === 403) return 'forbidden';
+  if (status === 413) return 'file_too_large';
+  return 'request_failed';
+}
+
 function describeImportFailure(error: unknown): ImportFailure {
   const status = getErrorStatus(error);
   const report = getErrorReport(error);
@@ -237,8 +251,17 @@ export function PortfolioImportDialog({
     if (inputRef.current) inputRef.current.value = '';
   };
 
-  const handleOpenChange = (nextOpen: boolean) => {
-    if (!nextOpen && !importPortfolio.isPending && !validatePortfolio.isPending) reset();
+  const handleOpenChange = (nextOpen: boolean, trackCancellation = true) => {
+    if (!nextOpen && !importPortfolio.isPending && !validatePortfolio.isPending) {
+      if (open && trackCancellation) {
+        trackEvent('portfolio_import', {
+          stage: 'cancelled',
+          workflow_stage: preview ? 'review' : file ? 'validation' : 'selection',
+          record_count: boundedCount(preview?.total ?? 0),
+        });
+      }
+      reset();
+    }
     onOpenChange(nextOpen);
   };
 
@@ -259,6 +282,11 @@ export function PortfolioImportDialog({
     if (!file) return;
     if (file.size > MAX_IMPORT_BYTES) {
       setFailure({ message: 'This CSV is larger than the 2 MB upload limit. Split it into smaller files and try again.' });
+      trackEvent('portfolio_import', {
+        stage: 'validation_failure',
+        workflow_stage: 'validation',
+        reason: 'file_too_large',
+      });
       return;
     }
 
@@ -266,8 +294,23 @@ export function PortfolioImportDialog({
     validatePortfolio.mutate(
       { data: file },
       {
-        onSuccess: setPreview,
-        onError: (error) => setFailure(describeImportFailure(error)),
+        onSuccess: (result) => {
+          setPreview(result);
+          trackEvent('portfolio_import', {
+            stage: 'validation_success',
+            workflow_stage: 'review',
+            record_count: boundedCount(result.total),
+            facility_count: boundedCount(result.facilities),
+          });
+        },
+        onError: (error) => {
+          setFailure(describeImportFailure(error));
+          trackEvent('portfolio_import', {
+            stage: 'validation_failure',
+            workflow_stage: 'validation',
+            reason: validationFailureReason(error),
+          });
+        },
       },
     );
   };
@@ -277,8 +320,13 @@ export function PortfolioImportDialog({
     setFailure(null);
     importPortfolio.mutate({ data: file }, {
       onSuccess: (result) => {
+        trackEvent('portfolio_import', {
+          stage: 'commit_success',
+          workflow_stage: 'commit',
+          record_count: boundedCount(result.imported),
+        });
         onImported(result.imported);
-        handleOpenChange(false);
+        handleOpenChange(false, false);
       },
       onError: (error) => {
         setPreview(null);

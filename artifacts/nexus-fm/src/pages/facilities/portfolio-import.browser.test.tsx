@@ -13,6 +13,10 @@ const api = vi.hoisted(() => ({
   downloadTemplate: vi.fn(),
 }));
 
+const analytics = vi.hoisted(() => ({
+  track: vi.fn(),
+}));
+
 vi.mock('@workspace/api-client-react', async () => {
   const actual = await vi.importActual<typeof import('@workspace/api-client-react')>(
     '@workspace/api-client-react',
@@ -30,6 +34,7 @@ vi.mock('@workspace/api-client-react', async () => {
       params ? ['/api/facilities', params] : ['/api/facilities'],
   };
 });
+
 
 import { Toaster } from '@/components/ui/toaster';
 import { FacilitiesPage } from './index';
@@ -72,6 +77,8 @@ async function selectCsv(user: ReturnType<typeof userEvent.setup>, contents = 'f
 
 describe('facility portfolio import browser regressions', () => {
   beforeEach(() => {
+    analytics.track.mockReset();
+    window.umami = { track: analytics.track };
     api.listFacilities.mockReturnValue({
       data: {
         items: [],
@@ -102,6 +109,7 @@ describe('facility portfolio import browser regressions', () => {
   });
 
   afterEach(() => {
+    delete window.umami;
     cleanup();
     vi.restoreAllMocks();
   });
@@ -164,6 +172,12 @@ describe('facility portfolio import browser regressions', () => {
     expect(await screen.findByTestId('alert-import-preview')).toHaveTextContent(
       'Validation passed. Committing will create 8 records.',
     );
+    expect(analytics.track).toHaveBeenCalledWith('portfolio_import', {
+      stage: 'validation_success',
+      workflow_stage: 'review',
+      record_count: 8,
+      facility_count: 2,
+    });
     expect(screen.getByText('North Campus')).toBeVisible();
     expect(screen.getByText('South Campus')).toBeVisible();
     expect(screen.queryByText('Main Building')).not.toBeInTheDocument();
@@ -194,6 +208,15 @@ describe('facility portfolio import browser regressions', () => {
     expect(screen.getByText('5 records were created.')).toBeVisible();
     expect(screen.queryByTestId('dialog-portfolio-import')).not.toBeInTheDocument();
     expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ['/api/facilities'] });
+    expect(analytics.track).toHaveBeenCalledWith('portfolio_import', {
+      stage: 'commit_success',
+      workflow_stage: 'commit',
+      record_count: 5,
+    });
+    expect(analytics.track).not.toHaveBeenCalledWith(
+      'portfolio_import',
+      expect.objectContaining({ stage: 'cancelled' }),
+    );
   });
 
   it('offers the generated validation report for download', async () => {
@@ -213,6 +236,11 @@ describe('facility portfolio import browser regressions', () => {
     expect(await screen.findByTestId('text-import-failure')).toHaveTextContent(
       'The CSV contains validation errors.',
     );
+    expect(analytics.track).toHaveBeenCalledWith('portfolio_import', {
+      stage: 'validation_failure',
+      workflow_stage: 'validation',
+      reason: 'invalid_csv',
+    });
     await user.click(screen.getByTestId('button-download-validation-report'));
 
     const downloadedBlob = vi.mocked(URL.createObjectURL).mock.calls[0]?.[0] as Blob;
@@ -262,5 +290,64 @@ describe('facility portfolio import browser regressions', () => {
 
     expect(screen.queryByTestId('button-import-registry')).not.toBeInTheDocument();
     expect(screen.queryByTestId('dialog-portfolio-import')).not.toBeInTheDocument();
+  });
+
+  it('records review abandonment without exposing the selected filename', async () => {
+    const user = userEvent.setup();
+    api.validateImport.mockReturnValue(idleMutation(
+      vi.fn((_variables: unknown, options: MutationOptions<unknown>) => {
+        options.onSuccess?.({
+          total: 250_000,
+          facilities: 1,
+          buildings: 0,
+          spaces: 0,
+          systems: 0,
+          assets: 0,
+          facilityGroups: [],
+        });
+      }),
+    ));
+    renderPage();
+
+    await openImportDialog(user);
+    await selectCsv(user, 'facility_name\nPrivate Campus');
+    await user.click(screen.getByTestId('button-submit-portfolio-import'));
+    await screen.findByTestId('alert-import-preview');
+    await user.click(screen.getByTestId('button-cancel-portfolio-import'));
+
+    expect(analytics.track).toHaveBeenCalledWith('portfolio_import', {
+      stage: 'cancelled',
+      workflow_stage: 'review',
+      record_count: 100_000,
+    });
+    expect(JSON.stringify(analytics.track.mock.calls)).not.toContain('portfolio.csv');
+    expect(JSON.stringify(analytics.track.mock.calls)).not.toContain('Private Campus');
+  });
+
+  it('keeps importing when analytics throws', async () => {
+    const user = userEvent.setup();
+    analytics.track.mockImplementation(() => {
+      throw new Error('analytics unavailable');
+    });
+    api.validateImport.mockReturnValue(idleMutation(
+      vi.fn((_variables: unknown, options: MutationOptions<unknown>) => {
+        options.onSuccess?.({
+          total: 1,
+          facilities: 1,
+          buildings: 0,
+          spaces: 0,
+          systems: 0,
+          assets: 0,
+          facilityGroups: [],
+        });
+      }),
+    ));
+    renderPage();
+
+    await openImportDialog(user);
+    await selectCsv(user);
+    await user.click(screen.getByTestId('button-submit-portfolio-import'));
+
+    expect(await screen.findByTestId('alert-import-preview')).toBeVisible();
   });
 });
