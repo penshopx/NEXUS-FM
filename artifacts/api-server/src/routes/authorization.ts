@@ -66,6 +66,10 @@ type ScopeTarget = {
   scopeTargetStatus: "RESOLVED" | "MISSING" | "NOT_APPLICABLE";
 };
 
+function escapeLikePattern(value: string): string {
+  return value.replace(/[\\%_]/g, "\\$&");
+}
+
 function csvCell(value: unknown) {
   if (value === null || value === undefined) return "";
   let text = value instanceof Date ? value.toISOString() : String(value);
@@ -437,12 +441,15 @@ router.get("/organizations/search", async (req, res): Promise<void> => {
     res.status(400).json({ error: "query must contain at least 2 non-whitespace characters" });
     return;
   }
-  const exactPattern = query;
-  const prefixPattern = `${query}%`;
-  const containsPattern = `%${query}%`;
+  const escapedQuery = escapeLikePattern(query);
+  const exactPattern = escapedQuery;
+  const prefixPattern = `${escapedQuery}%`;
+  const containsPattern = `%${escapedQuery}%`;
   const matchRank = sql<number>`case
-    when ${organizationsTable.name} ilike ${exactPattern} or ${organizationsTable.slug} ilike ${exactPattern} then 0
-    when ${organizationsTable.name} ilike ${prefixPattern} or ${organizationsTable.slug} ilike ${prefixPattern} then 1
+    when ${organizationsTable.name} ilike ${exactPattern} escape ${"\\"}
+      or ${organizationsTable.slug} ilike ${exactPattern} escape ${"\\"} then 0
+    when ${organizationsTable.name} ilike ${prefixPattern} escape ${"\\"}
+      or ${organizationsTable.slug} ilike ${prefixPattern} escape ${"\\"} then 1
     else 2
   end`;
   const rows = await database.select({
@@ -453,8 +460,8 @@ router.get("/organizations/search", async (req, res): Promise<void> => {
     .where(and(
       eq(organizationsTable.isActive, true),
       or(
-        ilike(organizationsTable.name, containsPattern),
-        ilike(organizationsTable.slug, containsPattern),
+        sql`${organizationsTable.name} ilike ${containsPattern} escape ${"\\"}`,
+        sql`${organizationsTable.slug} ilike ${containsPattern} escape ${"\\"}`,
       ),
     ))
     .orderBy(asc(matchRank), asc(organizationsTable.name), asc(organizationsTable.slug), asc(organizationsTable.id))

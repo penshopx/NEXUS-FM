@@ -734,6 +734,29 @@ test("authorization routes run through a real HTTP app with injected currentUser
       (rankedOrganizationSearch.body as Array<{ id: string }>).map((row) => row.id),
       rankedOrganizations.slice(0, 3).map((row) => row.id),
     );
+    const wildcardToken = randomUUID();
+    const wildcardOrganizations = await db.insert(organizationsTable).values([
+      { name: `Rate 50% ${wildcardToken}`, slug: `percent-${wildcardToken}` },
+      { name: `Unit_A ${wildcardToken}`, slug: `underscore-${wildcardToken}` },
+      { name: `Rate 500 ${wildcardToken}`, slug: `percent-decoy-${wildcardToken}` },
+      { name: `UnitXA ${wildcardToken}`, slug: `underscore-decoy-${wildcardToken}` },
+    ]).returning();
+    const literalPercentSearch = await request(
+      `/organizations/search?query=${encodeURIComponent(`50% ${wildcardToken}`)}`,
+    );
+    assert.equal(literalPercentSearch.response.status, 200);
+    assert.deepEqual(
+      (literalPercentSearch.body as Array<{ id: string }>).map((row) => row.id),
+      [wildcardOrganizations[0].id],
+    );
+    const literalUnderscoreSearch = await request(
+      `/organizations/search?query=${encodeURIComponent(`Unit_A ${wildcardToken}`)}`,
+    );
+    assert.equal(literalUnderscoreSearch.response.status, 200);
+    assert.deepEqual(
+      (literalUnderscoreSearch.body as Array<{ id: string }>).map((row) => row.id),
+      [wildcardOrganizations[1].id],
+    );
     const organizationByName = await request(
       `/organizations/search?query=${encodeURIComponent(targetOrganization.name.slice(0, 4))}`,
     );
