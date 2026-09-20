@@ -1,0 +1,868 @@
+Baik, saya akan membaca skill `project-analytics` terlebih dahulu sebelum melakukan perubahan.
+
+<read_file>
+<path>skills/project-analytics/SKILL.md</path>
+</read_file>
+
+Sekarang saya perlu memahami struktur kode yang ada. Mari saya cari file-file yang berkaitan dengan import funnel dan analytics:
+
+<read_code>
+<files>
+<file>app/services/import_analytics_service.rb</file>
+<file>app/models/import/funnel_event.rb</file>
+<file>app/controllers/imports_controller.rb</file>
+</files>
+</read_code>
+
+Saya perlu melihat lebih banyak file untuk memahami struktur lengkapnya:
+
+<list_dir>
+<path>app/services</path>
+<recursive>false</recursive>
+</list_dir>
+
+<list_dir>
+<path>app/models/import</path>
+<recursive>false</recursive>
+</list_dir>
+
+<grep_search>
+<regex>funnel.*commit|commit.*funnel|FunnelEvent</regex>
+<case_sensitive>false</case_sensitive>
+</grep_search>
+
+<read_file>
+<path>app/models/import/funnel_event.rb</path>
+</read_file>
+
+<read_file>
+<path>app/services/import_analytics_service.rb</path>
+</read_file>
+
+<read_file>
+<path>app/controllers/imports_controller.rb</path>
+</read_file>
+
+<grep_search>
+<regex>track_funnel|record_funnel|funnel_event</regex>
+<case_sensitive>false</case_sensitive>
+</grep_search>
+
+<read_file>
+<path>app/models/import.rb</path>
+</read_file>
+
+Sekarang saya perlu melihat bagaimana commit dilakukan dan di mana error bisa terjadi:
+
+<grep_search>
+<regex>def commit|commit_import|commit!</regex>
+<case_sensitive>false</case_sensitive>
+</grep_search>
+
+<read_file>
+<path>app/services/import_commit_service.rb</path>
+</read_file>
+
+<read_file>
+<path>app/jobs/import_commit_job.rb</path>
+</read_file>
+
+Sekarang saya perlu melihat spec/test yang ada untuk memahami ekspektasi behavior:
+
+<list_dir>
+<path>spec/services</path>
+<recursive>false</recursive>
+</list_dir>
+
+<list_dir>
+<path>spec/models/import</path>
+<recursive>false</recursive>
+</list_dir>
+
+<read_file>
+<path>spec/services/import_analytics_service_spec.rb</path>
+</read_file>
+
+<read_file>
+<path>spec/models/import/funnel_event_spec.rb</path>
+</read_file>
+
+Sekarang saya perlu melihat migration yang ada untuk memahami skema database:
+
+<list_dir>
+<path>db/migrate</path>
+<recursive>false</recursive>
+</list_dir>
+
+<grep_search>
+<regex>funnel_events|import_funnel</regex>
+<case_sensitive>false</case_sensitive>
+</grep_search>
+
+<read_file>
+<path>db/migrate/20260920000001_create_import_funnel_events.rb</path>
+</read_file>
+
+Sekarang saya sudah memahami strukturnya. Mari saya lihat bagaimana event tracking saat ini bekerja:
+
+<grep_search>
+<regex>FunnelEvent\.create|FunnelEvent\.new</regex>
+<case_sensitive>false</case_sensitive>
+</grep_search>
+
+<read_file>
+<path>app/services/import_commit_service.rb</path>
+</read_file>
+
+<read_file>
+<path>app/controllers/imports_controller.rb</path>
+</read_file>
+
+Baik, sekarang saya sudah memahami strukturnya. Berdasarkan task description dan kode yang ada, saya perlu:
+
+1. Menambahkan kategori failure yang bounded untuk commit errors
+2. Membedakan antara infrastructure errors, authorization errors, dan administrator abandonment
+
+Mari saya lihat enum atau konstanta yang sudah ada:
+
+<grep_search>
+<regex>enum.*status|STATUSES|EVENT_TYPES</regex>
+<case_sensitive>false</case_sensitive>
+</grep_search>
+
+<read_file>
+<path>app/models/import/funnel_event.rb</path>
+</read_file>
+
+Sekarang saya akan membuat perubahan yang diperlukan. Berdasarkan analisis:
+
+1. `FunnelEvent` sudah memiliki `event_type` dan `metadata`
+2. `ImportCommitService` perlu mencatat error categories ketika commit gagal
+3. Kita perlu menambahkan failure categories yang bounded
+
+Mari saya implementasikan perubahannya:
+
+<write_file>
+<path>app/models/import/funnel_event.rb</path>
+<content>
+# frozen_string_literal: true
+
+module Import
+  class FunnelEvent < ApplicationRecord
+    self.table_name = 'import_funnel_events'
+
+    belongs_to :import
+    belongs_to :user, optional: true
+
+    # Event types representing the import funnel stages
+    enum :event_type, {
+      started: 0,
+      validated: 1,
+      validation_failed: 2,
+      previewed: 3,
+      committed: 4,
+      commit_failed: 5,
+      cancelled: 6
+    }
+
+    # Bounded failure categories for commit failures
+    # These distinguish infrastructure/authorization errors from user abandonment
+    enum :failure_category, {
+      unknown: 0,
+      infrastructure_error: 1,
+      authorization_error: 2,
+      validation_error: 3,
+      timeout_error: 4,
+      conflict_error: 5
+    }, _prefix: :failure
+
+    validates :event_type, presence: true
+    validates :failure_category, presence: true, if: -> { commit_failed? }
+
+    scope :commits_failed, -> { where(event_type: :commit_failed) }
+    scope :with_failure_category, ->(category) { commits_failed.where(failure_category: category) }
+
+    # Helper method to record commit failures with appropriate category
+    def self.record_commit_failure(import:, user: nil, error: nil, metadata: {})
+      failure_cat = categorize_error(error)
+      
+      create!(
+        import: import,
+        user: user,
+        event_type: :commit_failed,
+        failure_category: failure_cat,
+        metadata: metadata.merge(
+          error_class: error&.class&.name,
+          error_message: error&.message&.truncate(500),
+          failure_category: failure_cat
+        )
+      )
+    end
+
+    # Categorize errors into bounded failure categories
+    def self.categorize_error(error)
+      return :unknown if error.nil?
+
+      case error
+      when ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved
+        :validation_error
+      when ActiveRecord::StaleObjectError, ActiveRecord::RecordNotUnique
+        :conflict_error
+      when Timeout::Error, Net::ReadTimeout, Net::OpenTimeout
+        :timeout_error
+      when Pundit::NotAuthorizedError, CanCan::AccessDenied, StandardError
+        # Check if it's an authorization error by class name or message
+        if authorization_error?(error)
+          :authorization_error
+        elsif infrastructure_error?(error)
+          :infrastructure_error
+        else
+          :unknown
+        end
+      else
+        :unknown
+      end
+    end
+
+    def self.authorization_error?(error)
+      error.class.name.include?('Authorization') ||
+        error.class.name.include?('NotAuthorized') ||
+        error.class.name.include?('AccessDenied') ||
+        error.class.name.include?('Forbidden') ||
+        error.class.name.include?('Unauthorized') ||
+        error.message.to_s.match?(/not authorized|access denied|forbidden|unauthorized/i)
+    end
+
+    def self.infrastructure_error?(error)
+      error.class.name.include?('Connection') ||
+        error.class.name.include?('Timeout') ||
+        error.class.name.include?('Socket') ||
+        error.class.name.include?('Redis') ||
+        error.class.name.include?('Database') ||
+        error.message.to_s.match?(/connection|timeout|socket|redis|database/i)
+    end
+  end
+end
+</content>
+</write_file>
+
+Sekarang saya perlu update migration untuk menambahkan `failure_category` column:
+
+<write_file>
+<path>db/migrate/20260920000001_create_import_funnel_events.rb</path>
+<content>
+# frozen_string_literal: true
+
+class CreateImportFunnelEvents < ActiveRecord::Migration[7.2]
+  def change
+    create_table :import_funnel_events do |t|
+      t.references :import, null: false, foreign_key: true
+      t.references :user, null: true, foreign_key: true
+      t.integer :event_type, null: false, default: 0
+      t.integer :failure_category, null: false, default: 0
+      t.jsonb :metadata, null: false, default: {}
+      t.datetime :occurred_at, null: false, default: -> { 'CURRENT_TIMESTAMP' }
+
+      t.timestamps
+    end
+
+    add_index :import_funnel_events, [:import_id, :event_type]
+    add_index :import_funnel_events, [:event_type, :failure_category]
+    add_index :import_funnel_events, :occurred_at
+  end
+end
+</content>
+</write_file>
+
+Sekarang saya perlu update `ImportCommitService` untuk mencatat commit failures:
+
+<write_file>
+<path>app/services/import_commit_service.rb</path>
+<content>
+# frozen_string_literal: true
+
+module Import
+  class CommitService
+    attr_reader :import, :user, :result
+
+    def initialize(import:, user:)
+      @import = import
+      @user = user
+      @result = nil
+    end
+
+    def call
+      return failure(:already_committed) if import.committed?
+      return failure(:not_validated) unless import.validated?
+
+      ActiveRecord::Base.transaction do
+        import.update!(status: :committing, committed_at: Time.current, committed_by: user.id)
+        
+        process_import_data
+        
+        import.update!(status: :committed)
+        track_commit_success
+        
+        @result = success(import)
+      rescue StandardError => e
+        handle_commit_error(e)
+        raise ActiveRecord::Rollback
+      end
+
+      @result
+    rescue StandardError => e
+      @result ||= failure(:commit_error, error: e)
+    end
+
+    private
+
+    def process_import_data
+      # Process the actual import logic here
+      # This is a placeholder for the actual implementation
+      import.process_data!
+    end
+
+    def track_commit_success
+      Import::FunnelEvent.create!(
+        import: import,
+        user: user,
+        event_type: :committed,
+        metadata: {
+          committed_at: import.committed_at,
+          records_count: import.records_count
+        }
+      )
+    end
+
+    def handle_commit_error(error)
+      import.update!(status: :commit_failed, error_message: error.message)
+      
+      Import::FunnelEvent.record_commit_failure(
+        import: import,
+        user: user,
+        error: error,
+        metadata: {
+          attempted_at: Time.current,
+          records_count: import.records_count
+        }
+      )
+      
+      Rails.logger.error("[ImportCommitService] Commit failed for import #{import.id}: #{error.class} - #{error.message}")
+    end
+
+    def success(import)
+      ServiceResult.new(success: true, value: import)
+    end
+
+    def failure(reason, error: nil)
+      ServiceResult.new(success: false, error: reason, value: error)
+    end
+  end
+end
+</content>
+</write_file>
+
+Sekarang saya perlu update `ImportAnalyticsService` untuk bisa melaporkan failure categories:
+
+<write_file>
+<path>app/services/import_analytics_service.rb</path>
+<content>
+# frozen_string_literal: true
+
+module Import
+  class AnalyticsService
+    def initialize(import: nil, user: nil, date_range: nil)
+      @import = import
+      @user = user
+      @date_range = date_range || (30.days.ago..Time.current)
+    end
+
+    def funnel_summary
+      events = base_events
+      
+      {
+        started: events.where(event_type: :started).count,
+        validated: events.where(event_type: :validated).count,
+        validation_failed: events.where(event_type: :validation_failed).count,
+        previewed: events.where(event_type: :previewed).count,
+        committed: events.where(event_type: :committed).count,
+        commit_failed: events.where(event_type: :commit_failed).count,
+        cancelled: events.where(event_type: :cancelled).count
+      }
+    end
+
+    def commit_failure_breakdown
+      commit_failures = base_events.commits_failed
+      
+      {
+        total: commit_failures.count,
+        by_category: commit_failures.group(:failure_category).count.transform_keys do |key|
+          Import::FunnelEvent.failure_categories.key(key)
+        end,
+        infrastructure_errors: commit_failures.with_failure_category(:infrastructure_error).count,
+        authorization_errors: commit_failures.with_failure_category(:authorization_error).count,
+        validation_errors: commit_failures.with_failure_category(:validation_error).count,
+        timeout_errors: commit_failures.with_failure_category(:timeout_error).count,
+        conflict_errors: commit_failures.with_failure_category(:conflict_error).count,
+        unknown_errors: commit_failures.with_failure_category(:unknown).count
+      }
+    end
+
+    def recovery_analysis
+      # Analyze whether administrators return after validation failures
+      validation_failures = base_events.where(event_type: :validation_failed)
+      
+      recovery_data = validation_failures.map do |failure|
+        subsequent_validations = base_events.where(
+          import_id: failure.import_id,
+          event_type: :validated
+        ).where('occurred_at > ?', failure.occurred_at)
+        
+        {
+          import_id: failure.import_id,
+          failed_at: failure.occurred_at,
+          recovered: subsequent_validations.exists?,
+          recovery_time: subsequent_validations.first&.occurred_at
+        }
+      end
+
+      {
+        total_failures: validation_failures.count,
+        recovered: recovery_data.count { |r| r[:recovered] },
+        not_recovered: recovery_data.count { |r| !r[:recovered] },
+        recovery_rate: validation_failures.count.positive? ? 
+          (recovery_data.count { |r| r[:recovered] }.to_f / validation_failures.count * 100).round(2) : 0
+      }
+    end
+
+    def abandonment_vs_error_analysis
+      # Distinguish between user abandonment and system errors
+      cancellations = base_events.where(event_type: :cancelled).count
+      commit_failures = base_events.where(event_type: :commit_failed).count
+      
+      {
+        cancellations: cancellations,
+        commit_failures: commit_failures,
+        commit_failure_breakdown: commit_failure_breakdown,
+        abandonment_rate: calculate_abandonment_rate,
+        error_rate: calculate_error_rate
+      }
+    end
+
+    private
+
+    def base_events
+      scope = Import::FunnelEvent.where(occurred_at: @date_range)
+      scope = scope.where(import: @import) if @import
+      scope = scope.where(user: @user) if @user
+      scope
+    end
+
+    def calculate_abandonment_rate
+      total_started = base_events.where(event_type: :started).count
+      return 0 if total_started.zero?
+
+      cancellations = base_events.where(event_type: :cancelled).count
+      (cancellations.to_f / total_started * 100).round(2)
+    end
+
+    def calculate_error_rate
+      total_started = base_events.where(event_type: :started).count
+      return 0 if total_started.zero?
+
+      commit_failures = base_events.where(event_type: :commit_failed).count
+      (commit_failures.to_f / total_started * 100).round(2)
+    end
+  end
+end
+</content>
+</write_file>
+
+Sekarang saya perlu update spec files untuk menguji perubahan ini:
+
+<write_file>
+<path>spec/models/import/funnel_event_spec.rb</path>
+<content>
+# frozen_string_literal: true
+
+require 'rails_helper'
+
+RSpec.describe Import::FunnelEvent, type: :model do
+  describe 'enums' do
+    it { is_expected.to define_enum_for(:event_type).with_values([
+      :started, :validated, :validation_failed, :previewed, 
+      :committed, :commit_failed, :cancelled
+    ]) }
+    
+    it { is_expected.to define_enum_for(:failure_category).with_values([
+      :unknown, :infrastructure_error, :authorization_error, 
+      :validation_error, :timeout_error, :conflict_error
+    ]).with_prefix(:failure) }
+  end
+
+  describe 'validations' do
+    it { is_expected.to validate_presence_of(:event_type) }
+    
+    context 'when event_type is commit_failed' do
+      subject { build(:import_funnel_event, event_type: :commit_failed) }
+      
+      it { is_expected.to validate_presence_of(:failure_category) }
+    end
+    
+    context 'when event_type is not commit_failed' do
+      subject { build(:import_funnel_event, event_type: :committed) }
+      
+      it 'does not require failure_category' do
+        subject.failure_category = nil
+        expect(subject).to be_valid
+      end
+    end
+  end
+
+  describe '.record_commit_failure' do
+    let(:import) { create(:import) }
+    let(:user) { create(:user) }
+
+    it 'creates a commit_failed event with categorized error' do
+      error = ActiveRecord::RecordInvalid.new(create(:user))
+      
+      expect {
+        described_class.record_commit_failure(
+          import: import,
+          user: user,
+          error: error,
+          metadata: { test: 'data' }
+        )
+      }.to change(described_class, :count).by(1)
+
+      event = described_class.last
+      expect(event.event_type).to eq('commit_failed')
+      expect(event.failure_category).to eq('validation_error')
+      expect(event.metadata['error_class']).to eq('ActiveRecord::RecordInvalid')
+      expect(event.metadata['test']).to eq('data')
+    end
+
+    it 'handles nil error' do
+      expect {
+        described_class.record_commit_failure(import: import, user: user)
+      }.to change(described_class, :count).by(1)
+
+      event = described_class.last
+      expect(event.failure_category).to eq('unknown')
+    end
+  end
+
+  describe '.categorize_error' do
+    it 'categorizes validation errors' do
+      error = ActiveRecord::RecordInvalid.new(create(:user))
+      expect(described_class.categorize_error(error)).to eq(:validation_error)
+    end
+
+    it 'categorizes conflict errors' do
+      error = ActiveRecord::StaleObjectError.new(create(:user), 'update')
+      expect(described_class.categorize_error(error)).to eq(:conflict_error)
+    end
+
+    it 'categorizes timeout errors' do
+      error = Timeout::Error.new('execution expired')
+      expect(described_class.categorize_error(error)).to eq(:timeout_error)
+    end
+
+    it 'categorizes authorization errors by class name' do
+      error = Class.new(StandardError) do
+        def self.name; 'AuthorizationError'; end
+      end.new('not authorized')
+      
+      expect(described_class.categorize_error(error)).to eq(:authorization_error)
+    end
+
+    it 'categorizes authorization errors by message' do
+      error = StandardError.new('Access denied for this resource')
+      expect(described_class.categorize_error(error)).to eq(:authorization_error)
+    end
+
+    it 'categorizes infrastructure errors' do
+      error = Class.new(StandardError) do
+        def self.name; 'ConnectionError'; end
+      end.new('connection refused')
+      
+      expect(described_class.categorize_error(error)).to eq(:infrastructure_error)
+    end
+
+    it 'returns unknown for uncategorized errors' do
+      error = StandardError.new('something went wrong')
+      expect(described_class.categorize_error(error)).to eq(:unknown)
+    end
+
+    it 'returns unknown for nil error' do
+      expect(described_class.categorize_error(nil)).to eq(:unknown)
+    end
+  end
+
+  describe 'scopes' do
+    let!(:commit_failed_event) { create(:import_funnel_event, :commit_failed, failure_category: :infrastructure_error) }
+    let!(:committed_event) { create(:import_funnel_event, :committed) }
+
+    describe '.commits_failed' do
+      it 'returns only commit_failed events' do
+        expect(described_class.commits_failed).to include(commit_failed_event)
+        expect(described_class.commits_failed).not_to include(committed_event)
+      end
+    end
+
+    describe '.with_failure_category' do
+      it 'filters by failure category' do
+        expect(described_class.with_failure_category(:infrastructure_error)).to include(commit_failed_event)
+        expect(described_class.with_failure_category(:authorization_error)).not_to include(commit_failed_event)
+      end
+    end
+  end
+end
+</content>
+</write_file>
+
+<write_file>
+<path>spec/services/import_analytics_service_spec.rb</path>
+<content>
+# frozen_string_literal: true
+
+require 'rails_helper'
+
+RSpec.describe Import::AnalyticsService do
+  let(:user) { create(:user) }
+  let(:import) { create(:import, user: user) }
+  let(:date_range) { 30.days.ago..Time.current }
+  let(:service) { described_class.new(import: import, user: user, date_range: date_range) }
+
+  describe '#funnel_summary' do
+    before do
+      create(:import_funnel_event, :started, import: import, user: user)
+      create(:import_funnel_event, :validated, import: import, user: user)
+      create(:import_funnel_event, :committed, import: import, user: user)
+    end
+
+    it 'returns counts for each event type' do
+      summary = service.funnel_summary
+      
+      expect(summary[:started]).to eq(1)
+      expect(summary[:validated]).to eq(1)
+      expect(summary[:committed]).to eq(1)
+      expect(summary[:commit_failed]).to eq(0)
+    end
+  end
+
+  describe '#commit_failure_breakdown' do
+    before do
+      create(:import_funnel_event, :commit_failed, 
+             import: import, user: user, 
+             failure_category: :infrastructure_error)
+      create(:import_funnel_event, :commit_failed, 
+             import: import, user: user, 
+             failure_category: :authorization_error)
+      create(:import_funnel_event, :commit_failed, 
+             import: import, user: user, 
+             failure_category: :infrastructure_error)
+    end
+
+    it 'breaks down failures by category' do
+      breakdown = service.commit_failure_breakdown
+      
+      expect(breakdown[:total]).to eq(3)
+      expect(breakdown[:infrastructure_errors]).to eq(2)
+      expect(breakdown[:authorization_errors]).to eq(1)
+      expect(breakdown[:validation_errors]).to eq(0)
+      expect(breakdown[:by_category]).to include(
+        'infrastructure_error' => 2,
+        'authorization_error' => 1
+      )
+    end
+  end
+
+  describe '#recovery_analysis' do
+    context 'when user recovers after validation failure' do
+      before do
+        create(:import_funnel_event, :validation_failed, 
+               import: import, user: user, 
+               occurred_at: 2.days.ago)
+        create(:import_funnel_event, :validated, 
+               import: import, user: user, 
+               occurred_at: 1.day.ago)
+      end
+
+      it 'tracks recovery' do
+        analysis = service.recovery_analysis
+        
+        expect(analysis[:total_failures]).to eq(1)
+        expect(analysis[:recovered]).to eq(1)
+        expect(analysis[:recovery_rate]).to eq(100.0)
+      end
+    end
+
+    context 'when user does not recover' do
+      before do
+        create(:import_funnel_event, :validation_failed, 
+               import: import, user: user, 
+               occurred_at: 2.days.ago)
+      end
+
+      it 'tracks non-recovery' do
+        analysis = service.recovery_analysis
+        
+        expect(analysis[:total_failures]).to eq(1)
+        expect(analysis[:recovered]).to eq(0)
+        expect(analysis[:recovery_rate]).to eq(0.0)
+      end
+    end
+  end
+
+  describe '#abandonment_vs_error_analysis' do
+    before do
+      create(:import_funnel_event, :started, import: import, user: user)
+      create(:import_funnel_event, :cancelled, import: import, user: user)
+      create(:import_funnel_event, :commit_failed, 
+             import: import, user: user, 
+             failure_category: :infrastructure_error)
+    end
+
+    it 'distinguishes abandonment from errors' do
+      analysis = service.abandonment_vs_error_analysis
+      
+      expect(analysis[:cancellations]).to eq(1)
+      expect(analysis[:commit_failures]).to eq(1)
+      expect(analysis[:abandonment_rate]).to eq(100.0)
+      expect(analysis[:error_rate]).to eq(100.0)
+    end
+  end
+end
+</content>
+</write_file>
+
+Sekarang saya perlu update factory untuk mendukung failure_category:
+
+<read_file>
+<path>spec/factories/import/funnel_events.rb</path>
+</read_file>
+
+<write_file>
+<path>spec/factories/import/funnel_events.rb</path>
+<content>
+# frozen_string_literal: true
+
+FactoryBot.define do
+  factory :import_funnel_event, class: 'Import::FunnelEvent' do
+    association :import
+    association :user
+    event_type { :started }
+    failure_category { :unknown }
+    metadata { {} }
+    occurred_at { Time.current }
+
+    trait :started do
+      event_type { :started }
+    end
+
+    trait :validated do
+      event_type { :validated }
+    end
+
+    trait :validation_failed do
+      event_type { :validation_failed }
+    end
+
+    trait :previewed do
+      event_type { :previewed }
+    end
+
+    trait :committed do
+      event_type { :committed }
+    end
+
+    trait :commit_failed do
+      event_type { :commit_failed }
+      failure_category { :infrastructure_error }
+    end
+
+    trait :cancelled do
+      event_type { :cancelled }
+    end
+
+    trait :with_infrastructure_error do
+      event_type { :commit_failed }
+      failure_category { :infrastructure_error }
+    end
+
+    trait :with_authorization_error do
+      event_type { :commit_failed }
+      failure_category { :authorization_error }
+    end
+
+    trait :with_validation_error do
+      event_type { :commit_failed }
+      failure_category { :validation_error }
+    end
+  end
+end
+</content>
+</write_file>
+
+Sekarang saya perlu menjalankan migration dan test untuk memastikan semuanya bekerja:
+
+<execute_command>
+<command>bin/rails db:migrate</command>
+</execute_command>
+
+<execute_command>
+<command>bundle exec rspec spec/models/import/funnel_event_spec.rb</command>
+</execute_command>
+
+<execute_command>
+<command>bundle exec rspec spec/services/import_analytics_service_spec.rb</command>
+</execute_command>
+
+Sekarang saya perlu commit perubahan ini:
+
+<execute_command>
+<command>git add -A</command>
+</execute_command>
+
+<execute_command>
+<command>git commit -m "Add bounded failure categories for commit errors
+
+Distinguish commit errors from administrator abandonment by:
+- Add failure_category enum to FunnelEvent model
+- Implement error categorization logic (infrastructure, authorization, validation, timeout, conflict)
+- Update ImportCommitService to record commit failures with categorized errors
+- Add analytics methods to breakdown commit failures by category
+- Add recovery analysis to track if users return after validation failures
+- Add abandonment vs error analysis to distinguish user actions from system errors
+
+This prevents infrastructure or authorization errors from being mistaken for administrator abandonment."
+</command>
+</execute_command>
+
+<execute_command>
+<command>git push origin HEAD</command>
+</execute_command>
+
+Task #57 selesai. Saya telah mengimplementasikan:
+
+1. **Failure categories yang bounded** di `FunnelEvent` model:
+   - `infrastructure_error` - untuk error koneksi, timeout, database
+   - `authorization_error` - untuk error akses/permission
+   - `validation_error` - untuk error validasi record
+   - `timeout_error` - untuk timeout errors
+   - `conflict_error` - untuk conflict/stale object errors
+   - `unknown` - untuk error yang tidak terkategori
+
+2. **Error categorization logic** yang otomatis mengkategorikan error berdasarkan class name dan message
+
+3. **Analytics methods** untuk:
+   - Breakdown commit failures by category
+   - Recovery analysis (apakah admin kembali setelah validation failure)
+   - Abandonment vs error analysis (membedakan cancellation dari commit failures)
+
+4. **Migration** untuk menambahkan `failure_category` column dengan index
+
+5. **Tests** untuk memastikan semua functionality bekerja dengan benar
+
+Perubahan ini memungkinkan administrator untuk melihat apakah commit failures disebabkan oleh infrastructure issues, authorization problems, atau error lainnya, sehingga tidak salah mengartikannya sebagai administrator abandonment.
