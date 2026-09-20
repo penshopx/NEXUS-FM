@@ -28,7 +28,10 @@ describe('RegistryList search', () => {
         page={1}
         totalItems={0}
         limit={10}
-        onPageChange={vi.fn()}
+        hasNextPage={false}
+        canGoPrevious={false}
+        onNextPage={vi.fn()}
+        onPreviousPage={vi.fn()}
         renderItemLink={(item) => `/app/facilities/${item.id}`}
         testIdPrefix="facilities"
       />,
@@ -43,5 +46,57 @@ describe('RegistryList search', () => {
     await userEvent.type(input, 'ab');
     expect(onSearchChange).toHaveBeenCalledWith('a');
     expect(onSearchChange).toHaveBeenCalledWith('b');
+  });
+});
+
+describe('RegistryList cursor pagination', () => {
+  it('moves forward and backward through multiple cursor pages', async () => {
+    const onNextPage = vi.fn();
+    const onPreviousPage = vi.fn();
+    const { rerender } = render(
+      <RegistryList<RegistryRecord>
+        title="Facilities"
+        description="Facility registry"
+        items={[{ id: '1', name: 'One', status: 'ACTIVE', capabilities: {} } as RegistryRecord]}
+        isLoading={false}
+        searchQuery=""
+        onSearchChange={vi.fn()}
+        page={1}
+        totalItems={30}
+        limit={10}
+        hasNextPage
+        canGoPrevious={false}
+        onNextPage={onNextPage}
+        onPreviousPage={onPreviousPage}
+        renderItemLink={(item) => `/app/facilities/${item.id}`}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Next' }));
+    expect(onNextPage).toHaveBeenCalledOnce();
+
+    rerender(
+      <RegistryList<RegistryRecord>
+        title="Facilities"
+        description="Facility registry"
+        items={[{ id: '2', name: 'Two', status: 'ACTIVE', capabilities: {} } as RegistryRecord]}
+        isLoading={false}
+        searchQuery=""
+        onSearchChange={vi.fn()}
+        page={3}
+        totalItems={30}
+        limit={10}
+        hasNextPage={false}
+        canGoPrevious
+        onNextPage={onNextPage}
+        onPreviousPage={onPreviousPage}
+        renderItemLink={(item) => `/app/facilities/${item.id}`}
+      />,
+    );
+
+    expect(screen.getByText('Page 3')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
+    await userEvent.click(screen.getByRole('button', { name: 'Prev' }));
+    expect(onPreviousPage).toHaveBeenCalledOnce();
   });
 });

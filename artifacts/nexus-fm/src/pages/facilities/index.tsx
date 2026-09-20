@@ -1,5 +1,5 @@
 import { getSafeMutationMessage } from '@/lib/utils';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { 
   useListFacilities, 
@@ -16,29 +16,21 @@ import { RegistryForm } from '@/components/registry/registry-form';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { useDebounce } from '@/hooks/use-debounce';
 import { ApiErrorState } from '@/components/api-error-state';
 import { PortfolioImportDialog } from '@/components/registry/portfolio-import-dialog';
-import { registrySearchQuery } from '@/lib/registry-search';
+import { useRegistryCursorPagination } from '@/hooks/use-registry-cursor-pagination';
 
 export function FacilitiesPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
-  const debouncedSearch = useDebounce(search, 300);
-  const registrySearch = registrySearchQuery(debouncedSearch);
+  const pagination = useRegistryCursorPagination();
   const limit = 10;
-  
-  // Reset page when search changes
-  useEffect(() => {
-    setPage(1);
-  }, [debouncedSearch]);
-  
+
+  const listParams = { q: pagination.registrySearch, cursor: pagination.cursor, limit };
   const { data, isLoading, error } = useListFacilities(
-    { q: registrySearch, page, limit },
-    { query: { queryKey: getListFacilitiesQueryKey({ q: registrySearch, page, limit }) } }
+    listParams,
+    { query: { queryKey: getListFacilitiesQueryKey(listParams) } }
   );
   
   const createFacility = useCreateFacility();
@@ -102,12 +94,15 @@ export function FacilitiesPage() {
         description="Manage top-level facilities across your real estate portfolio."
         items={data?.items as RegistryRecord[]}
         isLoading={isLoading}
-        searchQuery={search}
-        onSearchChange={setSearch}
-        page={page}
+        searchQuery={pagination.search}
+        onSearchChange={pagination.setSearch}
+        page={pagination.page}
         totalItems={data?.total || 0}
         limit={limit}
-        onPageChange={setPage}
+        hasNextPage={!!data?.nextCursor}
+        canGoPrevious={pagination.canGoPrevious}
+        onNextPage={() => data?.nextCursor && pagination.goNext(data.nextCursor)}
+        onPreviousPage={pagination.goPrevious}
         onCreate={data?.collectionCapabilities?.create ? () => setIsCreateOpen(true) : undefined}
         onImport={data?.collectionCapabilities?.create ? () => setIsImportOpen(true) : undefined}
         onEdit={(item) => setEditingItem(item)}
@@ -123,7 +118,7 @@ export function FacilitiesPage() {
             title: 'Portfolio imported successfully',
             description: `${imported} ${imported === 1 ? 'record was' : 'records were'} created.`,
           });
-          setPage(1);
+          pagination.reset();
           queryClient.invalidateQueries({ queryKey: getListFacilitiesQueryKey() });
         }}
       />

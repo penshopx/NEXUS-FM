@@ -15,7 +15,10 @@ interface RegistryListProps<T extends RegistryRecord> {
   page: number;
   totalItems: number;
   limit: number;
-  onPageChange: (p: number) => void;
+  hasNextPage: boolean;
+  canGoPrevious: boolean;
+  onNextPage: () => void;
+  onPreviousPage: () => void;
   onCreate?: () => void;
   onImport?: () => void;
   onEdit?: (item: T) => void;
@@ -34,7 +37,10 @@ export function RegistryList<T extends RegistryRecord>({
   page,
   totalItems,
   limit,
-  onPageChange,
+  hasNextPage,
+  canGoPrevious,
+  onNextPage,
+  onPreviousPage,
   onCreate,
   onImport,
   onEdit,
@@ -42,7 +48,6 @@ export function RegistryList<T extends RegistryRecord>({
   renderItemLink,
   testIdPrefix = 'registry'
 }: RegistryListProps<T>) {
-  const totalPages = Math.ceil(totalItems / limit) || 1;
   const searchHelpId = `${testIdPrefix}-search-help`;
 
   return (
@@ -193,19 +198,19 @@ export function RegistryList<T extends RegistryRecord>({
                 variant="outline"
                 size="sm"
                 className="h-8 font-mono"
-                onClick={() => onPageChange(Math.max(1, page - 1))}
-                disabled={page <= 1}
+                onClick={onPreviousPage}
+                disabled={!canGoPrevious}
                 data-testid={`button-prev-page-${testIdPrefix}`}
               >
                 Prev
               </Button>
-              <div className="px-2">Page {page} of {totalPages}</div>
+              <div className="px-2">Page {page}</div>
               <Button
                 variant="outline"
                 size="sm"
                 className="h-8 font-mono"
-                onClick={() => onPageChange(Math.min(totalPages, page + 1))}
-                disabled={page >= totalPages}
+                onClick={onNextPage}
+                disabled={!hasNextPage}
                 data-testid={`button-next-page-${testIdPrefix}`}
               >
                 Next

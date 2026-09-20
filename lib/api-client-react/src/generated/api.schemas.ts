@@ -199,6 +199,11 @@ export interface RegistryPage {
   page: number;
   limit: number;
   total: number;
+  /**
+     * Opaque cursor for the next page, or null when this is the final page.
+     * @nullable
+     */
+  nextCursor: string | null;
   collectionCapabilities: RegistryCollectionCapabilities;
 }
 
@@ -619,6 +624,11 @@ export type SearchParameter = string;
 
 export type PageParameter = number;
 
+/**
+ * Opaque cursor returned by the previous registry page. When present, page is ignored.
+ */
+export type CursorParameter = string;
+
 export type LimitParameter = number;
 
 export type GetAuthorizationAuditLogsParams = {
@@ -704,6 +714,11 @@ q?: SearchParameter;
  */
 page?: PageParameter;
 /**
+ * Opaque cursor returned by the previous registry page. When present, page is ignored.
+ * @minLength 1
+ */
+cursor?: CursorParameter;
+/**
  * @minimum 1
  * @maximum 100
  */
@@ -727,6 +742,11 @@ q?: SearchParameter;
  * @minimum 1
  */
 page?: PageParameter;
+/**
+ * Opaque cursor returned by the previous registry page. When present, page is ignored.
+ * @minLength 1
+ */
+cursor?: CursorParameter;
 /**
  * @minimum 1
  * @maximum 100
@@ -752,6 +772,11 @@ q?: SearchParameter;
  */
 page?: PageParameter;
 /**
+ * Opaque cursor returned by the previous registry page. When present, page is ignored.
+ * @minLength 1
+ */
+cursor?: CursorParameter;
+/**
  * @minimum 1
  * @maximum 100
  */
@@ -776,6 +801,11 @@ q?: SearchParameter;
  */
 page?: PageParameter;
 /**
+ * Opaque cursor returned by the previous registry page. When present, page is ignored.
+ * @minLength 1
+ */
+cursor?: CursorParameter;
+/**
  * @minimum 1
  * @maximum 100
  */
@@ -792,6 +822,11 @@ q?: SearchParameter;
  * @minimum 1
  */
 page?: PageParameter;
+/**
+ * Opaque cursor returned by the previous registry page. When present, page is ignored.
+ * @minLength 1
+ */
+cursor?: CursorParameter;
 /**
  * @minimum 1
  * @maximum 100
@@ -823,6 +858,11 @@ q?: SearchParameter;
  * @minimum 1
  */
 page?: PageParameter;
+/**
+ * Opaque cursor returned by the previous registry page. When present, page is ignored.
+ * @minLength 1
+ */
+cursor?: CursorParameter;
 /**
  * @minimum 1
  * @maximum 100

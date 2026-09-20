@@ -1,6 +1,6 @@
 import { getSafeMutationMessage } from '@/lib/utils';
 import {
- useState, useEffect } from 'react';
+ useState } from 'react';
 import {
  useRoute } from 'wouter';
 import {
@@ -38,9 +38,7 @@ import {
  useToast } from '@/hooks/use-toast';
 import {
  Skeleton } from '@/components/ui/skeleton';
-import {
- useDebounce } from '@/hooks/use-debounce';
-import { registrySearchQuery } from '@/lib/registry-search';
+import { useRegistryCursorPagination } from '@/hooks/use-registry-cursor-pagination';
 import {
  ApiErrorState } from '@/components/api-error-state';
 
@@ -63,18 +61,14 @@ export function SystemDetailPage() {
   const { data: building } = useGetBuilding(buildingId || '', { query: { enabled: !!buildingId, queryKey: getGetBuildingQueryKey(buildingId || "") } });
   const { data: facility } = useGetFacility(facilityId || '', { query: { enabled: !!facilityId, queryKey: getGetFacilityQueryKey(facilityId || "") } });
   
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
-  const debouncedSearch = useDebounce(search, 300);
-  const registrySearch = registrySearchQuery(debouncedSearch);
+  const pagination = useRegistryCursorPagination();
   const limit = 10;
-  
-  useEffect(() => { setPage(1); }, [debouncedSearch]);
-  
+
+  const listParams = { q: pagination.registrySearch, cursor: pagination.cursor, limit };
   const { data: assetsData, isLoading: assetsLoading, error: assetsError } = useListSystemAssets(
     systemId,
-    { q: registrySearch, page, limit },
-    { query: { enabled: !!systemId, queryKey: getListSystemAssetsQueryKey(systemId, { q: registrySearch, page, limit }) } }
+    listParams,
+    { query: { enabled: !!systemId, queryKey: getListSystemAssetsQueryKey(systemId, listParams) } }
   );
   
   const allAssets = (assetsData?.items || []) ;
@@ -169,12 +163,15 @@ export function SystemDetailPage() {
           description={`Manage physical assets tied to ${system.name}.`}
           items={allAssets}
           isLoading={assetsLoading}
-          searchQuery={search}
-          onSearchChange={setSearch}
-          page={page}
+          searchQuery={pagination.search}
+          onSearchChange={pagination.setSearch}
+          page={pagination.page}
           totalItems={assetsData?.total || 0}
           limit={limit}
-          onPageChange={setPage}
+          hasNextPage={!!assetsData?.nextCursor}
+          canGoPrevious={pagination.canGoPrevious}
+          onNextPage={() => assetsData?.nextCursor && pagination.goNext(assetsData.nextCursor)}
+          onPreviousPage={pagination.goPrevious}
           onCreate={system.capabilities.createChildren.ASSET ? () => setIsCreateOpen(true) : undefined}
           onEdit={(item) => setEditingItem(item)}
           onDelete={(item) => setDeletingItem(item)}

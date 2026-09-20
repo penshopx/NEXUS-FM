@@ -13,5 +13,10 @@ export interface RegistryPage {
   page: number;
   limit: number;
   total: number;
+  /**
+     * Opaque cursor for the next page, or null when this is the final page.
+     * @nullable
+     */
+  nextCursor: string | null;
   collectionCapabilities: RegistryCollectionCapabilities;
 }

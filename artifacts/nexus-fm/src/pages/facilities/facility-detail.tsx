@@ -1,6 +1,6 @@
 import { getSafeMutationMessage } from '@/lib/utils';
 import {
- useState, useEffect } from 'react';
+ useState } from 'react';
 import {
  useRoute } from 'wouter';
 import {
@@ -33,10 +33,8 @@ import {
 import {
  Skeleton } from '@/components/ui/skeleton';
 import {
- useDebounce } from '@/hooks/use-debounce';
-import {
  ApiErrorState } from '@/components/api-error-state';
-import { registrySearchQuery } from '@/lib/registry-search';
+import { useRegistryCursorPagination } from '@/hooks/use-registry-cursor-pagination';
 
 export function FacilityDetailPage() {
   const [, params] = useRoute('/app/facilities/:id');
@@ -49,20 +47,14 @@ export function FacilityDetailPage() {
     query: { enabled: !!facilityId, queryKey: getGetFacilityQueryKey(facilityId || "") }
   });
   
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
-  const debouncedSearch = useDebounce(search, 300);
-  const registrySearch = registrySearchQuery(debouncedSearch);
+  const pagination = useRegistryCursorPagination();
   const limit = 10;
-  
-  useEffect(() => {
-    setPage(1);
-  }, [debouncedSearch]);
-  
+
+  const listParams = { q: pagination.registrySearch, cursor: pagination.cursor, limit };
   const { data: buildingsData, isLoading: buildingsLoading, error: buildingsError } = useListFacilityBuildings(
     facilityId, 
-    { q: registrySearch, page, limit },
-    { query: { enabled: !!facilityId, queryKey: getListFacilityBuildingsQueryKey(facilityId, { q: registrySearch, page, limit }) } }
+    listParams,
+    { query: { enabled: !!facilityId, queryKey: getListFacilityBuildingsQueryKey(facilityId, listParams) } }
   );
   
   const allBuildings = (buildingsData?.items || []) ;
@@ -158,12 +150,15 @@ export function FacilityDetailPage() {
           description={`Manage physical buildings within ${facility.name}.`}
           items={allBuildings}
           isLoading={buildingsLoading}
-          searchQuery={search}
-          onSearchChange={setSearch}
-          page={page}
+          searchQuery={pagination.search}
+          onSearchChange={pagination.setSearch}
+          page={pagination.page}
           totalItems={buildingsData?.total || 0}
           limit={limit}
-          onPageChange={setPage}
+          hasNextPage={!!buildingsData?.nextCursor}
+          canGoPrevious={pagination.canGoPrevious}
+          onNextPage={() => buildingsData?.nextCursor && pagination.goNext(buildingsData.nextCursor)}
+          onPreviousPage={pagination.goPrevious}
           onCreate={facility.capabilities.createChildren.BUILDING ? () => setIsCreateOpen(true) : undefined}
           onEdit={(item) => setEditingItem(item)}
           onDelete={(item) => setDeletingItem(item)}

@@ -5,6 +5,7 @@
  * NEXUS-FM foundation API
  * OpenAPI spec version: 0.1.0
  */
+import type { CursorParameter } from './cursorParameter';
 import type { LimitParameter } from './limitParameter';
 import type { PageParameter } from './pageParameter';
 import type { SearchParameter } from './searchParameter';
@@ -19,6 +20,11 @@ q?: SearchParameter;
  * @minimum 1
  */
 page?: PageParameter;
+/**
+ * Opaque cursor returned by the previous registry page. When present, page is ignored.
+ * @minLength 1
+ */
+cursor?: CursorParameter;
 /**
  * @minimum 1
  * @maximum 100

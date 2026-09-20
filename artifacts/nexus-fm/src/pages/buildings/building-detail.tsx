@@ -1,6 +1,6 @@
 import { getSafeMutationMessage } from '@/lib/utils';
 import {
- useState, useEffect } from 'react';
+ useState } from 'react';
 import {
  useRoute } from 'wouter';
 import {
@@ -35,9 +35,7 @@ import {
  useToast } from '@/hooks/use-toast';
 import {
  Skeleton } from '@/components/ui/skeleton';
-import {
- useDebounce } from '@/hooks/use-debounce';
-import { registrySearchQuery } from '@/lib/registry-search';
+import { useRegistryCursorPagination } from '@/hooks/use-registry-cursor-pagination';
 import {
  ApiErrorState } from '@/components/api-error-state';
 
@@ -57,20 +55,14 @@ export function BuildingDetailPage() {
     query: { enabled: !!facilityId, queryKey: getGetFacilityQueryKey(facilityId || "") }
   });
   
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
-  const debouncedSearch = useDebounce(search, 300);
-  const registrySearch = registrySearchQuery(debouncedSearch);
+  const pagination = useRegistryCursorPagination();
   const limit = 10;
-  
-  useEffect(() => {
-    setPage(1);
-  }, [debouncedSearch]);
-  
+
+  const listParams = { q: pagination.registrySearch, cursor: pagination.cursor, limit };
   const { data: spacesData, isLoading: spacesLoading, error: spacesError } = useListBuildingSpaces(
     buildingId,
-    { q: registrySearch, page, limit },
-    { query: { enabled: !!buildingId, queryKey: getListBuildingSpacesQueryKey(buildingId, { q: registrySearch, page, limit }) } }
+    listParams,
+    { query: { enabled: !!buildingId, queryKey: getListBuildingSpacesQueryKey(buildingId, listParams) } }
   );
   
   const allSpaces = (spacesData?.items || []) ;
@@ -163,12 +155,15 @@ export function BuildingDetailPage() {
           description={`Manage physical spaces and rooms within ${building.name}.`}
           items={allSpaces}
           isLoading={spacesLoading}
-          searchQuery={search}
-          onSearchChange={setSearch}
-          page={page}
+          searchQuery={pagination.search}
+          onSearchChange={pagination.setSearch}
+          page={pagination.page}
           totalItems={spacesData?.total || 0}
           limit={limit}
-          onPageChange={setPage}
+          hasNextPage={!!spacesData?.nextCursor}
+          canGoPrevious={pagination.canGoPrevious}
+          onNextPage={() => spacesData?.nextCursor && pagination.goNext(spacesData.nextCursor)}
+          onPreviousPage={pagination.goPrevious}
           onCreate={building.capabilities.createChildren.SPACE ? () => setIsCreateOpen(true) : undefined}
           onEdit={(item) => setEditingItem(item)}
           onDelete={(item) => setDeletingItem(item)}

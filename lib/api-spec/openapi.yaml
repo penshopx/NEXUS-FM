@@ -581,6 +581,7 @@ paths:
       parameters:
         - {$ref: "#/components/parameters/Search"}
         - {$ref: "#/components/parameters/Page"}
+        - {$ref: "#/components/parameters/Cursor"}
         - {$ref: "#/components/parameters/Limit"}
       responses:
         "200": {description: Facilities, content: {application/json: {schema: {$ref: "#/components/schemas/RegistryPage"}}}}
@@ -751,6 +752,7 @@ paths:
         - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
         - {$ref: "#/components/parameters/Search"}
         - {$ref: "#/components/parameters/Page"}
+        - {$ref: "#/components/parameters/Cursor"}
         - {$ref: "#/components/parameters/Limit"}
       responses:
         "200": {description: Buildings, content: {application/json: {schema: {$ref: "#/components/schemas/RegistryPage"}}}}
@@ -820,6 +822,7 @@ paths:
         - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
         - {$ref: "#/components/parameters/Search"}
         - {$ref: "#/components/parameters/Page"}
+        - {$ref: "#/components/parameters/Cursor"}
         - {$ref: "#/components/parameters/Limit"}
       responses:
         "200": {description: Spaces, content: {application/json: {schema: {$ref: "#/components/schemas/RegistryPage"}}}}
@@ -897,6 +900,7 @@ paths:
         - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
         - {$ref: "#/components/parameters/Search"}
         - {$ref: "#/components/parameters/Page"}
+        - {$ref: "#/components/parameters/Cursor"}
         - {$ref: "#/components/parameters/Limit"}
       responses:
         "200": {description: Systems, content: {application/json: {schema: {$ref: "#/components/schemas/RegistryPage"}}}}
@@ -921,6 +925,7 @@ paths:
         - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
         - {$ref: "#/components/parameters/Search"}
         - {$ref: "#/components/parameters/Page"}
+        - {$ref: "#/components/parameters/Cursor"}
         - {$ref: "#/components/parameters/Limit"}
       responses:
         "200": {description: Assets, content: {application/json: {schema: {$ref: "#/components/schemas/RegistryPage"}}}}
@@ -1051,6 +1056,7 @@ paths:
         - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
         - {$ref: "#/components/parameters/Search"}
         - {$ref: "#/components/parameters/Page"}
+        - {$ref: "#/components/parameters/Cursor"}
         - {$ref: "#/components/parameters/Limit"}
       responses:
         "200": {description: Assets, content: {application/json: {schema: {$ref: "#/components/schemas/RegistryPage"}}}}
@@ -1160,6 +1166,12 @@ components:
       description: Case-insensitive name or code substring; when provided, must contain at least 3 characters.
       schema: {type: string, minLength: 3}
     Page: {name: page, in: query, required: false, schema: {type: integer, minimum: 1, default: 1}}
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      description: Opaque cursor returned by the previous registry page. When present, page is ignored.
+      schema: {type: string, minLength: 1}
     Limit: {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100, default: 50}}
   responses:
     Unauthorized:
@@ -1347,7 +1359,7 @@ components:
             ASSET: {type: boolean}
     RegistryPage:
       type: object
-      required: [items, page, limit, total, collectionCapabilities]
+      required: [items, page, limit, total, nextCursor, collectionCapabilities]
       properties:
         items:
           type: array
@@ -1355,6 +1367,9 @@ components:
         page: {type: integer}
         limit: {type: integer}
         total: {type: integer}
+        nextCursor:
+          type: [string, "null"]
+          description: Opaque cursor for the next page, or null when this is the final page.
         collectionCapabilities:
           $ref: "#/components/schemas/RegistryCollectionCapabilities"
     RegistryCollectionCapabilities:

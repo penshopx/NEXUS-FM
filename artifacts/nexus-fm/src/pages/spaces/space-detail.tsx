@@ -1,6 +1,6 @@
 import { getSafeMutationMessage } from '@/lib/utils';
 import {
- useState, useEffect } from 'react';
+ useState } from 'react';
 import {
  useRoute } from 'wouter';
 import {
@@ -44,9 +44,7 @@ import {
  useToast } from '@/hooks/use-toast';
 import {
  Skeleton } from '@/components/ui/skeleton';
-import {
- useDebounce } from '@/hooks/use-debounce';
-import { registrySearchQuery } from '@/lib/registry-search';
+import { useRegistryCursorPagination } from '@/hooks/use-registry-cursor-pagination';
 import {
  ApiErrorState } from '@/components/api-error-state';
 
@@ -75,34 +73,34 @@ export function SpaceDetailPage() {
   const [activeTab, setActiveTab] = useState('systems');
   
   // Systems Data
-  const [systemPage, setSystemPage] = useState(1);
-  const [systemSearch, setSystemSearch] = useState('');
-  const debouncedSystemSearch = useDebounce(systemSearch, 300);
-  const systemRegistrySearch = registrySearchQuery(debouncedSystemSearch);
+  const systemPagination = useRegistryCursorPagination({ prefix: 'systems-' });
   const systemLimit = 10;
-  
-  useEffect(() => { setSystemPage(1); }, [debouncedSystemSearch]);
-  
+
+  const systemListParams = {
+    q: systemPagination.registrySearch,
+    cursor: systemPagination.cursor,
+    limit: systemLimit,
+  };
   const { data: systemsData, isLoading: systemsLoading, error: systemsError } = useListSpaceSystems(
     spaceId,
-    { q: systemRegistrySearch, page: systemPage, limit: systemLimit },
-    { query: { enabled: !!spaceId && activeTab === 'systems', queryKey: getListSpaceSystemsQueryKey(spaceId, { q: systemRegistrySearch, page: systemPage, limit: systemLimit }) } }
+    systemListParams,
+    { query: { enabled: !!spaceId && activeTab === 'systems', queryKey: getListSpaceSystemsQueryKey(spaceId, systemListParams) } }
   );
   const allSystems = (systemsData?.items || []) ;
     
   // Assets Data
-  const [assetPage, setAssetPage] = useState(1);
-  const [assetSearch, setAssetSearch] = useState('');
-  const debouncedAssetSearch = useDebounce(assetSearch, 300);
-  const assetRegistrySearch = registrySearchQuery(debouncedAssetSearch);
+  const assetPagination = useRegistryCursorPagination({ prefix: 'assets-' });
   const assetLimit = 10;
-  
-  useEffect(() => { setAssetPage(1); }, [debouncedAssetSearch]);
-  
+
+  const assetListParams = {
+    q: assetPagination.registrySearch,
+    cursor: assetPagination.cursor,
+    limit: assetLimit,
+  };
   const { data: assetsData, isLoading: assetsLoading, error: assetsError } = useListSpaceAssets(
     spaceId,
-    { q: assetRegistrySearch, page: assetPage, limit: assetLimit },
-    { query: { enabled: !!spaceId && activeTab === 'assets', queryKey: getListSpaceAssetsQueryKey(spaceId, { q: assetRegistrySearch, page: assetPage, limit: assetLimit }) } }
+    assetListParams,
+    { query: { enabled: !!spaceId && activeTab === 'assets', queryKey: getListSpaceAssetsQueryKey(spaceId, assetListParams) } }
   );
   const allAssets = (assetsData?.items || []) ;
   
@@ -267,12 +265,15 @@ export function SpaceDetailPage() {
               description="Manage operational systems within this space."
               items={allSystems}
               isLoading={systemsLoading}
-              searchQuery={systemSearch}
-              onSearchChange={setSystemSearch}
-              page={systemPage}
+              searchQuery={systemPagination.search}
+              onSearchChange={systemPagination.setSearch}
+              page={systemPagination.page}
               totalItems={systemsData?.total || 0}
               limit={systemLimit}
-              onPageChange={setSystemPage}
+              hasNextPage={!!systemsData?.nextCursor}
+              canGoPrevious={systemPagination.canGoPrevious}
+              onNextPage={() => systemsData?.nextCursor && systemPagination.goNext(systemsData.nextCursor)}
+              onPreviousPage={systemPagination.goPrevious}
               onCreate={space.capabilities.createChildren.SYSTEM ? () => setIsCreateSystemOpen(true) : undefined}
               onEdit={(item) => setEditingSystem(item)}
               onDelete={(item) => setDeletingSystem(item)}
@@ -290,12 +291,15 @@ export function SpaceDetailPage() {
               description="Manage independent assets directly assigned to this space."
               items={allAssets}
               isLoading={assetsLoading}
-              searchQuery={assetSearch}
-              onSearchChange={setAssetSearch}
-              page={assetPage}
+              searchQuery={assetPagination.search}
+              onSearchChange={assetPagination.setSearch}
+              page={assetPagination.page}
               totalItems={assetsData?.total || 0}
               limit={assetLimit}
-              onPageChange={setAssetPage}
+              hasNextPage={!!assetsData?.nextCursor}
+              canGoPrevious={assetPagination.canGoPrevious}
+              onNextPage={() => assetsData?.nextCursor && assetPagination.goNext(assetsData.nextCursor)}
+              onPreviousPage={assetPagination.goPrevious}
               onCreate={space.capabilities.createChildren.ASSET ? () => setIsCreateAssetOpen(true) : undefined}
               onEdit={(item) => setEditingAsset(item)}
               onDelete={(item) => setDeletingAsset(item)}

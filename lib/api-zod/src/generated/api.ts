@@ -584,6 +584,7 @@ export const listFacilitiesQueryQMin = 3;
 
 export const listFacilitiesQueryPageDefault = 1;
 
+
 export const listFacilitiesQueryLimitDefault = 50;
 export const listFacilitiesQueryLimitMax = 100;
 
@@ -592,6 +593,7 @@ export const listFacilitiesQueryLimitMax = 100;
 export const ListFacilitiesQueryParams = zod.object({
   "q": zod.coerce.string().min(listFacilitiesQueryQMin).optional().describe('Case-insensitive name or code substring; when provided, must contain at least 3 characters.'),
   "page": zod.coerce.number().int().min(1).default(listFacilitiesQueryPageDefault),
+  "cursor": zod.coerce.string().min(1).optional().describe('Opaque cursor returned by the previous registry page. When present, page is ignored.'),
   "limit": zod.coerce.number().int().min(1).max(listFacilitiesQueryLimitMax).default(listFacilitiesQueryLimitDefault)
 })
 
@@ -621,6 +623,7 @@ export const ListFacilitiesResponse = zod.object({
   "page": zod.number().int(),
   "limit": zod.number().int(),
   "total": zod.number().int(),
+  "nextCursor": zod.string().nullable().describe('Opaque cursor for the next page, or null when this is the final page.'),
   "collectionCapabilities": zod.object({
   "create": zod.boolean().describe('Whether the server permits creating the collection\'s resource kind in this verified context.')
 }).describe('Server-evaluated actions for the current authorized collection context.')
@@ -785,6 +788,7 @@ export const SearchFacilitiesResponse = zod.object({
   "page": zod.number().int(),
   "limit": zod.number().int(),
   "total": zod.number().int(),
+  "nextCursor": zod.string().nullable().describe('Opaque cursor for the next page, or null when this is the final page.'),
   "collectionCapabilities": zod.object({
   "create": zod.boolean().describe('Whether the server permits creating the collection\'s resource kind in this verified context.')
 }).describe('Server-evaluated actions for the current authorized collection context.')
@@ -989,6 +993,7 @@ export const listFacilityBuildingsQueryQMin = 3;
 
 export const listFacilityBuildingsQueryPageDefault = 1;
 
+
 export const listFacilityBuildingsQueryLimitDefault = 50;
 export const listFacilityBuildingsQueryLimitMax = 100;
 
@@ -997,6 +1002,7 @@ export const listFacilityBuildingsQueryLimitMax = 100;
 export const ListFacilityBuildingsQueryParams = zod.object({
   "q": zod.coerce.string().min(listFacilityBuildingsQueryQMin).optional().describe('Case-insensitive name or code substring; when provided, must contain at least 3 characters.'),
   "page": zod.coerce.number().int().min(1).default(listFacilityBuildingsQueryPageDefault),
+  "cursor": zod.coerce.string().min(1).optional().describe('Opaque cursor returned by the previous registry page. When present, page is ignored.'),
   "limit": zod.coerce.number().int().min(1).max(listFacilityBuildingsQueryLimitMax).default(listFacilityBuildingsQueryLimitDefault)
 })
 
@@ -1026,6 +1032,7 @@ export const ListFacilityBuildingsResponse = zod.object({
   "page": zod.number().int(),
   "limit": zod.number().int(),
   "total": zod.number().int(),
+  "nextCursor": zod.string().nullable().describe('Opaque cursor for the next page, or null when this is the final page.'),
   "collectionCapabilities": zod.object({
   "create": zod.boolean().describe('Whether the server permits creating the collection\'s resource kind in this verified context.')
 }).describe('Server-evaluated actions for the current authorized collection context.')
@@ -1069,6 +1076,7 @@ export const SearchBuildingsResponse = zod.object({
   "page": zod.number().int(),
   "limit": zod.number().int(),
   "total": zod.number().int(),
+  "nextCursor": zod.string().nullable().describe('Opaque cursor for the next page, or null when this is the final page.'),
   "collectionCapabilities": zod.object({
   "create": zod.boolean().describe('Whether the server permits creating the collection\'s resource kind in this verified context.')
 }).describe('Server-evaluated actions for the current authorized collection context.')
@@ -1231,6 +1239,7 @@ export const listBuildingSpacesQueryQMin = 3;
 
 export const listBuildingSpacesQueryPageDefault = 1;
 
+
 export const listBuildingSpacesQueryLimitDefault = 50;
 export const listBuildingSpacesQueryLimitMax = 100;
 
@@ -1239,6 +1248,7 @@ export const listBuildingSpacesQueryLimitMax = 100;
 export const ListBuildingSpacesQueryParams = zod.object({
   "q": zod.coerce.string().min(listBuildingSpacesQueryQMin).optional().describe('Case-insensitive name or code substring; when provided, must contain at least 3 characters.'),
   "page": zod.coerce.number().int().min(1).default(listBuildingSpacesQueryPageDefault),
+  "cursor": zod.coerce.string().min(1).optional().describe('Opaque cursor returned by the previous registry page. When present, page is ignored.'),
   "limit": zod.coerce.number().int().min(1).max(listBuildingSpacesQueryLimitMax).default(listBuildingSpacesQueryLimitDefault)
 })
 
@@ -1268,6 +1278,7 @@ export const ListBuildingSpacesResponse = zod.object({
   "page": zod.number().int(),
   "limit": zod.number().int(),
   "total": zod.number().int(),
+  "nextCursor": zod.string().nullable().describe('Opaque cursor for the next page, or null when this is the final page.'),
   "collectionCapabilities": zod.object({
   "create": zod.boolean().describe('Whether the server permits creating the collection\'s resource kind in this verified context.')
 }).describe('Server-evaluated actions for the current authorized collection context.')
@@ -1360,6 +1371,7 @@ export const SearchSpacesResponse = zod.object({
   "page": zod.number().int(),
   "limit": zod.number().int(),
   "total": zod.number().int(),
+  "nextCursor": zod.string().nullable().describe('Opaque cursor for the next page, or null when this is the final page.'),
   "collectionCapabilities": zod.object({
   "create": zod.boolean().describe('Whether the server permits creating the collection\'s resource kind in this verified context.')
 }).describe('Server-evaluated actions for the current authorized collection context.')
@@ -1525,6 +1537,7 @@ export const listSpaceSystemsQueryQMin = 3;
 
 export const listSpaceSystemsQueryPageDefault = 1;
 
+
 export const listSpaceSystemsQueryLimitDefault = 50;
 export const listSpaceSystemsQueryLimitMax = 100;
 
@@ -1533,6 +1546,7 @@ export const listSpaceSystemsQueryLimitMax = 100;
 export const ListSpaceSystemsQueryParams = zod.object({
   "q": zod.coerce.string().min(listSpaceSystemsQueryQMin).optional().describe('Case-insensitive name or code substring; when provided, must contain at least 3 characters.'),
   "page": zod.coerce.number().int().min(1).default(listSpaceSystemsQueryPageDefault),
+  "cursor": zod.coerce.string().min(1).optional().describe('Opaque cursor returned by the previous registry page. When present, page is ignored.'),
   "limit": zod.coerce.number().int().min(1).max(listSpaceSystemsQueryLimitMax).default(listSpaceSystemsQueryLimitDefault)
 })
 
@@ -1562,6 +1576,7 @@ export const ListSpaceSystemsResponse = zod.object({
   "page": zod.number().int(),
   "limit": zod.number().int(),
   "total": zod.number().int(),
+  "nextCursor": zod.string().nullable().describe('Opaque cursor for the next page, or null when this is the final page.'),
   "collectionCapabilities": zod.object({
   "create": zod.boolean().describe('Whether the server permits creating the collection\'s resource kind in this verified context.')
 }).describe('Server-evaluated actions for the current authorized collection context.')
@@ -1629,6 +1644,7 @@ export const listSpaceAssetsQueryQMin = 3;
 
 export const listSpaceAssetsQueryPageDefault = 1;
 
+
 export const listSpaceAssetsQueryLimitDefault = 50;
 export const listSpaceAssetsQueryLimitMax = 100;
 
@@ -1637,6 +1653,7 @@ export const listSpaceAssetsQueryLimitMax = 100;
 export const ListSpaceAssetsQueryParams = zod.object({
   "q": zod.coerce.string().min(listSpaceAssetsQueryQMin).optional().describe('Case-insensitive name or code substring; when provided, must contain at least 3 characters.'),
   "page": zod.coerce.number().int().min(1).default(listSpaceAssetsQueryPageDefault),
+  "cursor": zod.coerce.string().min(1).optional().describe('Opaque cursor returned by the previous registry page. When present, page is ignored.'),
   "limit": zod.coerce.number().int().min(1).max(listSpaceAssetsQueryLimitMax).default(listSpaceAssetsQueryLimitDefault)
 })
 
@@ -1666,6 +1683,7 @@ export const ListSpaceAssetsResponse = zod.object({
   "page": zod.number().int(),
   "limit": zod.number().int(),
   "total": zod.number().int(),
+  "nextCursor": zod.string().nullable().describe('Opaque cursor for the next page, or null when this is the final page.'),
   "collectionCapabilities": zod.object({
   "create": zod.boolean().describe('Whether the server permits creating the collection\'s resource kind in this verified context.')
 }).describe('Server-evaluated actions for the current authorized collection context.')
@@ -1763,6 +1781,7 @@ export const SearchSystemsResponse = zod.object({
   "page": zod.number().int(),
   "limit": zod.number().int(),
   "total": zod.number().int(),
+  "nextCursor": zod.string().nullable().describe('Opaque cursor for the next page, or null when this is the final page.'),
   "collectionCapabilities": zod.object({
   "create": zod.boolean().describe('Whether the server permits creating the collection\'s resource kind in this verified context.')
 }).describe('Server-evaluated actions for the current authorized collection context.')
@@ -1957,6 +1976,7 @@ export const SearchAssetsResponse = zod.object({
   "page": zod.number().int(),
   "limit": zod.number().int(),
   "total": zod.number().int(),
+  "nextCursor": zod.string().nullable().describe('Opaque cursor for the next page, or null when this is the final page.'),
   "collectionCapabilities": zod.object({
   "create": zod.boolean().describe('Whether the server permits creating the collection\'s resource kind in this verified context.')
 }).describe('Server-evaluated actions for the current authorized collection context.')
@@ -2128,6 +2148,7 @@ export const listSystemAssetsQueryQMin = 3;
 
 export const listSystemAssetsQueryPageDefault = 1;
 
+
 export const listSystemAssetsQueryLimitDefault = 50;
 export const listSystemAssetsQueryLimitMax = 100;
 
@@ -2136,6 +2157,7 @@ export const listSystemAssetsQueryLimitMax = 100;
 export const ListSystemAssetsQueryParams = zod.object({
   "q": zod.coerce.string().min(listSystemAssetsQueryQMin).optional().describe('Case-insensitive name or code substring; when provided, must contain at least 3 characters.'),
   "page": zod.coerce.number().int().min(1).default(listSystemAssetsQueryPageDefault),
+  "cursor": zod.coerce.string().min(1).optional().describe('Opaque cursor returned by the previous registry page. When present, page is ignored.'),
   "limit": zod.coerce.number().int().min(1).max(listSystemAssetsQueryLimitMax).default(listSystemAssetsQueryLimitDefault)
 })
 
@@ -2165,6 +2187,7 @@ export const ListSystemAssetsResponse = zod.object({
   "page": zod.number().int(),
   "limit": zod.number().int(),
   "total": zod.number().int(),
+  "nextCursor": zod.string().nullable().describe('Opaque cursor for the next page, or null when this is the final page.'),
   "collectionCapabilities": zod.object({
   "create": zod.boolean().describe('Whether the server permits creating the collection\'s resource kind in this verified context.')
 }).describe('Server-evaluated actions for the current authorized collection context.')
@@ -2269,6 +2292,7 @@ export const ListBuildingsResponse = zod.object({
   "page": zod.number().int(),
   "limit": zod.number().int(),
   "total": zod.number().int(),
+  "nextCursor": zod.string().nullable().describe('Opaque cursor for the next page, or null when this is the final page.'),
   "collectionCapabilities": zod.object({
   "create": zod.boolean().describe('Whether the server permits creating the collection\'s resource kind in this verified context.')
 }).describe('Server-evaluated actions for the current authorized collection context.')
@@ -2365,6 +2389,7 @@ export const ListSpacesResponse = zod.object({
   "page": zod.number().int(),
   "limit": zod.number().int(),
   "total": zod.number().int(),
+  "nextCursor": zod.string().nullable().describe('Opaque cursor for the next page, or null when this is the final page.'),
   "collectionCapabilities": zod.object({
   "create": zod.boolean().describe('Whether the server permits creating the collection\'s resource kind in this verified context.')
 }).describe('Server-evaluated actions for the current authorized collection context.')
@@ -2462,6 +2487,7 @@ export const ListSystemsResponse = zod.object({
   "page": zod.number().int(),
   "limit": zod.number().int(),
   "total": zod.number().int(),
+  "nextCursor": zod.string().nullable().describe('Opaque cursor for the next page, or null when this is the final page.'),
   "collectionCapabilities": zod.object({
   "create": zod.boolean().describe('Whether the server permits creating the collection\'s resource kind in this verified context.')
 }).describe('Server-evaluated actions for the current authorized collection context.')
@@ -2560,6 +2586,7 @@ export const ListAssetsResponse = zod.object({
   "page": zod.number().int(),
   "limit": zod.number().int(),
   "total": zod.number().int(),
+  "nextCursor": zod.string().nullable().describe('Opaque cursor for the next page, or null when this is the final page.'),
   "collectionCapabilities": zod.object({
   "create": zod.boolean().describe('Whether the server permits creating the collection\'s resource kind in this verified context.')
 }).describe('Server-evaluated actions for the current authorized collection context.')
