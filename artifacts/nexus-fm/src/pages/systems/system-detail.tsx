@@ -40,6 +40,7 @@ import {
  Skeleton } from '@/components/ui/skeleton';
 import {
  useDebounce } from '@/hooks/use-debounce';
+import { registrySearchQuery } from '@/lib/registry-search';
 import {
  ApiErrorState } from '@/components/api-error-state';
 
@@ -65,14 +66,15 @@ export function SystemDetailPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
+  const registrySearch = registrySearchQuery(debouncedSearch);
   const limit = 10;
   
   useEffect(() => { setPage(1); }, [debouncedSearch]);
   
   const { data: assetsData, isLoading: assetsLoading, error: assetsError } = useListSystemAssets(
     systemId,
-    { q: debouncedSearch || undefined, page, limit },
-    { query: { enabled: !!systemId, queryKey: getListSystemAssetsQueryKey(systemId, { q: debouncedSearch || undefined, page, limit }) } }
+    { q: registrySearch, page, limit },
+    { query: { enabled: !!systemId, queryKey: getListSystemAssetsQueryKey(systemId, { q: registrySearch, page, limit }) } }
   );
   
   const allAssets = (assetsData?.items || []) ;

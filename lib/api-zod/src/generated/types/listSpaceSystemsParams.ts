@@ -10,6 +10,10 @@ import type { PageParameter } from './pageParameter';
 import type { SearchParameter } from './searchParameter';
 
 export type ListSpaceSystemsParams = {
+/**
+ * Case-insensitive name or code substring; when provided, must contain at least 3 characters.
+ * @minLength 3
+ */
 q?: SearchParameter;
 /**
  * @minimum 1

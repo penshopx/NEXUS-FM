@@ -36,6 +36,7 @@ import {
  useDebounce } from '@/hooks/use-debounce';
 import {
  ApiErrorState } from '@/components/api-error-state';
+import { registrySearchQuery } from '@/lib/registry-search';
 
 export function FacilityDetailPage() {
   const [, params] = useRoute('/app/facilities/:id');
@@ -51,6 +52,7 @@ export function FacilityDetailPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
+  const registrySearch = registrySearchQuery(debouncedSearch);
   const limit = 10;
   
   useEffect(() => {
@@ -59,8 +61,8 @@ export function FacilityDetailPage() {
   
   const { data: buildingsData, isLoading: buildingsLoading, error: buildingsError } = useListFacilityBuildings(
     facilityId, 
-    { q: debouncedSearch || undefined, page, limit },
-    { query: { enabled: !!facilityId, queryKey: getListFacilityBuildingsQueryKey(facilityId, { q: debouncedSearch || undefined, page, limit }) } }
+    { q: registrySearch, page, limit },
+    { query: { enabled: !!facilityId, queryKey: getListFacilityBuildingsQueryKey(facilityId, { q: registrySearch, page, limit }) } }
   );
   
   const allBuildings = (buildingsData?.items || []) ;

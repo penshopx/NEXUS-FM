@@ -60,6 +60,7 @@ import {
   PORTFOLIO_IMPORT_MAX_ROWS,
   RegistryExportAuthorizationError,
   listAuthorizedRegistryBatch,
+  normalizedRegistrySearch,
   queryAuthorizedRegistryRows,
   resolveRegistryObject,
 } from "../src/services/facilities.ts";
@@ -1621,6 +1622,16 @@ test("facility registry resolves trusted ancestors and enforces every route surf
     return { response, text: await response.text() };
   };
   try {
+    for (const path of [
+      "/facilities?q=a",
+      "/facilities/search?q=ab",
+      "/facilities/export?q=ab",
+      `/facilities/${facility.id}/buildings?q=ab`,
+    ]) {
+      const shortSearch = await request(path);
+      assert.equal(shortSearch.response.status, 400, `${path} must reject a short search`);
+      assert.match(shortSearch.text, /at least 3 characters/);
+    }
     const listed = await request("/facilities?limit=1&page=1");
     assert.equal(listed.response.status, 200);
     const listedBody = JSON.parse(listed.text) as {
@@ -2132,6 +2143,31 @@ test("empty facility collection exposes server-derived bootstrap create capabili
   }
 });
 
+test("registry search rejects one- and two-character terms before querying", async () => {
+  assert.equal(normalizedRegistrySearch(undefined), undefined);
+  assert.equal(normalizedRegistrySearch("   "), undefined);
+  assert.equal(normalizedRegistrySearch(" abc "), "abc");
+  assert.throws(() => normalizedRegistrySearch("a"), /at least 3 characters/);
+  assert.throws(() => normalizedRegistrySearch(" ab "), /at least 3 characters/);
+
+  const database = new Proxy({}, {
+    get() {
+      throw new Error("short registry search reached the database");
+    },
+  });
+  await assert.rejects(
+    queryAuthorizedRegistryRows({
+      database,
+      kind: "ASSET",
+      organizationId: randomUUID(),
+      actorUserId: randomUUID(),
+      query: "ab",
+      limit: 25,
+    }),
+    /at least 3 characters/,
+  );
+});
+
 test("large registry portfolio keeps list, search, nested totals, and export queries bounded", async () => {
   const facilityId = randomUUID();
   const actor = await makeFixture("FACILITY_MANAGER", "FACILITY", facilityId);
@@ -2345,6 +2381,7 @@ test("large registry portfolio keeps list, search, nested totals, and export que
   };
   await assertTrigramSearchPlan("Needle", "assets_name_trgm_idx");
   await assertTrigramSearchPlan("PERF-31-073", "assets_code_trgm_idx");
+
 });
 
 test("registry export snapshot is stable across concurrent rename, insert, and delete", async () => {

@@ -7,5 +7,8 @@
  */
 
 export type SearchSystemsParams = {
+/**
+ * @minLength 3
+ */
 q: string;
 };

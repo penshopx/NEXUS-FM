@@ -19,6 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useDebounce } from '@/hooks/use-debounce';
 import { ApiErrorState } from '@/components/api-error-state';
 import { PortfolioImportDialog } from '@/components/registry/portfolio-import-dialog';
+import { registrySearchQuery } from '@/lib/registry-search';
 
 export function FacilitiesPage() {
   const queryClient = useQueryClient();
@@ -27,6 +28,7 @@ export function FacilitiesPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
+  const registrySearch = registrySearchQuery(debouncedSearch);
   const limit = 10;
   
   // Reset page when search changes
@@ -35,8 +37,8 @@ export function FacilitiesPage() {
   }, [debouncedSearch]);
   
   const { data, isLoading, error } = useListFacilities(
-    { q: debouncedSearch || undefined, page, limit },
-    { query: { queryKey: getListFacilitiesQueryKey({ q: debouncedSearch || undefined, page, limit }) } }
+    { q: registrySearch, page, limit },
+    { query: { queryKey: getListFacilitiesQueryKey({ q: registrySearch, page, limit }) } }
   );
   
   const createFacility = useCreateFacility();

@@ -17,6 +17,7 @@ import {
   authorizeRegistryObject,
   csvForRow,
   listAuthorizedRegistryBatch,
+  normalizedRegistrySearch,
   portfolioImportHeaderLine,
   PORTFOLIO_IMPORT_MAX_BYTES,
   queryAuthorizedRegistryRows,
@@ -104,6 +105,19 @@ const plural: Record<RegistryKind, string> = {
 function parsePage(value: unknown, fallback: number, max: number) {
   const parsed = typeof value === "string" ? Number(value) : fallback;
   return Number.isInteger(parsed) && parsed > 0 ? Math.min(parsed, max) : fallback;
+}
+
+function registrySearchFromRequest(
+  req: import("express").Request,
+  res: import("express").Response,
+) {
+  const query = typeof req.query.q === "string" ? req.query.q : undefined;
+  try {
+    return { valid: true as const, query: normalizedRegistrySearch(query) };
+  } catch (error) {
+    res.status(400).json({ error: (error as Error).message });
+    return { valid: false as const };
+  }
 }
 
 const registryCursorSchema = z.object({
@@ -401,6 +415,9 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
   const resolveCurrentUser = dependencies.currentUser ?? defaultCurrentUser;
 
   async function list(req: import("express").Request, res: import("express").Response, kind: RegistryKind) {
+    const search = registrySearchFromRequest(req, res);
+    if (!search.valid) return;
+    const query = search.query;
     const actor = await actorContext(req, res, resolveCurrentUser, database);
     if (!actor) return;
     const bootstrapResourceId = randomUUID();
@@ -425,7 +442,7 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
       return;
     }
     const result = await authorizedRows(database, kind, actor.organizationId, actor.user.id,
-      typeof req.query.q === "string" ? req.query.q : undefined, String(req.id), page, limit,
+      query, String(req.id), page, limit,
       undefined, cursor);
     res.json({
       items: result.rows,
@@ -438,6 +455,9 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
   }
 
   async function exportRows(req: import("express").Request, res: import("express").Response, kind: RegistryKind) {
+    const search = registrySearchFromRequest(req, res);
+    if (!search.valid) return;
+    const query = search.query;
     const actor = await actorContext(req, res, resolveCurrentUser, database);
     if (!actor) return;
     const write = async (chunk: string) => {
@@ -459,7 +479,7 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
             kind,
             organizationId: actor.organizationId,
             actorUserId: actor.user.id,
-            query: typeof req.query.q === "string" ? req.query.q : undefined,
+            query,
             limit: batchSize,
             after,
           });
@@ -1026,6 +1046,8 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
       await create(req, res, childKind);
     });
     router.get(`/${parentPath}/:parentId/${plural[childKind]}`, async (req, res): Promise<void> => {
+      const search = registrySearchFromRequest(req, res);
+      if (!search.valid) return;
       const actor = await actorContext(req, res, resolveCurrentUser, database);
       if (!actor) return;
       const parent = await authorizeRegistryObject({
@@ -1052,7 +1074,7 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
         childKind,
         actor.organizationId,
         actor.user.id,
-        typeof req.query.q === "string" ? req.query.q : undefined,
+        search.query,
         String(req.id),
         page,
         limit,

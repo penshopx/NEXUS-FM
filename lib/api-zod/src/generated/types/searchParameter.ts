@@ -6,4 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
+/**
+ * Case-insensitive name or code substring; when provided, must contain at least 3 characters.
+ */
 export type SearchParameter = string;

@@ -46,6 +46,7 @@ import {
  Skeleton } from '@/components/ui/skeleton';
 import {
  useDebounce } from '@/hooks/use-debounce';
+import { registrySearchQuery } from '@/lib/registry-search';
 import {
  ApiErrorState } from '@/components/api-error-state';
 
@@ -77,14 +78,15 @@ export function SpaceDetailPage() {
   const [systemPage, setSystemPage] = useState(1);
   const [systemSearch, setSystemSearch] = useState('');
   const debouncedSystemSearch = useDebounce(systemSearch, 300);
+  const systemRegistrySearch = registrySearchQuery(debouncedSystemSearch);
   const systemLimit = 10;
   
   useEffect(() => { setSystemPage(1); }, [debouncedSystemSearch]);
   
   const { data: systemsData, isLoading: systemsLoading, error: systemsError } = useListSpaceSystems(
     spaceId,
-    { q: debouncedSystemSearch || undefined, page: systemPage, limit: systemLimit },
-    { query: { enabled: !!spaceId && activeTab === 'systems', queryKey: getListSpaceSystemsQueryKey(spaceId, { q: debouncedSystemSearch || undefined, page: systemPage, limit: systemLimit }) } }
+    { q: systemRegistrySearch, page: systemPage, limit: systemLimit },
+    { query: { enabled: !!spaceId && activeTab === 'systems', queryKey: getListSpaceSystemsQueryKey(spaceId, { q: systemRegistrySearch, page: systemPage, limit: systemLimit }) } }
   );
   const allSystems = (systemsData?.items || []) ;
     
@@ -92,14 +94,15 @@ export function SpaceDetailPage() {
   const [assetPage, setAssetPage] = useState(1);
   const [assetSearch, setAssetSearch] = useState('');
   const debouncedAssetSearch = useDebounce(assetSearch, 300);
+  const assetRegistrySearch = registrySearchQuery(debouncedAssetSearch);
   const assetLimit = 10;
   
   useEffect(() => { setAssetPage(1); }, [debouncedAssetSearch]);
   
   const { data: assetsData, isLoading: assetsLoading, error: assetsError } = useListSpaceAssets(
     spaceId,
-    { q: debouncedAssetSearch || undefined, page: assetPage, limit: assetLimit },
-    { query: { enabled: !!spaceId && activeTab === 'assets', queryKey: getListSpaceAssetsQueryKey(spaceId, { q: debouncedAssetSearch || undefined, page: assetPage, limit: assetLimit }) } }
+    { q: assetRegistrySearch, page: assetPage, limit: assetLimit },
+    { query: { enabled: !!spaceId && activeTab === 'assets', queryKey: getListSpaceAssetsQueryKey(spaceId, { q: assetRegistrySearch, page: assetPage, limit: assetLimit }) } }
   );
   const allAssets = (assetsData?.items || []) ;
   

@@ -43,6 +43,7 @@ export function RegistryList<T extends RegistryRecord>({
   testIdPrefix = 'registry'
 }: RegistryListProps<T>) {
   const totalPages = Math.ceil(totalItems / limit) || 1;
+  const searchHelpId = `${testIdPrefix}-search-help`;
 
   return (
     <div className="space-y-6">
@@ -55,13 +56,21 @@ export function RegistryList<T extends RegistryRecord>({
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
             <Input
-              placeholder="Search..."
+              placeholder="Search (3+ characters)"
               aria-label={`Search ${title}`}
+              aria-describedby={searchHelpId}
               className="pl-9 bg-card border-border focus-visible:ring-primary"
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
               data-testid={`input-search-${testIdPrefix}`}
             />
+            <p
+              id={searchHelpId}
+              className="mt-1.5 text-xs text-muted-foreground"
+              data-testid={`text-search-help-${testIdPrefix}`}
+            >
+              Enter at least 3 characters to search.
+            </p>
           </div>
           <div className="flex items-center gap-2">
             {onImport && (

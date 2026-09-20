@@ -7,5 +7,8 @@
  */
 
 export type SearchBuildingsParams = {
+/**
+ * @minLength 3
+ */
 q: string;
 };

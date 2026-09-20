@@ -612,6 +612,9 @@ export type PreconditionRequiredResponse = ErrorResponse;
  */
 export type IfMatchParameter = string;
 
+/**
+ * Case-insensitive name or code substring; when provided, must contain at least 3 characters.
+ */
 export type SearchParameter = string;
 
 export type PageParameter = number;
@@ -691,6 +694,10 @@ status?: UserRoleBindingStatus;
 };
 
 export type ListFacilitiesParams = {
+/**
+ * Case-insensitive name or code substring; when provided, must contain at least 3 characters.
+ * @minLength 3
+ */
 q?: SearchParameter;
 /**
  * @minimum 1
@@ -704,10 +711,17 @@ limit?: LimitParameter;
 };
 
 export type SearchFacilitiesParams = {
+/**
+ * @minLength 3
+ */
 q: string;
 };
 
 export type ListFacilityBuildingsParams = {
+/**
+ * Case-insensitive name or code substring; when provided, must contain at least 3 characters.
+ * @minLength 3
+ */
 q?: SearchParameter;
 /**
  * @minimum 1
@@ -721,10 +735,17 @@ limit?: LimitParameter;
 };
 
 export type SearchBuildingsParams = {
+/**
+ * @minLength 3
+ */
 q: string;
 };
 
 export type ListBuildingSpacesParams = {
+/**
+ * Case-insensitive name or code substring; when provided, must contain at least 3 characters.
+ * @minLength 3
+ */
 q?: SearchParameter;
 /**
  * @minimum 1
@@ -738,10 +759,17 @@ limit?: LimitParameter;
 };
 
 export type SearchSpacesParams = {
+/**
+ * @minLength 3
+ */
 q: string;
 };
 
 export type ListSpaceSystemsParams = {
+/**
+ * Case-insensitive name or code substring; when provided, must contain at least 3 characters.
+ * @minLength 3
+ */
 q?: SearchParameter;
 /**
  * @minimum 1
@@ -755,6 +783,10 @@ limit?: LimitParameter;
 };
 
 export type ListSpaceAssetsParams = {
+/**
+ * Case-insensitive name or code substring; when provided, must contain at least 3 characters.
+ * @minLength 3
+ */
 q?: SearchParameter;
 /**
  * @minimum 1
@@ -768,14 +800,24 @@ limit?: LimitParameter;
 };
 
 export type SearchSystemsParams = {
+/**
+ * @minLength 3
+ */
 q: string;
 };
 
 export type SearchAssetsParams = {
+/**
+ * @minLength 3
+ */
 q: string;
 };
 
 export type ListSystemAssetsParams = {
+/**
+ * Case-insensitive name or code substring; when provided, must contain at least 3 characters.
+ * @minLength 3
+ */
 q?: SearchParameter;
 /**
  * @minimum 1
@@ -789,6 +831,10 @@ limit?: LimitParameter;
 };
 
 export type ListBuildingsParams = {
+/**
+ * Case-insensitive name or code substring; when provided, must contain at least 3 characters.
+ * @minLength 3
+ */
 q?: SearchParameter;
 /**
  * @minimum 1
@@ -802,6 +848,10 @@ limit?: LimitParameter;
 };
 
 export type ListSpacesParams = {
+/**
+ * Case-insensitive name or code substring; when provided, must contain at least 3 characters.
+ * @minLength 3
+ */
 q?: SearchParameter;
 /**
  * @minimum 1
@@ -815,6 +865,10 @@ limit?: LimitParameter;
 };
 
 export type ListSystemsParams = {
+/**
+ * Case-insensitive name or code substring; when provided, must contain at least 3 characters.
+ * @minLength 3
+ */
 q?: SearchParameter;
 /**
  * @minimum 1
@@ -828,6 +882,10 @@ limit?: LimitParameter;
 };
 
 export type ListAssetsParams = {
+/**
+ * Case-insensitive name or code substring; when provided, must contain at least 3 characters.
+ * @minLength 3
+ */
 q?: SearchParameter;
 /**
  * @minimum 1

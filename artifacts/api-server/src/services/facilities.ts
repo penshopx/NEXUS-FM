@@ -18,6 +18,7 @@ import type { Asset, Building, Facility, Space, System } from "@workspace/db";
 import { authorize, isBindingScopeCompatible, type AuthorizationDecision } from "./authorization";
 
 export const REGISTRY_KINDS = ["FACILITY", "BUILDING", "SPACE", "SYSTEM", "ASSET"] as const;
+export const REGISTRY_SEARCH_MIN_LENGTH = 3;
 export type RegistryKind = typeof REGISTRY_KINDS[number];
 export type RegistryRow = Facility | Building | Space | System | Asset;
 
@@ -222,6 +223,15 @@ type RegistryQuery = {
   after?: { name: string; id: string };
 };
 
+export function normalizedRegistrySearch(query?: string) {
+  const search = query?.trim();
+  if (!search) return undefined;
+  if (search.length < REGISTRY_SEARCH_MIN_LENGTH) {
+    throw new RangeError(`Registry search must contain at least ${REGISTRY_SEARCH_MIN_LENGTH} characters`);
+  }
+  return search;
+}
+
 export class RegistryExportAuthorizationError extends Error {
   constructor() {
     super("Registry export authorization is no longer valid");
@@ -299,7 +309,7 @@ async function registryAuthorizationPredicate(input: RegistryQuery, table: any) 
 }
 
 function registryBasePredicate(input: RegistryQuery, table: any, authorizationPredicate: any) {
-  const search = input.query?.trim();
+  const search = normalizedRegistrySearch(input.query);
   return and(
     eq(table.organizationId, input.organizationId),
     authorizationPredicate,
@@ -318,6 +328,7 @@ function registryCursorPredicate(input: RegistryQuery, table: any) {
 }
 
 export async function queryAuthorizedRegistryRows(input: RegistryQuery) {
+  normalizedRegistrySearch(input.query);
   const table = registryTable(input.kind);
   const authorizationPredicate = await registryAuthorizationPredicate(input, table);
   if (!authorizationPredicate) return { rows: [] as RegistryRow[], total: 0, hasMore: false };
@@ -335,6 +346,7 @@ export async function queryAuthorizedRegistryRows(input: RegistryQuery) {
 }
 
 export async function listAuthorizedRegistryBatch(input: RegistryQuery) {
+  normalizedRegistrySearch(input.query);
   const table = registryTable(input.kind);
   const authorizationPredicate = await registryAuthorizationPredicate({
     ...input,

@@ -7,5 +7,8 @@
  */
 
 export type SearchSpacesParams = {
+/**
+ * @minLength 3
+ */
 q: string;
 };

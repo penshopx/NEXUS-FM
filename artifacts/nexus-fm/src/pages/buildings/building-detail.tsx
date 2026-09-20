@@ -37,6 +37,7 @@ import {
  Skeleton } from '@/components/ui/skeleton';
 import {
  useDebounce } from '@/hooks/use-debounce';
+import { registrySearchQuery } from '@/lib/registry-search';
 import {
  ApiErrorState } from '@/components/api-error-state';
 
@@ -59,6 +60,7 @@ export function BuildingDetailPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
+  const registrySearch = registrySearchQuery(debouncedSearch);
   const limit = 10;
   
   useEffect(() => {
@@ -67,8 +69,8 @@ export function BuildingDetailPage() {
   
   const { data: spacesData, isLoading: spacesLoading, error: spacesError } = useListBuildingSpaces(
     buildingId,
-    { q: debouncedSearch || undefined, page, limit },
-    { query: { enabled: !!buildingId, queryKey: getListBuildingSpacesQueryKey(buildingId, { q: debouncedSearch || undefined, page, limit }) } }
+    { q: registrySearch, page, limit },
+    { query: { enabled: !!buildingId, queryKey: getListBuildingSpacesQueryKey(buildingId, { q: registrySearch, page, limit }) } }
   );
   
   const allSpaces = (spacesData?.items || []) ;

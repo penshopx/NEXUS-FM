@@ -7,5 +7,8 @@
  */
 
 export type SearchAssetsParams = {
+/**
+ * @minLength 3
+ */
 q: string;
 };

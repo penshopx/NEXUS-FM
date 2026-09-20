@@ -580,6 +580,8 @@ export const CheckAuthorizationResponse = zod.object({
 /**
  * @summary List facilities in the active organization
  */
+export const listFacilitiesQueryQMin = 3;
+
 export const listFacilitiesQueryPageDefault = 1;
 
 export const listFacilitiesQueryLimitDefault = 50;
@@ -588,7 +590,7 @@ export const listFacilitiesQueryLimitMax = 100;
 
 
 export const ListFacilitiesQueryParams = zod.object({
-  "q": zod.coerce.string().optional(),
+  "q": zod.coerce.string().min(listFacilitiesQueryQMin).optional().describe('Case-insensitive name or code substring; when provided, must contain at least 3 characters.'),
   "page": zod.coerce.number().int().min(1).default(listFacilitiesQueryPageDefault),
   "limit": zod.coerce.number().int().min(1).max(listFacilitiesQueryLimitMax).default(listFacilitiesQueryLimitDefault)
 })
@@ -749,8 +751,12 @@ export const ValidateFacilityPortfolioImportResponse = zod.object({
 /**
  * @summary Search facilities in the active organization
  */
+export const searchFacilitiesQueryQMin = 3;
+
+
+
 export const SearchFacilitiesQueryParams = zod.object({
-  "q": zod.coerce.string()
+  "q": zod.coerce.string().min(searchFacilitiesQueryQMin)
 })
 
 export const SearchFacilitiesResponse = zod.object({
@@ -979,6 +985,8 @@ export const ListFacilityBuildingsParams = zod.object({
   "id": zod.coerce.string().uuid()
 })
 
+export const listFacilityBuildingsQueryQMin = 3;
+
 export const listFacilityBuildingsQueryPageDefault = 1;
 
 export const listFacilityBuildingsQueryLimitDefault = 50;
@@ -987,7 +995,7 @@ export const listFacilityBuildingsQueryLimitMax = 100;
 
 
 export const ListFacilityBuildingsQueryParams = zod.object({
-  "q": zod.coerce.string().optional(),
+  "q": zod.coerce.string().min(listFacilityBuildingsQueryQMin).optional().describe('Case-insensitive name or code substring; when provided, must contain at least 3 characters.'),
   "page": zod.coerce.number().int().min(1).default(listFacilityBuildingsQueryPageDefault),
   "limit": zod.coerce.number().int().min(1).max(listFacilityBuildingsQueryLimitMax).default(listFacilityBuildingsQueryLimitDefault)
 })
@@ -1027,8 +1035,12 @@ export const ListFacilityBuildingsResponse = zod.object({
 /**
  * @summary Search buildings in the active organization
  */
+export const searchBuildingsQueryQMin = 3;
+
+
+
 export const SearchBuildingsQueryParams = zod.object({
-  "q": zod.coerce.string()
+  "q": zod.coerce.string().min(searchBuildingsQueryQMin)
 })
 
 export const SearchBuildingsResponse = zod.object({
@@ -1215,6 +1227,8 @@ export const ListBuildingSpacesParams = zod.object({
   "id": zod.coerce.string().uuid()
 })
 
+export const listBuildingSpacesQueryQMin = 3;
+
 export const listBuildingSpacesQueryPageDefault = 1;
 
 export const listBuildingSpacesQueryLimitDefault = 50;
@@ -1223,7 +1237,7 @@ export const listBuildingSpacesQueryLimitMax = 100;
 
 
 export const ListBuildingSpacesQueryParams = zod.object({
-  "q": zod.coerce.string().optional(),
+  "q": zod.coerce.string().min(listBuildingSpacesQueryQMin).optional().describe('Case-insensitive name or code substring; when provided, must contain at least 3 characters.'),
   "page": zod.coerce.number().int().min(1).default(listBuildingSpacesQueryPageDefault),
   "limit": zod.coerce.number().int().min(1).max(listBuildingSpacesQueryLimitMax).default(listBuildingSpacesQueryLimitDefault)
 })
@@ -1312,8 +1326,12 @@ export const CreateBuildingSpaceResponse = zod.object({
 /**
  * @summary Search spaces in the active organization
  */
+export const searchSpacesQueryQMin = 3;
+
+
+
 export const SearchSpacesQueryParams = zod.object({
-  "q": zod.coerce.string()
+  "q": zod.coerce.string().min(searchSpacesQueryQMin)
 })
 
 export const SearchSpacesResponse = zod.object({
@@ -1503,6 +1521,8 @@ export const ListSpaceSystemsParams = zod.object({
   "id": zod.coerce.string().uuid()
 })
 
+export const listSpaceSystemsQueryQMin = 3;
+
 export const listSpaceSystemsQueryPageDefault = 1;
 
 export const listSpaceSystemsQueryLimitDefault = 50;
@@ -1511,7 +1531,7 @@ export const listSpaceSystemsQueryLimitMax = 100;
 
 
 export const ListSpaceSystemsQueryParams = zod.object({
-  "q": zod.coerce.string().optional(),
+  "q": zod.coerce.string().min(listSpaceSystemsQueryQMin).optional().describe('Case-insensitive name or code substring; when provided, must contain at least 3 characters.'),
   "page": zod.coerce.number().int().min(1).default(listSpaceSystemsQueryPageDefault),
   "limit": zod.coerce.number().int().min(1).max(listSpaceSystemsQueryLimitMax).default(listSpaceSystemsQueryLimitDefault)
 })
@@ -1605,6 +1625,8 @@ export const ListSpaceAssetsParams = zod.object({
   "id": zod.coerce.string().uuid()
 })
 
+export const listSpaceAssetsQueryQMin = 3;
+
 export const listSpaceAssetsQueryPageDefault = 1;
 
 export const listSpaceAssetsQueryLimitDefault = 50;
@@ -1613,7 +1635,7 @@ export const listSpaceAssetsQueryLimitMax = 100;
 
 
 export const ListSpaceAssetsQueryParams = zod.object({
-  "q": zod.coerce.string().optional(),
+  "q": zod.coerce.string().min(listSpaceAssetsQueryQMin).optional().describe('Case-insensitive name or code substring; when provided, must contain at least 3 characters.'),
   "page": zod.coerce.number().int().min(1).default(listSpaceAssetsQueryPageDefault),
   "limit": zod.coerce.number().int().min(1).max(listSpaceAssetsQueryLimitMax).default(listSpaceAssetsQueryLimitDefault)
 })
@@ -1707,8 +1729,12 @@ export const CreateSpaceAssetResponse = zod.object({
 /**
  * @summary Search systems in the active organization
  */
+export const searchSystemsQueryQMin = 3;
+
+
+
 export const SearchSystemsQueryParams = zod.object({
-  "q": zod.coerce.string()
+  "q": zod.coerce.string().min(searchSystemsQueryQMin)
 })
 
 export const SearchSystemsResponse = zod.object({
@@ -1897,8 +1923,12 @@ export const DeleteSystemResponse = zod.void()
 /**
  * @summary Search assets in the active organization
  */
+export const searchAssetsQueryQMin = 3;
+
+
+
 export const SearchAssetsQueryParams = zod.object({
-  "q": zod.coerce.string()
+  "q": zod.coerce.string().min(searchAssetsQueryQMin)
 })
 
 export const SearchAssetsResponse = zod.object({
@@ -2094,6 +2124,8 @@ export const ListSystemAssetsParams = zod.object({
   "id": zod.coerce.string().uuid()
 })
 
+export const listSystemAssetsQueryQMin = 3;
+
 export const listSystemAssetsQueryPageDefault = 1;
 
 export const listSystemAssetsQueryLimitDefault = 50;
@@ -2102,7 +2134,7 @@ export const listSystemAssetsQueryLimitMax = 100;
 
 
 export const ListSystemAssetsQueryParams = zod.object({
-  "q": zod.coerce.string().optional(),
+  "q": zod.coerce.string().min(listSystemAssetsQueryQMin).optional().describe('Case-insensitive name or code substring; when provided, must contain at least 3 characters.'),
   "page": zod.coerce.number().int().min(1).default(listSystemAssetsQueryPageDefault),
   "limit": zod.coerce.number().int().min(1).max(listSystemAssetsQueryLimitMax).default(listSystemAssetsQueryLimitDefault)
 })
@@ -2196,6 +2228,8 @@ export const CreateSystemAssetResponse = zod.object({
 /**
  * @summary List buildings in the active organization
  */
+export const listBuildingsQueryQMin = 3;
+
 export const listBuildingsQueryPageDefault = 1;
 
 export const listBuildingsQueryLimitDefault = 50;
@@ -2204,7 +2238,7 @@ export const listBuildingsQueryLimitMax = 100;
 
 
 export const ListBuildingsQueryParams = zod.object({
-  "q": zod.coerce.string().optional(),
+  "q": zod.coerce.string().min(listBuildingsQueryQMin).optional().describe('Case-insensitive name or code substring; when provided, must contain at least 3 characters.'),
   "page": zod.coerce.number().int().min(1).default(listBuildingsQueryPageDefault),
   "limit": zod.coerce.number().int().min(1).max(listBuildingsQueryLimitMax).default(listBuildingsQueryLimitDefault)
 })
@@ -2290,6 +2324,8 @@ export const CreateBuildingResponse = zod.object({
 /**
  * @summary List spaces in the active organization
  */
+export const listSpacesQueryQMin = 3;
+
 export const listSpacesQueryPageDefault = 1;
 
 export const listSpacesQueryLimitDefault = 50;
@@ -2298,7 +2334,7 @@ export const listSpacesQueryLimitMax = 100;
 
 
 export const ListSpacesQueryParams = zod.object({
-  "q": zod.coerce.string().optional(),
+  "q": zod.coerce.string().min(listSpacesQueryQMin).optional().describe('Case-insensitive name or code substring; when provided, must contain at least 3 characters.'),
   "page": zod.coerce.number().int().min(1).default(listSpacesQueryPageDefault),
   "limit": zod.coerce.number().int().min(1).max(listSpacesQueryLimitMax).default(listSpacesQueryLimitDefault)
 })
@@ -2385,6 +2421,8 @@ export const CreateSpaceResponse = zod.object({
 /**
  * @summary List systems in the active organization
  */
+export const listSystemsQueryQMin = 3;
+
 export const listSystemsQueryPageDefault = 1;
 
 export const listSystemsQueryLimitDefault = 50;
@@ -2393,7 +2431,7 @@ export const listSystemsQueryLimitMax = 100;
 
 
 export const ListSystemsQueryParams = zod.object({
-  "q": zod.coerce.string().optional(),
+  "q": zod.coerce.string().min(listSystemsQueryQMin).optional().describe('Case-insensitive name or code substring; when provided, must contain at least 3 characters.'),
   "page": zod.coerce.number().int().min(1).default(listSystemsQueryPageDefault),
   "limit": zod.coerce.number().int().min(1).max(listSystemsQueryLimitMax).default(listSystemsQueryLimitDefault)
 })
@@ -2481,6 +2519,8 @@ export const CreateSystemResponse = zod.object({
 /**
  * @summary List assets in the active organization
  */
+export const listAssetsQueryQMin = 3;
+
 export const listAssetsQueryPageDefault = 1;
 
 export const listAssetsQueryLimitDefault = 50;
@@ -2489,7 +2529,7 @@ export const listAssetsQueryLimitMax = 100;
 
 
 export const ListAssetsQueryParams = zod.object({
-  "q": zod.coerce.string().optional(),
+  "q": zod.coerce.string().min(listAssetsQueryQMin).optional().describe('Case-insensitive name or code substring; when provided, must contain at least 3 characters.'),
   "page": zod.coerce.number().int().min(1).default(listAssetsQueryPageDefault),
   "limit": zod.coerce.number().int().min(1).max(listAssetsQueryLimitMax).default(listAssetsQueryLimitDefault)
 })
