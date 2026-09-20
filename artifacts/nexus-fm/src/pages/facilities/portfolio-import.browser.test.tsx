@@ -430,6 +430,52 @@ describe('facility portfolio import browser regressions', () => {
     expect(JSON.stringify(analytics.track.mock.calls)).not.toContain('Private Campus');
   });
 
+  it('records bounded commit failures without exposing error details', async () => {
+    const user = userEvent.setup();
+    api.validateImport.mockReturnValue(idleMutation(
+      vi.fn((_variables: unknown, options: MutationOptions<unknown>) => {
+        options.onSuccess?.({
+          total: 250_000,
+          facilities: 2,
+          buildings: 249_998,
+          spaces: 0,
+          systems: 0,
+          assets: 0,
+          facilityGroups: [],
+        });
+      }),
+    ));
+    api.importPortfolio.mockReturnValue(idleMutation(
+      vi.fn((_variables: unknown, options: MutationOptions<never>) => {
+        options.onError?.({
+          status: 403,
+          data: 'Private authorization details must not reach analytics',
+        });
+      }),
+    ));
+    renderPage();
+
+    await openImportDialog(user);
+    await selectCsv(user, 'facility_name\nPrivate Campus');
+    await user.click(screen.getByTestId('button-submit-portfolio-import'));
+    await screen.findByTestId('alert-import-preview');
+    await user.click(screen.getByTestId('button-submit-portfolio-import'));
+
+    expect(await screen.findByTestId('text-import-failure')).toHaveTextContent(
+      'You do not have permission to import this portfolio.',
+    );
+    expect(analytics.track).toHaveBeenCalledWith('portfolio_import', {
+      stage: 'commit_failure',
+      workflow_stage: 'commit',
+      reason: 'authorization_error',
+      record_count: 100_000,
+      facility_count: 2,
+    });
+    expect(JSON.stringify(analytics.track.mock.calls)).not.toContain('portfolio.csv');
+    expect(JSON.stringify(analytics.track.mock.calls)).not.toContain('Private Campus');
+    expect(JSON.stringify(analytics.track.mock.calls)).not.toContain('Private authorization details');
+  });
+
   it('keeps importing when analytics throws', async () => {
     const user = userEvent.setup();
     analytics.track.mockImplementation(() => {

@@ -255,6 +255,15 @@ function validationFailureReason(error: unknown) {
   return 'request_failed';
 }
 
+function commitFailureReason(error: unknown) {
+  const status = getErrorStatus(error);
+  if (status === 400 || status === 413 || status === 422) return 'validation_error';
+  if (status === 401 || status === 403) return 'authorization_error';
+  if (status === 409) return 'conflict';
+  if (typeof status === 'number' && status >= 500) return 'server_error';
+  return 'request_failed';
+}
+
 function describeImportFailure(error: unknown): ImportFailure {
   const status = getErrorStatus(error);
   const report = getErrorReport(error);
@@ -402,6 +411,13 @@ export function PortfolioImportDialog({
         handleOpenChange(false, false);
       },
       onError: (error) => {
+        trackEvent('portfolio_import', {
+          stage: 'commit_failure',
+          workflow_stage: 'commit',
+          reason: commitFailureReason(error),
+          record_count: boundedCount(preview.total),
+          facility_count: boundedCount(preview.facilities),
+        });
         setPreview(null);
         setFailure(describeImportFailure(error));
       },
