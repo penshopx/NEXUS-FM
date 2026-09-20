@@ -38,6 +38,17 @@ export interface PortfolioImportResult {
   importId: string;
 }
 
+/**
+ * Whether commit will create this facility or attach planned descendants to an existing registry facility.
+ */
+export type PortfolioImportFacilityGroupFacilityStatus = typeof PortfolioImportFacilityGroupFacilityStatus[keyof typeof PortfolioImportFacilityGroupFacilityStatus];
+
+
+export const PortfolioImportFacilityGroupFacilityStatus = {
+  NEW_FACILITY: 'NEW_FACILITY',
+  EXISTING_FACILITY: 'EXISTING_FACILITY',
+} as const;
+
 export type PortfolioImportPreviewRecordKind = typeof PortfolioImportPreviewRecordKind[keyof typeof PortfolioImportPreviewRecordKind];
 
 
@@ -85,10 +96,13 @@ export type PortfolioImportFacilityGroupCounts = {
 };
 
 export interface PortfolioImportFacilityGroup {
+  /** Whether commit will create this facility or attach planned descendants to an existing registry facility. */
+  facilityStatus: PortfolioImportFacilityGroupFacilityStatus;
   name: string;
+  /** CSV client reference for a new facility; for an existing facility this mirrors its stable registry ID for hierarchy matching. */
   clientRef: string;
   /** @nullable */
-  id?: string | null;
+  id: string | null;
   /** @nullable */
   code?: string | null;
   counts: PortfolioImportFacilityGroupCounts;

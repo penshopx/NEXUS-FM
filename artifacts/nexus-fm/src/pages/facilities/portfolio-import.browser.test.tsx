@@ -126,8 +126,10 @@ describe('facility portfolio import browser regressions', () => {
         systems: 1,
         assets: 1,
         facilityGroups: [{
+          facilityStatus: 'NEW_FACILITY',
           name: 'North Campus',
           clientRef: 'facility-a',
+          id: null,
           code: 'FACILITY-A',
           counts: { buildings: 2, spaces: 1, systems: 1, assets: 1 },
           records: [
@@ -138,8 +140,10 @@ describe('facility portfolio import browser regressions', () => {
             { row: 7, kind: 'ASSET', name: 'Air Handler', clientRef: 'asset-a', parentRef: 'space-a', systemRef: 'system-a', status: 'ACTIVE' },
           ],
         }, {
+          facilityStatus: 'EXISTING_FACILITY',
           name: 'South Campus',
-          clientRef: 'facility-south',
+          clientRef: '2cc1d1b7-f3bd-45f1-a266-a78d7641a95f',
+          id: '2cc1d1b7-f3bd-45f1-a266-a78d7641a95f',
           counts: { buildings: 1, spaces: 0, systems: 0, assets: 0 },
           records: [
             { row: 9, kind: 'BUILDING', name: 'South Building', clientRef: 'building-south', parentRef: 'facility-south', status: 'ACTIVE' },
@@ -181,6 +185,12 @@ describe('facility portfolio import browser regressions', () => {
     });
     expect(screen.getByText('North Campus')).toBeVisible();
     expect(screen.getByText('South Campus')).toBeVisible();
+    expect(screen.getByTestId('status-import-facility-0')).toHaveTextContent('NEW FACILITY');
+    expect(screen.getByTestId('identifier-import-facility-0')).toHaveTextContent('CSV ref: facility-a');
+    expect(screen.getByTestId('status-import-facility-1')).toHaveTextContent('EXISTING REGISTRY FACILITY');
+    expect(screen.getByTestId('identifier-import-facility-1')).toHaveTextContent(
+      'registry ID: 2cc1d1b7-f3bd-45f1-a266-a78d7641a95f',
+    );
     expect(screen.queryByText('Main Building')).not.toBeInTheDocument();
 
     const previewFilter = screen.getByTestId('input-filter-import-preview');

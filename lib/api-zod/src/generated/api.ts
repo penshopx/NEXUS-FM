@@ -726,9 +726,10 @@ export const ValidateFacilityPortfolioImportResponse = zod.object({
   "systems": zod.number().int().min(validateFacilityPortfolioImportResponseSystemsMin),
   "assets": zod.number().int().min(validateFacilityPortfolioImportResponseAssetsMin),
   "facilityGroups": zod.array(zod.object({
+  "facilityStatus": zod.enum(['NEW_FACILITY', 'EXISTING_FACILITY']).describe('Whether commit will create this facility or attach planned descendants to an existing registry facility.'),
   "name": zod.string(),
-  "clientRef": zod.string(),
-  "id": zod.string().uuid().nullish(),
+  "clientRef": zod.string().describe('CSV client reference for a new facility; for an existing facility this mirrors its stable registry ID for hierarchy matching.'),
+  "id": zod.string().uuid().nullable(),
   "code": zod.string().nullish(),
   "counts": zod.object({
   "buildings": zod.number().int().min(validateFacilityPortfolioImportResponseFacilityGroupsItemCountsBuildingsMin),

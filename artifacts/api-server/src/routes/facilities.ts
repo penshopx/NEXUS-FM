@@ -655,6 +655,7 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
           FACILITY: 0, BUILDING: 0, SPACE: 0, SYSTEM: 0, ASSET: 0,
         };
         const previewGroups = new Map<string, {
+          facilityStatus: "NEW_FACILITY" | "EXISTING_FACILITY";
           name: string;
           clientRef: string;
           id: string | null;
@@ -753,6 +754,7 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
           if (!commit) {
             if (record.kind === "FACILITY") {
               previewGroups.set(facilityId, {
+                facilityStatus: "NEW_FACILITY",
                 name: record.name,
                 clientRef: record.clientRef,
                 id: record.id ?? null,
@@ -766,6 +768,7 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
                 const facility = await resolveRegistryObject(transaction, "FACILITY", facilityId, actor.organizationId);
                 if (!facility.found) throw new Error("Validated facility changed before preview");
                 group = {
+                  facilityStatus: "EXISTING_FACILITY",
                   name: facility.value.row.name,
                   clientRef: facility.value.row.id,
                   id: facility.value.row.id,

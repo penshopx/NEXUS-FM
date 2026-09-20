@@ -110,7 +110,7 @@ function FacilityPreviewGroup({ facility, index, filter }: {
   const visibleRecords = matchingHierarchy.slice(0, visibleCount);
   const descendantCount = facility.records.length;
   const matchingDescendantCount = matchingHierarchy.length;
-  const identifier = facility.code || facility.clientRef;
+  const isExistingFacility = facility.facilityStatus === 'EXISTING_FACILITY';
   const isFiltering = normalizedFilter.length > 0;
   const isOpen = isFiltering || open;
 
@@ -131,9 +131,21 @@ function FacilityPreviewGroup({ facility, index, filter }: {
             ? <ChevronDown className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
             : <ChevronRight className="mt-0.5 size-4 shrink-0" aria-hidden="true" />}
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm font-medium">{facility.name}</span>
-            <span className="block truncate font-mono text-xs text-muted-foreground">
-              {identifier}
+            <span className="flex flex-wrap items-center gap-2">
+              <span className="truncate text-sm font-medium">{facility.name}</span>
+              <span
+                className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-muted-foreground"
+                data-testid={`status-import-facility-${index}`}
+              >
+                {isExistingFacility ? 'EXISTING REGISTRY FACILITY' : 'NEW FACILITY'}
+              </span>
+            </span>
+            <span
+              className="block truncate font-mono text-xs text-muted-foreground"
+              data-testid={`identifier-import-facility-${index}`}
+            >
+              {isExistingFacility ? `registry ID: ${facility.id}` : `CSV ref: ${facility.clientRef}`}
+              {facility.code ? ` · code: ${facility.code}` : ''}
             </span>
           </span>
           <span className="shrink-0 text-xs text-muted-foreground">

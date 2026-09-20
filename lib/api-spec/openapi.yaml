@@ -1226,10 +1226,16 @@ components:
     PortfolioImportFacilityGroup:
       type: object
       additionalProperties: false
-      required: [name, clientRef, counts, records]
+      required: [facilityStatus, name, clientRef, id, counts, records]
       properties:
+        facilityStatus:
+          type: string
+          enum: [NEW_FACILITY, EXISTING_FACILITY]
+          description: Whether commit will create this facility or attach planned descendants to an existing registry facility.
         name: {type: string}
-        clientRef: {type: string}
+        clientRef:
+          type: string
+          description: CSV client reference for a new facility; for an existing facility this mirrors its stable registry ID for hierarchy matching.
         id: {type: [string, "null"], format: uuid}
         code: {type: [string, "null"]}
         counts:

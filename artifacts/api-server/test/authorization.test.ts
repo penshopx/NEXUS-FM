@@ -237,6 +237,20 @@ test("portfolio import commits the complete hierarchy and audits every mutation 
 
 test("portfolio import preview summarizes the hierarchy without registry or audit writes", async () => {
   const manager = await makeFixture("FACILITY_MANAGER", "ORGANIZATION");
+  const [existingFacility] = await db.insert(facilitiesTable).values({
+    organizationId: manager.organizationId,
+    name: "Existing Campus",
+    code: "EXISTING-CAMPUS",
+    status: "ACTIVE",
+  }).returning();
+  await db.insert(userRoleBindingsTable).values({
+    userId: manager.userId,
+    organizationId: manager.organizationId,
+    roleId: manager.roleId,
+    scopeType: "FACILITY",
+    scopeId: existingFacility.id,
+    grantedBy: manager.userId,
+  });
   await db.insert(userContextsTable).values({
     userId: manager.userId,
     activeOrganizationId: manager.organizationId,
@@ -255,7 +269,8 @@ test("portfolio import preview summarizes the hierarchy without registry or audi
     + "BUILDING,building-preview,,,facility-preview,,Preview Building,BUILDING-PREVIEW,,ACTIVE\n"
     + "SPACE,space-preview,,,building-preview,,Preview Space,SPACE-PREVIEW,,ACTIVE\n"
     + "SYSTEM,system-preview,,,space-preview,,Preview System,SYSTEM-PREVIEW,,ACTIVE\n"
-    + "ASSET,asset-preview,,,space-preview,system-preview,Preview Asset,ASSET-PREVIEW,,ACTIVE\n";
+    + "ASSET,asset-preview,,,space-preview,system-preview,Preview Asset,ASSET-PREVIEW,,ACTIVE\n"
+    + `BUILDING,existing-building,,,${existingFacility.id},,Existing Campus Annex,EXISTING-ANNEX,,ACTIVE\n`;
   try {
     const auditsBefore = await db.select().from(authorizationAuditLogsTable).where(
       eq(authorizationAuditLogsTable.actorUserId, manager.userId),
@@ -268,13 +283,14 @@ test("portfolio import preview summarizes the hierarchy without registry or audi
     const responseBody = await response.text();
     assert.equal(response.status, 200, responseBody);
     assert.deepEqual(JSON.parse(responseBody), {
-      total: 5,
+      total: 6,
       facilities: 1,
-      buildings: 1,
+      buildings: 2,
       spaces: 1,
       systems: 1,
       assets: 1,
       facilityGroups: [{
+        facilityStatus: "NEW_FACILITY",
         name: "Preview Campus",
         clientRef: "facility-preview",
         id: null,
@@ -298,6 +314,17 @@ test("portfolio import preview summarizes the hierarchy without registry or audi
             id: null, parentRef: "space-preview", systemRef: "system-preview", code: "ASSET-PREVIEW", status: "ACTIVE",
           },
         ],
+      }, {
+        facilityStatus: "EXISTING_FACILITY",
+        name: "Existing Campus",
+        clientRef: existingFacility.id,
+        id: existingFacility.id,
+        code: "EXISTING-CAMPUS",
+        counts: { buildings: 1, spaces: 0, systems: 0, assets: 0 },
+        records: [{
+          row: 7, kind: "BUILDING", name: "Existing Campus Annex", clientRef: "existing-building",
+          id: null, parentRef: existingFacility.id, systemRef: null, code: "EXISTING-ANNEX", status: "ACTIVE",
+        }],
       }],
     });
     const [facility] = await db.select().from(facilitiesTable).where(and(

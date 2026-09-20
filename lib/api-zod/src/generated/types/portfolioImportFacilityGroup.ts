@@ -6,13 +6,17 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { PortfolioImportFacilityGroupCounts } from './portfolioImportFacilityGroupCounts';
+import type { PortfolioImportFacilityGroupFacilityStatus } from './portfolioImportFacilityGroupFacilityStatus';
 import type { PortfolioImportPreviewRecord } from './portfolioImportPreviewRecord';
 
 export interface PortfolioImportFacilityGroup {
+  /** Whether commit will create this facility or attach planned descendants to an existing registry facility. */
+  facilityStatus: PortfolioImportFacilityGroupFacilityStatus;
   name: string;
+  /** CSV client reference for a new facility; for an existing facility this mirrors its stable registry ID for hierarchy matching. */
   clientRef: string;
   /** @nullable */
-  id?: string | null;
+  id: string | null;
   /** @nullable */
   code?: string | null;
   counts: PortfolioImportFacilityGroupCounts;
