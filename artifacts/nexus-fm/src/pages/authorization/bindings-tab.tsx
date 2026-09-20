@@ -21,6 +21,7 @@ import {
   NotFoundResponse,
   ErrorResponse
 } from '@workspace/api-client-react';
+import type { CanonicalRole, UserRoleBindingStatus } from '@workspace/api-client-react';
 import { 
   getGetUserRoleBindingsQueryKey,
   getGetAuthorizationAuditLogsQueryKey,
@@ -54,6 +55,22 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+
+const canonicalRoleOptions = [
+  'PLATFORM_ADMIN',
+  'FACILITY_MANAGER',
+  'FACILITY_SUPERVISOR',
+  'INSPECTOR',
+  'MAINTENANCE_TECHNICIAN',
+  'WAREHOUSE_SUPERVISOR',
+  'VENDOR',
+] as const satisfies readonly CanonicalRole[];
+
+const bindingStatusOptions = [
+  'ACTIVE',
+  'SUSPENDED',
+  'EXPIRED',
+] as const satisfies readonly UserRoleBindingStatus[];
 
 export function BindingsTab({ canManage }: { canManage: boolean }) {
   const [urlSearchParams, setUrlSearchParams] = useSearchParams();
@@ -361,10 +378,16 @@ function BindingsManager({ userId, member, canManage }: {
   member: OrganizationMemberSearchResult;
   canManage: boolean;
 }) {
-  const { data: bindings, isLoading } = useGetUserRoleBindings(userId, {
+  const [roleFilter, setRoleFilter] = useState<CanonicalRole | 'ALL'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<UserRoleBindingStatus | 'ALL'>('ALL');
+  const bindingFilters = {
+    ...(roleFilter === 'ALL' ? {} : { roleCode: roleFilter }),
+    ...(statusFilter === 'ALL' ? {} : { status: statusFilter }),
+  };
+  const { data: bindings, isLoading } = useGetUserRoleBindings(userId, bindingFilters, {
     query: {
       enabled: !!userId,
-      queryKey: getGetUserRoleBindingsQueryKey(userId)
+      queryKey: getGetUserRoleBindingsQueryKey(userId, bindingFilters)
     }
   });
   const { data: roles } = useListRoles({
@@ -379,6 +402,12 @@ function BindingsManager({ userId, member, canManage }: {
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingBinding, setEditingBinding] = useState<UserRoleBinding | null>(null);
+  const hasActiveFilters = roleFilter !== 'ALL' || statusFilter !== 'ALL';
+
+  useEffect(() => {
+    setRoleFilter('ALL');
+    setStatusFilter('ALL');
+  }, [userId]);
 
   if (isLoading) {
     return <div className="space-y-3">
@@ -411,12 +440,65 @@ function BindingsManager({ userId, member, canManage }: {
         </div>
       )}
 
+      <div className="p-4 border-b border-border bg-muted/10">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <div className="flex-1 space-y-1.5">
+            <label className="text-sm font-medium" htmlFor="binding-role-filter">Role</label>
+            <Select value={roleFilter} onValueChange={(value) => setRoleFilter(value as CanonicalRole | 'ALL')}>
+              <SelectTrigger id="binding-role-filter" data-testid="select-binding-role-filter">
+                <SelectValue placeholder="All roles" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All roles</SelectItem>
+                {canonicalRoleOptions.map((role) => (
+                  <SelectItem key={role} value={role}>{role.replaceAll('_', ' ')}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex-1 space-y-1.5">
+            <label className="text-sm font-medium" htmlFor="binding-status-filter">Status</label>
+            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as UserRoleBindingStatus | 'ALL')}>
+              <SelectTrigger id="binding-status-filter" data-testid="select-binding-status-filter">
+                <SelectValue placeholder="All statuses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All statuses</SelectItem>
+                {bindingStatusOptions.map((status) => (
+                  <SelectItem key={status} value={status}>{status}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {hasActiveFilters && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setRoleFilter('ALL');
+                setStatusFilter('ALL');
+              }}
+              data-testid="button-clear-binding-filters"
+            >
+              Clear filters
+            </Button>
+          )}
+        </div>
+      </div>
+
       {bindings?.length === 0 ? (
         <div className="p-12 text-center text-muted-foreground">
           <div className="size-12 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
             <Search className="size-6 opacity-50" />
           </div>
-          <p>No role bindings found for this user.</p>
+          {hasActiveFilters ? (
+            <>
+              <p className="font-medium text-foreground">No bindings match these filters.</p>
+              <p className="mt-1 text-sm">Try another role or status, or clear the filters.</p>
+            </>
+          ) : (
+            <p>No role bindings found for this user.</p>
+          )}
         </div>
       ) : (
         <div className="divide-y divide-border">

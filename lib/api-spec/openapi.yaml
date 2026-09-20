@@ -314,6 +314,18 @@ paths:
       operationId: getUserRoleBindings
       tags: [authorization]
       summary: Read a user's scoped role bindings
+      description: Filters are applied only after the caller's platform or active-organization scope restriction.
+      parameters:
+        - name: roleCode
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/CanonicalRole"
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/UserRoleBindingStatus"
       responses:
         "200":
           description: Role bindings
@@ -323,6 +335,7 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/UserRoleBinding"
+        "400": {$ref: "#/components/responses/BadRequest"}
         "403": {$ref: "#/components/responses/Forbidden"}
     post:
       operationId: createUserRoleBinding
@@ -1193,6 +1206,9 @@ components:
         - MAINTENANCE_TECHNICIAN
         - WAREHOUSE_SUPERVISOR
         - VENDOR
+    UserRoleBindingStatus:
+      type: string
+      enum: [ACTIVE, SUSPENDED, EXPIRED]
     Organization:
       type: object
       required: [id, name, slug]
@@ -1381,7 +1397,7 @@ components:
         scopeTargetStatus:
           type: string
           enum: [RESOLVED, MISSING, NOT_APPLICABLE]
-        status: {type: string, enum: [ACTIVE, SUSPENDED, EXPIRED]}
+        status: {$ref: "#/components/schemas/UserRoleBindingStatus"}
         startsAt: {type: string, format: date-time, nullable: true}
         endsAt: {type: string, format: date-time, nullable: true}
     UserRoleBindingInput:

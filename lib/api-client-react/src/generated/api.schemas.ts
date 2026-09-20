@@ -161,6 +161,15 @@ export const CanonicalRole = {
   VENDOR: 'VENDOR',
 } as const;
 
+export type UserRoleBindingStatus = typeof UserRoleBindingStatus[keyof typeof UserRoleBindingStatus];
+
+
+export const UserRoleBindingStatus = {
+  ACTIVE: 'ACTIVE',
+  SUSPENDED: 'SUSPENDED',
+  EXPIRED: 'EXPIRED',
+} as const;
+
 export interface Organization {
   id: string;
   name: string;
@@ -342,15 +351,6 @@ export const UserRoleBindingScopeTargetStatus = {
   RESOLVED: 'RESOLVED',
   MISSING: 'MISSING',
   NOT_APPLICABLE: 'NOT_APPLICABLE',
-} as const;
-
-export type UserRoleBindingStatus = typeof UserRoleBindingStatus[keyof typeof UserRoleBindingStatus];
-
-
-export const UserRoleBindingStatus = {
-  ACTIVE: 'ACTIVE',
-  SUSPENDED: 'SUSPENDED',
-  EXPIRED: 'EXPIRED',
 } as const;
 
 export interface UserRoleBinding {
@@ -542,6 +542,11 @@ query: string;
  * @maximum 50
  */
 limit?: number;
+};
+
+export type GetUserRoleBindingsParams = {
+roleCode?: CanonicalRole;
+status?: UserRoleBindingStatus;
 };
 
 export type ListFacilitiesParams = {

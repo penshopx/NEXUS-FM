@@ -291,10 +291,16 @@ export const SearchPlatformOrganizationsResponse = zod.array(SearchPlatformOrgan
 
 
 /**
+ * Filters are applied only after the caller's platform or active-organization scope restriction.
  * @summary Read a user's scoped role bindings
  */
 export const GetUserRoleBindingsParams = zod.object({
   "userId": zod.coerce.string().uuid()
+})
+
+export const GetUserRoleBindingsQueryParams = zod.object({
+  "roleCode": zod.enum(['PLATFORM_ADMIN', 'FACILITY_MANAGER', 'FACILITY_SUPERVISOR', 'INSPECTOR', 'MAINTENANCE_TECHNICIAN', 'WAREHOUSE_SUPERVISOR', 'VENDOR']).optional(),
+  "status": zod.enum(['ACTIVE', 'SUSPENDED', 'EXPIRED']).optional()
 })
 
 export const GetUserRoleBindingsResponseItem = zod.object({

@@ -882,6 +882,24 @@ test("authorization routes run through a real HTTP app with injected currentUser
       .some((row) => row.scopeId === missingScopeId &&
         row.scopeTargetName === null &&
         row.scopeTargetStatus === "MISSING"));
+    const managerBindings = await request(
+      `/users/${target.userId}/role-bindings?roleCode=FACILITY_MANAGER`,
+    );
+    assert.equal(managerBindings.response.status, 200);
+    assert.ok((managerBindings.body as Array<{ roleCode: string }>).length > 0);
+    assert.ok((managerBindings.body as Array<{ roleCode: string }>)
+      .every((row) => row.roleCode === "FACILITY_MANAGER"));
+    const activeManagerBindings = await request(
+      `/users/${target.userId}/role-bindings?roleCode=FACILITY_MANAGER&status=ACTIVE`,
+    );
+    assert.equal(activeManagerBindings.response.status, 200);
+    assert.ok((activeManagerBindings.body as Array<{ roleCode: string; status: string }>).length > 0);
+    assert.ok((activeManagerBindings.body as Array<{ roleCode: string; status: string }>)
+      .every((row) => row.roleCode === "FACILITY_MANAGER" && row.status === "ACTIVE"));
+    const invalidBindingFilter = await request(
+      `/users/${target.userId}/role-bindings?status=REVOKED`,
+    );
+    assert.equal(invalidBindingFilter.response.status, 400);
 
     const patched = await request(`/users/${target.userId}/role-bindings/${createdBindingId}`, {
       method: "PATCH",

@@ -34,6 +34,7 @@ import type {
   ForbiddenResponse,
   FoundationSummary,
   GetAuthorizationAuditLogsParams,
+  GetUserRoleBindingsParams,
   HealthStatus,
   ListAssetsParams,
   ListBuildingSpacesParams,
@@ -1077,20 +1078,30 @@ export function useSearchPlatformOrganizations<TData = Awaited<ReturnType<typeof
 
 
 
-export const getGetUserRoleBindingsUrl = (userId: string,) => {
+export const getGetUserRoleBindingsUrl = (userId: string,
+    params?: GetUserRoleBindingsParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/users/${userId}/role-bindings`
+  return stringifiedParams.length > 0 ? `/api/users/${userId}/role-bindings?${stringifiedParams}` : `/api/users/${userId}/role-bindings`
 }
 
 /**
+ * Filters are applied only after the caller's platform or active-organization scope restriction.
  * @summary Read a user's scoped role bindings
  */
-export const getUserRoleBindings = async (userId: string, options?: Parameters<typeof customFetch>[1]): Promise<UserRoleBinding[]> => {
+export const getUserRoleBindings = async (userId: string,
+    params?: GetUserRoleBindingsParams, options?: Parameters<typeof customFetch>[1]): Promise<UserRoleBinding[]> => {
 
-  return customFetch<UserRoleBinding[]>(getGetUserRoleBindingsUrl(userId),
+  return customFetch<UserRoleBinding[]>(getGetUserRoleBindingsUrl(userId,params),
   {
     ...options,
     method: 'GET'
@@ -1103,23 +1114,25 @@ export const getUserRoleBindings = async (userId: string, options?: Parameters<t
 
 
 
-export const getGetUserRoleBindingsQueryKey = (userId: string,) => {
+export const getGetUserRoleBindingsQueryKey = (userId: string,
+    params?: GetUserRoleBindingsParams,) => {
     return [
-    `/api/users/${userId}/role-bindings`
+    `/api/users/${userId}/role-bindings`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getGetUserRoleBindingsQueryOptions = <TData = Awaited<ReturnType<typeof getUserRoleBindings>>, TError = ErrorType<ForbiddenResponse>>(userId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUserRoleBindings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetUserRoleBindingsQueryOptions = <TData = Awaited<ReturnType<typeof getUserRoleBindings>>, TError = ErrorType<BadRequestResponse | ForbiddenResponse>>(userId: string,
+    params?: GetUserRoleBindingsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUserRoleBindings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetUserRoleBindingsQueryKey(userId);
+  const queryKey =  queryOptions?.queryKey ?? getGetUserRoleBindingsQueryKey(userId,params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUserRoleBindings>>> = ({ signal }) => getUserRoleBindings(userId, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUserRoleBindings>>> = ({ signal }) => getUserRoleBindings(userId,params, { signal, ...requestOptions });
 
 
 
@@ -1129,19 +1142,20 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetUserRoleBindingsQueryResult = NonNullable<Awaited<ReturnType<typeof getUserRoleBindings>>>
-export type GetUserRoleBindingsQueryError = ErrorType<ForbiddenResponse>
+export type GetUserRoleBindingsQueryError = ErrorType<BadRequestResponse | ForbiddenResponse>
 
 
 /**
  * @summary Read a user's scoped role bindings
  */
 
-export function useGetUserRoleBindings<TData = Awaited<ReturnType<typeof getUserRoleBindings>>, TError = ErrorType<ForbiddenResponse>>(
- userId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUserRoleBindings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export function useGetUserRoleBindings<TData = Awaited<ReturnType<typeof getUserRoleBindings>>, TError = ErrorType<BadRequestResponse | ForbiddenResponse>>(
+ userId: string,
+    params?: GetUserRoleBindingsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUserRoleBindings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getGetUserRoleBindingsQueryOptions(userId,options)
+  const queryOptions = getGetUserRoleBindingsQueryOptions(userId,params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

@@ -104,6 +104,10 @@ async function openBindingsForMember(user: ReturnType<typeof userEvent.setup>) {
 
 describe('authorization administration browser regressions', () => {
   beforeEach(() => {
+    HTMLElement.prototype.hasPointerCapture ??= () => false;
+    HTMLElement.prototype.setPointerCapture ??= () => {};
+    HTMLElement.prototype.releasePointerCapture ??= () => {};
+    HTMLElement.prototype.scrollIntoView ??= () => {};
     window.history.replaceState(null, '', '/authorization');
     api.myPermissions.mockReturnValue({
       data: { organizationId: 'org-1', permissions: allPermissions },
@@ -247,8 +251,7 @@ describe('authorization administration browser regressions', () => {
       },
       isLoading: false,
     });
-    api.bindings.mockReturnValue({
-      data: [
+    const visibleBindings = [
         {
           id: 'view-only-binding',
           userId: member.userId,
@@ -279,9 +282,11 @@ describe('authorization administration browser regressions', () => {
           startsAt: null,
           endsAt: '2026-01-01T00:00:00.000Z',
         },
-      ],
+      ];
+    api.bindings.mockImplementation((_userId: string, params?: { roleCode?: string; status?: string }) => ({
+      data: params?.status === 'SUSPENDED' ? [] : visibleBindings,
       isLoading: false,
-    });
+    }));
     renderPage();
 
     expect(screen.queryByTestId('tab-roles')).not.toBeInTheDocument();
@@ -304,6 +309,25 @@ describe('authorization administration browser regressions', () => {
       query: expect.objectContaining({ enabled: false }),
     }));
     expect(screen.queryByTestId('button-toggle-suspend-view-only-binding')).not.toBeInTheDocument();
+
+    await user.click(screen.getByTestId('select-binding-role-filter'));
+    await user.click(await screen.findByRole('option', { name: 'PLATFORM ADMIN' }));
+    expect(api.bindings).toHaveBeenLastCalledWith(
+      member.userId,
+      { roleCode: 'PLATFORM_ADMIN' },
+      expect.anything(),
+    );
+
+    await user.click(screen.getByTestId('select-binding-status-filter'));
+    await user.click(await screen.findByRole('option', { name: 'SUSPENDED' }));
+    expect(api.bindings).toHaveBeenLastCalledWith(
+      member.userId,
+      { roleCode: 'PLATFORM_ADMIN', status: 'SUSPENDED' },
+      expect.anything(),
+    );
+    expect(screen.getByText('No bindings match these filters.')).toBeVisible();
+    expect(screen.queryByText('No role bindings found for this user.')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('button-new-binding')).not.toBeInTheDocument();
   });
 
   it('recovers from stale role-policy saves and exposes self-escalation server errors', async () => {

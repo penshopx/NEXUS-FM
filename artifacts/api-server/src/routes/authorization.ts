@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { randomUUID } from "node:crypto";
 import { and, asc, count, desc, eq, gt, ilike, inArray, isNull, lte, or } from "drizzle-orm";
 import {
+  GetUserRoleBindingsQueryParams,
   SearchPlatformOrganizationsQueryParams,
   SearchPlatformOrganizationsResponse,
 } from "@workspace/api-zod";
@@ -465,6 +466,21 @@ router.get("/users/search", async (req, res): Promise<void> => {
 router.get("/users/:userId/role-bindings", async (req, res): Promise<void> => {
   const admin = await requireAdmin(req, res, "USER.VIEW", resolveCurrentUser, database);
   if (!admin) return;
+  const parsed = GetUserRoleBindingsQueryParams.safeParse(req.query);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  if (admin.scopeType !== "PLATFORM" && !admin.organizationId) {
+    res.status(403).json({ error: "Active organization context required" });
+    return;
+  }
+  const filters = [eq(userRoleBindingsTable.userId, req.params.userId)];
+  if (admin.scopeType !== "PLATFORM") {
+    filters.push(eq(userRoleBindingsTable.organizationId, admin.organizationId!));
+  }
+  if (parsed.data.roleCode) filters.push(eq(rolesTable.code, parsed.data.roleCode));
+  if (parsed.data.status) filters.push(eq(userRoleBindingsTable.status, parsed.data.status));
   const rows = await database.select({
     id: userRoleBindingsTable.id,
     userId: userRoleBindingsTable.userId,
@@ -479,12 +495,9 @@ router.get("/users/:userId/role-bindings", async (req, res): Promise<void> => {
     endsAt: userRoleBindingsTable.endsAt,
   }).from(userRoleBindingsTable)
     .innerJoin(rolesTable, eq(userRoleBindingsTable.roleId, rolesTable.id))
-    .where(eq(userRoleBindingsTable.userId, req.params.userId));
-  const authorizedRows = admin.scopeType === "PLATFORM"
-    ? rows
-    : rows.filter((row) => row.organizationId === admin.organizationId);
-  const scopeTargets = await resolveBindingScopeTargets(authorizedRows, database);
-  res.json(authorizedRows.map((row, index) => ({ ...row, ...scopeTargets[index]! })));
+    .where(and(...filters));
+  const scopeTargets = await resolveBindingScopeTargets(rows, database);
+  res.json(rows.map((row, index) => ({ ...row, ...scopeTargets[index]! })));
 });
 
 router.post("/users/:userId/role-bindings", async (req, res): Promise<void> => {
