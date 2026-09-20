@@ -21,6 +21,10 @@ const api = vi.hoisted(() => ({
   auditLogs: vi.fn<AuthorizationApiHookMock<'useGetAuthorizationAuditLogs'>>(),
 }));
 
+const analytics = vi.hoisted(() => ({
+  track: vi.fn(),
+}));
+
 vi.mock('@workspace/api-client-react', () => ({
   ScopeType: {
     PLATFORM: 'PLATFORM',
@@ -114,6 +118,8 @@ describe('authorization administration browser regressions', () => {
     HTMLElement.prototype.releasePointerCapture ??= () => {};
     HTMLElement.prototype.scrollIntoView ??= () => {};
     window.history.replaceState(null, '', '/authorization');
+    analytics.track.mockReset();
+    window.umami = { track: analytics.track };
     api.myPermissions.mockReturnValue({
       data: { organizationId: 'org-1', permissions: allPermissions },
       isLoading: false,
@@ -183,6 +189,7 @@ describe('authorization administration browser regressions', () => {
 
   afterEach(() => {
     cleanup();
+    delete window.umami;
     window.history.replaceState(null, '', '/authorization');
   });
 
@@ -550,6 +557,14 @@ describe('authorization administration browser regressions', () => {
     expect(screen.queryByText('Role Bindings for Target Admin')).not.toBeInTheDocument();
     expect(screen.queryByTestId('button-clear-member-search')).not.toBeInTheDocument();
     expect(window.location.search).toBe('');
+    expect(analytics.track).toHaveBeenCalledOnce();
+    expect(analytics.track).toHaveBeenCalledWith('member_search_reset', {
+      had_pagination: true,
+      had_organization_filter: true,
+    });
+    expect(JSON.stringify(analytics.track.mock.calls)).not.toContain('Target');
+    expect(JSON.stringify(analytics.track.mock.calls)).not.toContain('org-2');
+    expect(JSON.stringify(analytics.track.mock.calls)).not.toContain('Acme Facilities');
 
     window.history.back();
 

@@ -42,6 +42,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { trackEvent } from '@/lib/analytics';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Search, UserPlus, Trash2, Calendar, Edit2, Play, Pause, AlertTriangle, Mail, Building2, UserRound, ChevronLeft, ChevronRight, Check, ChevronsUpDown, X, Download } from 'lucide-react';
@@ -200,6 +201,9 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
   };
 
   const handleClearSearch = () => {
+    const hadPagination = page > 1;
+    const hadOrganizationFilter = submittedOrganizationId.length > 0;
+
     setSearchInput('');
     setSelectedOrganization(null);
     setOrganizationQuery('');
@@ -209,6 +213,10 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
       const next = new URLSearchParams(current);
       memberSearchParamNames.forEach((name) => next.delete(name));
       return next;
+    });
+    trackEvent('member_search_reset', {
+      had_pagination: hadPagination,
+      had_organization_filter: hadOrganizationFilter,
     });
   };
 
