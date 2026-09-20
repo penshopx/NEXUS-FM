@@ -1,9 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import axe, { type Result } from 'axe-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AuthorizationApiHookMock } from './authorization-api-mocks';
+import { expectNoHighImpactAccessibilityViolations } from '@/test/accessibility';
 
 const api = vi.hoisted(() => ({
   myPermissions: vi.fn<AuthorizationApiHookMock<'useGetMyPermissions'>>(),
@@ -105,27 +105,6 @@ async function openBindingsForMember(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByTestId('input-target-user'), 'Target');
   await user.click(screen.getByTestId('button-search-user'));
   await user.click(await screen.findByTestId('member-result-target-user-org-1'));
-}
-
-async function expectNoHighImpactAccessibilityViolations() {
-  const { violations } = await axe.run(document.body, {
-    resultTypes: ['violations'],
-  });
-  const highImpactViolations = violations.filter(
-    (violation) => violation.impact === 'serious' || violation.impact === 'critical',
-  );
-
-  expect(
-    highImpactViolations,
-    highImpactViolations.map(formatAccessibilityViolation).join('\n\n'),
-  ).toEqual([]);
-}
-
-function formatAccessibilityViolation(violation: Result) {
-  const affectedNodes = violation.nodes
-    .map((node) => `  ${node.target.join(' ')}: ${node.failureSummary}`)
-    .join('\n');
-  return `${violation.id} (${violation.impact}): ${violation.help}\n${affectedNodes}`;
 }
 
 describe('authorization administration browser regressions', () => {

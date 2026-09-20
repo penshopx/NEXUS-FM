@@ -56,6 +56,7 @@ export function RegistryList<T extends RegistryRecord>({
             <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
             <Input
               placeholder="Search..."
+              aria-label={`Search ${title}`}
               className="pl-9 bg-card border-border focus-visible:ring-primary"
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
@@ -132,17 +133,35 @@ export function RegistryList<T extends RegistryRecord>({
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         {onEdit && item.capabilities?.update && (
-                          <Button variant="ghost" size="icon" className="size-8" onClick={() => onEdit(item)} data-testid={`button-edit-${testIdPrefix}-${item.id}`}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8"
+                            onClick={() => onEdit(item)}
+                            aria-label={`Edit ${item.name}`}
+                            data-testid={`button-edit-${testIdPrefix}-${item.id}`}
+                          >
                             <Edit2 className="size-4" />
                           </Button>
                         )}
                         {onDelete && item.capabilities?.delete && (
-                          <Button variant="ghost" size="icon" className="size-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => onDelete(item)} data-testid={`button-delete-${testIdPrefix}-${item.id}`}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => onDelete(item)}
+                            aria-label={`Delete ${item.name}`}
+                            data-testid={`button-delete-${testIdPrefix}-${item.id}`}
+                          >
                             <Trash2 className="size-4" />
                           </Button>
                         )}
                         <Button variant="ghost" size="icon" className="size-8 ml-2 hover:bg-primary hover:text-primary-foreground" asChild>
-                          <Link href={renderItemLink(item)} data-testid={`link-view-${testIdPrefix}-${item.id}`}>
+                          <Link
+                            href={renderItemLink(item)}
+                            aria-label={`View ${item.name}`}
+                            data-testid={`link-view-${testIdPrefix}-${item.id}`}
+                          >
                             <ArrowRight className="size-4" />
                           </Link>
                         </Button>

@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { expectNoHighImpactAccessibilityViolations } from '@/test/accessibility';
 
 const api = vi.hoisted(() => ({
   listFacilities: vi.fn(),
@@ -217,6 +218,49 @@ describe('facility portfolio import browser regressions', () => {
       'portfolio_import',
       expect.objectContaining({ stage: 'cancelled' }),
     );
+  });
+
+  it('has no serious or critical accessibility violations on the registry and its dialogs', async () => {
+    const user = userEvent.setup();
+    api.listFacilities.mockReturnValue({
+      data: {
+        items: [{
+          id: 'facility-1',
+          name: 'North Campus',
+          code: 'NORTH',
+          description: 'Primary operations campus',
+          status: 'ACTIVE',
+          capabilities: { update: true, delete: true },
+        }],
+        page: 1,
+        limit: 10,
+        total: 1,
+        collectionCapabilities: { create: true },
+      },
+      isLoading: false,
+      error: null,
+    });
+    renderPage();
+
+    await expectNoHighImpactAccessibilityViolations();
+
+    await user.click(screen.getByTestId('button-create-registry'));
+    expect(screen.getByRole('dialog', { name: 'Create Facility' })).toBeVisible();
+    await expectNoHighImpactAccessibilityViolations();
+    await user.keyboard('{Escape}');
+
+    await user.click(screen.getByTestId('button-edit-registry-facility-1'));
+    expect(screen.getByRole('dialog', { name: 'Edit Facility' })).toBeVisible();
+    await expectNoHighImpactAccessibilityViolations();
+    await user.keyboard('{Escape}');
+
+    await user.click(screen.getByTestId('button-delete-registry-facility-1'));
+    expect(screen.getByRole('alertdialog', { name: 'Are you absolutely sure?' })).toBeVisible();
+    await expectNoHighImpactAccessibilityViolations();
+    await user.keyboard('{Escape}');
+
+    await openImportDialog(user);
+    await expectNoHighImpactAccessibilityViolations();
   });
 
   it('offers the generated validation report for download', async () => {
