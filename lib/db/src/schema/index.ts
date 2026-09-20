@@ -1,3 +1,4 @@
+export * from "./access-scope-directories";
 export * from "./audit-events";
 export * from "./authorization";
 export * from "./facilities";

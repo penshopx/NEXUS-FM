@@ -2,6 +2,8 @@ import { Router, type IRouter } from "express";
 import { randomUUID } from "node:crypto";
 import { and, asc, count, desc, eq, gt, ilike, inArray, isNull, lte, or, sql } from "drizzle-orm";
 import {
+  CreateRoleBindingScopeTargetBody,
+  CreateRoleBindingScopeTargetResponse,
   GetUserRoleBindingsQueryParams,
   SearchRoleBindingScopeTargetsQueryParams,
   SearchRoleBindingScopeTargetsResponse,
@@ -22,9 +24,11 @@ import {
   rolesTable,
   scopeTypeValues,
   spacesTable,
+  teamsTable,
   userContextsTable,
   userRoleBindingsTable,
   usersTable,
+  vendorAssignmentsTable,
 } from "@workspace/db";
 import { currentUser as defaultCurrentUser } from "./foundation";
 import {
@@ -65,6 +69,8 @@ async function resolveBindingScopeTargets(
     BUILDING: buildingsTable,
     SPACE: spacesTable,
     ASSET: assetsTable,
+    TEAM: teamsTable,
+    VENDOR_ASSIGNMENT: vendorAssignmentsTable,
   } as const;
   const organizationNames = new Map<string, string>();
 
@@ -129,6 +135,8 @@ const selectableScopeTables = {
   BUILDING: buildingsTable,
   SPACE: spacesTable,
   ASSET: assetsTable,
+  TEAM: teamsTable,
+  VENDOR_ASSIGNMENT: vendorAssignmentsTable,
 } as const;
 
 function hasScopeTargetDirectory(scopeType: string): scopeType is keyof typeof selectableScopeTables {
@@ -472,6 +480,69 @@ router.get("/role-binding-scope-targets", async (req, res): Promise<void> => {
     ...row,
     scopeType: parsed.data.scopeType,
   }))));
+});
+
+router.post("/role-binding-scope-targets", async (req, res): Promise<void> => {
+  const admin = await requireAdmin(req, res, "USER.MANAGE", resolveCurrentUser, database);
+  if (!admin) return;
+  const parsed = CreateRoleBindingScopeTargetBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  if (!canCrossOrganizationFoundation(admin.scopeType, admin.organizationId, parsed.data.organizationId)) {
+    res.status(403).json({ error: "Target organization is outside active organization scope" });
+    return;
+  }
+  const name = parsed.data.name.trim();
+  const code = parsed.data.code?.trim();
+  if (!name || (parsed.data.code !== undefined && !code)) {
+    res.status(400).json({ error: "Name and code cannot contain only whitespace" });
+    return;
+  }
+
+  let created: { id: string; organizationId: string; name: string } | undefined;
+  await database.transaction(async (tx) => {
+    const values = {
+      organizationId: parsed.data.organizationId,
+      name,
+      code,
+    };
+    if (parsed.data.scopeType === "TEAM") {
+      [created] = await tx.insert(teamsTable).values(values).returning({
+        id: teamsTable.id,
+        organizationId: teamsTable.organizationId,
+        name: teamsTable.name,
+      });
+    } else {
+      [created] = await tx.insert(vendorAssignmentsTable).values(values).returning({
+        id: vendorAssignmentsTable.id,
+        organizationId: vendorAssignmentsTable.organizationId,
+        name: vendorAssignmentsTable.name,
+      });
+    }
+    if (!created) return;
+    await tx.insert(authorizationAuditLogsTable).values({
+      actorUserId: admin.user.id,
+      organizationId: parsed.data.organizationId,
+      action: "SCOPE_TARGET_CREATED",
+      resource: parsed.data.scopeType,
+      resourceId: created.id,
+      decision: "ALLOW",
+      reasonCode: "ALLOWED",
+      beforeState: null,
+      afterState: JSON.stringify({ name: created.name, code: code ?? null }),
+      requestId: String(req.id),
+    });
+  });
+  if (!created) {
+    res.status(500).json({ error: "Scope target could not be created" });
+    return;
+  }
+  res.status(201).json(CreateRoleBindingScopeTargetResponse.parse({
+    ...created,
+    scopeType: parsed.data.scopeType,
+  }));
 });
 
 router.get("/users/search", async (req, res): Promise<void> => {

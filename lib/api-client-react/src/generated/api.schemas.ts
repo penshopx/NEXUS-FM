@@ -409,6 +409,29 @@ export interface RoleBindingScopeTarget {
   organizationId: string;
 }
 
+export type RoleBindingScopeTargetInputScopeType = typeof RoleBindingScopeTargetInputScopeType[keyof typeof RoleBindingScopeTargetInputScopeType];
+
+
+export const RoleBindingScopeTargetInputScopeType = {
+  TEAM: 'TEAM',
+  VENDOR_ASSIGNMENT: 'VENDOR_ASSIGNMENT',
+} as const;
+
+export interface RoleBindingScopeTargetInput {
+  organizationId: string;
+  scopeType: RoleBindingScopeTargetInputScopeType;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  name: string;
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  code?: string;
+}
+
 export type UserRoleBindingScopeTargetStatus = typeof UserRoleBindingScopeTargetStatus[keyof typeof UserRoleBindingScopeTargetStatus];
 
 

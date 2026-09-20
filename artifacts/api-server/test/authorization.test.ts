@@ -21,9 +21,11 @@ import {
   rolesTable,
   spacesTable,
   systemsTable,
+  teamsTable,
   userContextsTable,
   userRoleBindingsTable,
   usersTable,
+  vendorAssignmentsTable,
 } from "@workspace/db";
 import {
   authorize,
@@ -876,7 +878,7 @@ test("authorization routes run through a real HTTP app with injected currentUser
       }),
     });
     assert.equal(duplicate.response.status, 409);
-    for (const scopeType of ["ASSIGNED", "TEAM", "VENDOR_ASSIGNMENT", "OWNED_REQUEST"] as const) {
+    for (const scopeType of ["ASSIGNED", "OWNED_REQUEST"] as const) {
       const initialScopeId = randomUUID();
       const contextualBinding = await request(`/users/${target.userId}/role-bindings`, {
         method: "POST",
@@ -899,6 +901,117 @@ test("authorization routes run through a real HTTP app with injected currentUser
       assert.equal(retargetedBinding.response.status, 200, `${scopeType}: ${JSON.stringify(retargetedBinding.body)}`);
       assert.equal((retargetedBinding.body as { scopeId: string }).scopeId, replacementScopeId);
     }
+    const directoryScopeTargets = [
+      {
+        scopeType: "TEAM" as const,
+        name: "Night Operations",
+        code: `TEAM-${randomUUID()}`,
+      },
+      {
+        scopeType: "VENDOR_ASSIGNMENT" as const,
+        name: "Elevator Maintenance",
+        code: `VENDOR-${randomUUID()}`,
+      },
+    ];
+    for (const directoryTarget of directoryScopeTargets) {
+      const createdTarget = await request("/role-binding-scope-targets", {
+        method: "POST",
+        body: JSON.stringify({
+          organizationId: target.organizationId,
+          scopeType: directoryTarget.scopeType,
+          name: directoryTarget.name,
+          code: directoryTarget.code,
+        }),
+      });
+      assert.equal(createdTarget.response.status, 201, JSON.stringify(createdTarget.body));
+      const targetRecord = createdTarget.body as { id: string; name: string; organizationId: string };
+      assert.equal(targetRecord.name, directoryTarget.name);
+      assert.equal(targetRecord.organizationId, target.organizationId);
+      const binding = await request(`/users/${target.userId}/role-bindings`, {
+        method: "POST",
+        body: JSON.stringify({
+          organizationId: target.organizationId,
+          roleId: manager.roleId,
+          scopeType: directoryTarget.scopeType,
+          scopeId: targetRecord.id,
+        }),
+      });
+      assert.equal(binding.response.status, 201, `${directoryTarget.scopeType}: ${JSON.stringify(binding.body)}`);
+      assert.equal((binding.body as { scopeTargetName: string }).scopeTargetName, directoryTarget.name);
+      assert.equal((binding.body as { scopeTargetStatus: string }).scopeTargetStatus, "RESOLVED");
+      const search = await request(
+        `/role-binding-scope-targets?scopeType=${directoryTarget.scopeType}&organizationId=${target.organizationId}&query=${encodeURIComponent(directoryTarget.name)}`,
+      );
+      assert.equal(search.response.status, 200, JSON.stringify(search.body));
+      assert.ok((search.body as Array<{ id: string }>).some((row) => row.id === targetRecord.id));
+    }
+    actorId = manager.userId;
+    const crossOrganizationTargetCreation = await request("/role-binding-scope-targets", {
+      method: "POST",
+      body: JSON.stringify({
+        organizationId: target.organizationId,
+        scopeType: "TEAM",
+        name: "Forbidden Cross-Organization Team",
+      }),
+    });
+    assert.equal(crossOrganizationTargetCreation.response.status, 403);
+    actorId = platform.userId;
+    for (const scopeType of ["TEAM", "VENDOR_ASSIGNMENT"] as const) {
+      const missingDirectoryTarget = await request(`/users/${target.userId}/role-bindings`, {
+        method: "POST",
+        body: JSON.stringify({
+          organizationId: target.organizationId,
+          roleId: manager.roleId,
+          scopeType,
+          scopeId: randomUUID(),
+        }),
+      });
+      assert.equal(missingDirectoryTarget.response.status, 400, `${scopeType}: ${JSON.stringify(missingDirectoryTarget.body)}`);
+    }
+    const [inactiveTeam] = await db.insert(teamsTable).values({
+      organizationId: target.organizationId,
+      name: "Retired Response Team",
+      code: `INACTIVE-TEAM-${randomUUID()}`,
+      status: "INACTIVE",
+    }).returning();
+    const [inactiveTeamBinding] = await db.insert(userRoleBindingsTable).values({
+      userId: target.userId,
+      organizationId: target.organizationId,
+      roleId: manager.roleId,
+      scopeType: "TEAM",
+      scopeId: inactiveTeam.id,
+      grantedBy: platform.userId,
+    }).returning();
+    assert.ok(inactiveTeamBinding);
+    const [deletedVendorAssignment] = await db.insert(vendorAssignmentsTable).values({
+      organizationId: target.organizationId,
+      name: "Deleted Vendor Assignment",
+      code: `DELETED-VENDOR-${randomUUID()}`,
+    }).returning();
+    const [deletedVendorBinding] = await db.insert(userRoleBindingsTable).values({
+      userId: target.userId,
+      organizationId: target.organizationId,
+      roleId: manager.roleId,
+      scopeType: "VENDOR_ASSIGNMENT",
+      scopeId: deletedVendorAssignment.id,
+      grantedBy: platform.userId,
+    }).returning();
+    assert.ok(deletedVendorBinding);
+    await db.delete(vendorAssignmentsTable).where(eq(vendorAssignmentsTable.id, deletedVendorAssignment.id));
+    const [foreignOrganizationTeam] = await db.insert(teamsTable).values({
+      organizationId: manager.organizationId,
+      name: "Secret Foreign Team",
+      code: `FOREIGN-TEAM-${randomUUID()}`,
+    }).returning();
+    const [crossOrganizationHistoricalBinding] = await db.insert(userRoleBindingsTable).values({
+      userId: target.userId,
+      organizationId: target.organizationId,
+      roleId: manager.roleId,
+      scopeType: "TEAM",
+      scopeId: foreignOrganizationTeam.id,
+      grantedBy: platform.userId,
+    }).returning();
+    assert.ok(crossOrganizationHistoricalBinding);
     const [namedFacility] = await db.insert(facilitiesTable).values({
       organizationId: target.organizationId,
       name: "North Campus",
@@ -982,6 +1095,18 @@ test("authorization routes run through a real HTTP app with injected currentUser
     assert.ok((listed.body as Array<{ scopeId: string | null; scopeTargetName: string | null; scopeTargetStatus: string }>)
       .some((row) => row.scopeId === inactiveFacility.id &&
         row.scopeTargetName === "Retired Campus" &&
+        row.scopeTargetStatus === "MISSING"));
+    assert.ok((listed.body as Array<{ scopeId: string | null; scopeTargetName: string | null; scopeTargetStatus: string }>)
+      .some((row) => row.scopeId === inactiveTeam.id &&
+        row.scopeTargetName === "Retired Response Team" &&
+        row.scopeTargetStatus === "MISSING"));
+    assert.ok((listed.body as Array<{ scopeId: string | null; scopeTargetName: string | null; scopeTargetStatus: string }>)
+      .some((row) => row.scopeId === deletedVendorAssignment.id &&
+        row.scopeTargetName === null &&
+        row.scopeTargetStatus === "MISSING"));
+    assert.ok((listed.body as Array<{ scopeId: string | null; scopeTargetName: string | null; scopeTargetStatus: string }>)
+      .some((row) => row.scopeId === foreignOrganizationTeam.id &&
+        row.scopeTargetName === null &&
         row.scopeTargetStatus === "MISSING"));
     const managerBindings = await request(
       `/users/${target.userId}/role-bindings?roleCode=FACILITY_MANAGER`,

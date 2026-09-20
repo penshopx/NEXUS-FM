@@ -794,9 +794,16 @@ const createSchema = z.object({
 
 type CreateValues = z.infer<typeof createSchema>;
 
-const namedScopeTypes = new Set<ScopeType>(['FACILITY', 'BUILDING', 'SPACE', 'ASSET']);
+const namedScopeTypes = new Set<ScopeType>([
+  'FACILITY',
+  'BUILDING',
+  'SPACE',
+  'ASSET',
+  'TEAM',
+  'VENDOR_ASSIGNMENT',
+]);
 
-function ScopeTargetPicker({
+export function ScopeTargetPicker({
   organizationId,
   organizationName,
   scopeType,

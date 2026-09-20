@@ -9,6 +9,8 @@ Scope labels must also carry an explicit resolution state. A missing or historic
 
 New or changed bindings may select only active targets returned by the administrator-scoped target directory. An unchanged historical target may remain on an existing binding so administrators can review or edit unrelated fields without silently rewriting access history.
 
+When a previously contextual scope becomes directory-backed, random IDs must stop being accepted for new or retargeted bindings. Inactive records preserve their last canonical name as historical context; hard-deleted or cross-organization records remain unnamed and missing.
+
 **Why:** Administrators with inspection-only access need understandable access reviews, but granting catalog access through management endpoints would couple readability to mutation authority. Silent fallback labels can also misrepresent deleted or unavailable targets.
 
 **How to apply:** Enrich only rows already authorized for the caller. Resolve targets with both organization and object ID, preserve stable IDs, and return explicit resolved/missing/not-applicable state. Restrict target choices to the caller's platform or active-organization access, and reject newly submitted missing or inactive targets. Do not relax management permissions for display-only needs.

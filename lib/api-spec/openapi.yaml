@@ -345,6 +345,29 @@ paths:
         "400": {$ref: "#/components/responses/BadRequest"}
         "401": {$ref: "#/components/responses/Unauthorized"}
         "403": {$ref: "#/components/responses/Forbidden"}
+    post:
+      operationId: createRoleBindingScopeTarget
+      tags: [authorization]
+      summary: Create a team or vendor-assignment scope target
+      description: >-
+        Creates an active, organization-owned directory record that can be
+        selected for new role bindings.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoleBindingScopeTargetInput"
+      responses:
+        "201":
+          description: Created scope target
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoleBindingScopeTarget"
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
   /users/{userId}/role-bindings:
     parameters:
       - {$ref: "#/components/parameters/UserId"}
@@ -1467,6 +1490,14 @@ components:
         name: {type: string}
         scopeType: {$ref: "#/components/schemas/ScopeType"}
         organizationId: {type: string, format: uuid}
+    RoleBindingScopeTargetInput:
+      type: object
+      required: [organizationId, scopeType, name]
+      properties:
+        organizationId: {type: string, format: uuid}
+        scopeType: {type: string, enum: [TEAM, VENDOR_ASSIGNMENT]}
+        name: {type: string, minLength: 1, maxLength: 200}
+        code: {type: string, minLength: 1, maxLength: 100}
     UserRoleBinding:
       type: object
       required: [id, userId, organizationId, roleId, roleCode, version, scopeType, scopeTargetName, scopeTargetStatus, status]

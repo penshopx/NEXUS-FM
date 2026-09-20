@@ -318,6 +318,31 @@ export const SearchRoleBindingScopeTargetsResponse = zod.array(SearchRoleBinding
 
 
 /**
+ * Creates an active, organization-owned directory record that can be selected for new role bindings.
+ * @summary Create a team or vendor-assignment scope target
+ */
+export const createRoleBindingScopeTargetBodyNameMax = 200;
+
+export const createRoleBindingScopeTargetBodyCodeMax = 100;
+
+
+
+export const CreateRoleBindingScopeTargetBody = zod.object({
+  "organizationId": zod.string().uuid(),
+  "scopeType": zod.enum(['TEAM', 'VENDOR_ASSIGNMENT']),
+  "name": zod.string().min(1).max(createRoleBindingScopeTargetBodyNameMax),
+  "code": zod.string().min(1).max(createRoleBindingScopeTargetBodyCodeMax).optional()
+})
+
+export const CreateRoleBindingScopeTargetResponse = zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "scopeType": zod.enum(['PLATFORM', 'ORGANIZATION', 'PORTFOLIO', 'FACILITY', 'BUILDING', 'SPACE', 'ASSET', 'ASSIGNED', 'TEAM', 'VENDOR_ASSIGNMENT', 'OWNED_REQUEST']),
+  "organizationId": zod.string().uuid()
+})
+
+
+/**
  * Filters are applied only after the caller's platform or active-organization scope restriction.
  * @summary Read a user's scoped role bindings
  */

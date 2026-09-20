@@ -166,12 +166,26 @@ describe('authorization administration browser regressions', () => {
       isError: false,
     });
     api.searchScopeTargets.mockReturnValue({
-      data: [{
-        id: 'facility-1',
-        name: 'North Campus',
-        scopeType: 'FACILITY',
-        organizationId: 'org-1',
-      }],
+      data: [
+        {
+          id: 'facility-1',
+          name: 'North Campus',
+          scopeType: 'FACILITY',
+          organizationId: 'org-1',
+        },
+        {
+          id: 'team-1',
+          name: 'Night Operations',
+          scopeType: 'TEAM',
+          organizationId: 'org-1',
+        },
+        {
+          id: 'vendor-assignment-1',
+          name: 'Elevator Maintenance',
+          scopeType: 'VENDOR_ASSIGNMENT',
+          organizationId: 'org-1',
+        },
+      ],
       isFetching: false,
       isError: false,
     });
@@ -331,7 +345,7 @@ describe('authorization administration browser regressions', () => {
     await user.click(screen.getByTestId('select-role'));
     await user.click(screen.getByRole('option', { name: 'PLATFORM_ADMIN' }));
 
-    for (const scopeType of ['ASSIGNED', 'TEAM', 'VENDOR_ASSIGNMENT', 'OWNED_REQUEST']) {
+    for (const scopeType of ['ASSIGNED', 'OWNED_REQUEST']) {
       await user.click(screen.getByTestId('select-scopetype'));
       await user.click(screen.getByRole('option', { name: scopeType }));
       const targetInput = screen.getByTestId('input-scopeid');
@@ -345,6 +359,43 @@ describe('authorization administration browser regressions', () => {
           }),
         }),
         expect.any(Object),
+      );
+    }
+  });
+
+  it('creates team and vendor bindings by selecting their permanent directory names', async () => {
+    const user = userEvent.setup();
+    const create = vi.fn();
+    api.createBinding.mockReturnValue({ mutate: create, isPending: false });
+    renderPage();
+    await openBindingsForMember(user);
+    await user.click(screen.getByTestId('button-new-binding'));
+    await user.click(screen.getByTestId('select-role'));
+    await user.click(screen.getByRole('option', { name: 'PLATFORM_ADMIN' }));
+
+    for (const [scopeType, targetId] of [
+      ['TEAM', 'team-1'],
+      ['VENDOR_ASSIGNMENT', 'vendor-assignment-1'],
+    ] as const) {
+      await user.click(screen.getByTestId('select-scopetype'));
+      await user.click(screen.getByRole('option', { name: scopeType }));
+      await user.click(screen.getByTestId('input-scopeid'));
+      await user.click(await screen.findByTestId(`input-scopeid-option-${targetId}`));
+      await user.click(screen.getByTestId('button-create-binding'));
+      expect(create).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ scopeType, scopeId: targetId }),
+        }),
+        expect.any(Object),
+      );
+      expect(api.searchScopeTargets).toHaveBeenCalledWith(
+        expect.objectContaining({
+          scopeType,
+          organizationId: member.organizationId,
+        }),
+        expect.objectContaining({
+          query: expect.objectContaining({ enabled: true }),
+        }),
       );
     }
   });

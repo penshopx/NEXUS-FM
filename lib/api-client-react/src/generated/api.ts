@@ -60,6 +60,7 @@ import type {
   RegistryPage,
   Role,
   RoleBindingScopeTarget,
+  RoleBindingScopeTargetInput,
   RolePermissionConflict,
   RolePermissionUpdate,
   RolePermissionsResponse,
@@ -1164,6 +1165,95 @@ export function useSearchRoleBindingScopeTargets<TData = Awaited<ReturnType<type
 
 
 
+
+export const getCreateRoleBindingScopeTargetUrl = () => {
+
+
+
+
+  return `/api/role-binding-scope-targets`
+}
+
+/**
+ * Creates an active, organization-owned directory record that can be selected for new role bindings.
+ * @summary Create a team or vendor-assignment scope target
+ */
+export const createRoleBindingScopeTarget = async (roleBindingScopeTargetInput: RoleBindingScopeTargetInput, options?: Parameters<typeof customFetch>[1]): Promise<RoleBindingScopeTarget> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<RoleBindingScopeTarget>(getCreateRoleBindingScopeTargetUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(roleBindingScopeTargetInput)
+  }
+);}
+
+
+
+
+
+export const getCreateRoleBindingScopeTargetMutationKey = () => ['createRoleBindingScopeTarget'] as const;
+
+export const getCreateRoleBindingScopeTargetMutationOptions = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createRoleBindingScopeTarget>>, TError,CreateRoleBindingScopeTargetMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createRoleBindingScopeTarget>>, TError,CreateRoleBindingScopeTargetMutationVariables, TContext> => {
+
+const mutationKey = getCreateRoleBindingScopeTargetMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createRoleBindingScopeTarget>>, CreateRoleBindingScopeTargetMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createRoleBindingScopeTarget(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateRoleBindingScopeTargetMutationResult = NonNullable<Awaited<ReturnType<typeof createRoleBindingScopeTarget>>>
+    export type CreateRoleBindingScopeTargetMutationBody = BodyType<RoleBindingScopeTargetInput>
+    export type CreateRoleBindingScopeTargetMutationError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>
+    export type CreateRoleBindingScopeTargetMutationVariables = {data: BodyType<RoleBindingScopeTargetInput>}
+
+    /**
+ * @summary Create a team or vendor-assignment scope target
+ */
+export const useCreateRoleBindingScopeTarget = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createRoleBindingScopeTarget>>, TError,CreateRoleBindingScopeTargetMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createRoleBindingScopeTarget>>,
+        TError,
+        CreateRoleBindingScopeTargetMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateRoleBindingScopeTargetMutationOptions(options));
+    }
 
 export const getGetUserRoleBindingsUrl = (userId: string,
     params?: GetUserRoleBindingsParams,) => {
