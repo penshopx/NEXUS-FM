@@ -182,6 +182,20 @@ describe('facility portfolio import browser regressions', () => {
     expect(screen.getByText('North Campus')).toBeVisible();
     expect(screen.getByText('South Campus')).toBeVisible();
     expect(screen.queryByText('Main Building')).not.toBeInTheDocument();
+
+    const previewFilter = screen.getByTestId('input-filter-import-preview');
+    await user.type(previewFilter, 'asset');
+    expect(screen.getByText('North Campus')).toBeVisible();
+    expect(screen.queryByText('South Campus')).not.toBeInTheDocument();
+    expect(screen.getByText('Air Handler')).toBeVisible();
+    expect(screen.queryByText('Main Building')).not.toBeInTheDocument();
+    expect(screen.getByText('1 match')).toBeVisible();
+
+    await user.clear(previewFilter);
+    expect(screen.getByText('North Campus')).toBeVisible();
+    expect(screen.getByText('South Campus')).toBeVisible();
+    expect(screen.queryByText('Air Handler')).not.toBeInTheDocument();
+
     await user.click(screen.getByTestId('button-toggle-import-facility-0'));
     expect(screen.getByText('Main Building')).toBeVisible();
     expect(screen.getByTestId('row-import-preview-7')).toHaveTextContent('system: system-a');

@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { CheckCircle2, ChevronDown, ChevronRight, Download, FileWarning, Upload } from 'lucide-react';
+import { CheckCircle2, ChevronDown, ChevronRight, Download, FileWarning, Search, Upload, X } from 'lucide-react';
 import {
   downloadFacilityPortfolioImportTemplate,
   useImportFacilityPortfolio,
@@ -41,6 +41,19 @@ type HierarchyRecord = {
   depth: number;
 };
 
+function includesPreviewQuery(
+  item: {
+    name: string;
+    code?: string | null;
+    clientRef: string;
+    kind: string;
+  },
+  query: string,
+) {
+  return [item.name, item.code, item.clientRef, item.kind]
+    .some((value) => value?.toLowerCase().includes(query));
+}
+
 function flattenFacilityHierarchy(facility: PortfolioImportFacilityGroup): HierarchyRecord[] {
   const recordsByRef = new Map(facility.records.map((record) => [record.clientRef.toLowerCase(), record]));
   const childrenByRef = new Map<string, PortfolioImportPreviewRecord[]>();
@@ -76,26 +89,45 @@ function flattenFacilityHierarchy(facility: PortfolioImportFacilityGroup): Hiera
   return flattened;
 }
 
-function FacilityPreviewGroup({ facility, index }: {
+function FacilityPreviewGroup({ facility, index, filter }: {
   facility: PortfolioImportFacilityGroup;
   index: number;
+  filter: string;
 }) {
   const [open, setOpen] = useState(false);
   const [visibleCount, setVisibleCount] = useState(PREVIEW_PAGE_SIZE);
   const hierarchy = flattenFacilityHierarchy(facility);
-  const visibleRecords = hierarchy.slice(0, visibleCount);
+  const normalizedFilter = filter.trim().toLowerCase();
+  const facilityMatches = normalizedFilter.length > 0 && includesPreviewQuery({
+    name: facility.name,
+    code: facility.code,
+    clientRef: facility.clientRef,
+    kind: 'FACILITY',
+  }, normalizedFilter);
+  const matchingHierarchy = normalizedFilter
+    ? hierarchy.filter(({ record }) => includesPreviewQuery(record, normalizedFilter))
+    : hierarchy;
+  const visibleRecords = matchingHierarchy.slice(0, visibleCount);
   const descendantCount = facility.records.length;
+  const matchingDescendantCount = matchingHierarchy.length;
   const identifier = facility.code || facility.clientRef;
+  const isFiltering = normalizedFilter.length > 0;
+  const isOpen = isFiltering || open;
 
   return (
-    <Collapsible open={open} onOpenChange={setOpen} className="rounded-md border bg-background">
+    <Collapsible
+      open={isOpen}
+      onOpenChange={isFiltering ? undefined : setOpen}
+      className="rounded-md border bg-background"
+    >
       <CollapsibleTrigger asChild>
         <button
           type="button"
+          disabled={isFiltering}
           className="flex w-full items-start gap-2 rounded-md p-3 text-left hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           data-testid={`button-toggle-import-facility-${index}`}
         >
-          {open
+          {isOpen
             ? <ChevronDown className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
             : <ChevronRight className="mt-0.5 size-4 shrink-0" aria-hidden="true" />}
           <span className="min-w-0 flex-1">
@@ -105,7 +137,9 @@ function FacilityPreviewGroup({ facility, index }: {
             </span>
           </span>
           <span className="shrink-0 text-xs text-muted-foreground">
-            {descendantCount} {descendantCount === 1 ? 'descendant' : 'descendants'}
+            {isFiltering
+              ? `${matchingDescendantCount + (facilityMatches ? 1 : 0)} ${matchingDescendantCount + (facilityMatches ? 1 : 0) === 1 ? 'match' : 'matches'}`
+              : `${descendantCount} ${descendantCount === 1 ? 'descendant' : 'descendants'}`}
           </span>
         </button>
       </CollapsibleTrigger>
@@ -115,7 +149,11 @@ function FacilityPreviewGroup({ facility, index }: {
             {facility.counts.buildings} buildings · {facility.counts.spaces} spaces ·{' '}
             {facility.counts.systems} systems · {facility.counts.assets} assets
           </p>
-          {descendantCount === 0 ? (
+          {isFiltering && facilityMatches && matchingDescendantCount === 0 ? (
+            <p className="py-2 text-xs text-muted-foreground">
+              The facility matches. Its {descendantCount} {descendantCount === 1 ? 'descendant is' : 'descendants are'} kept collapsed.
+            </p>
+          ) : descendantCount === 0 ? (
             <p className="py-2 text-xs text-muted-foreground">No descendants are planned for this facility.</p>
           ) : (
             <ul className="space-y-1" data-testid={`list-import-facility-records-${index}`}>
@@ -151,7 +189,7 @@ function FacilityPreviewGroup({ facility, index }: {
               })}
             </ul>
           )}
-          {visibleCount < descendantCount && (
+          {visibleCount < matchingDescendantCount && (
             <Button
               type="button"
               variant="outline"
@@ -160,7 +198,7 @@ function FacilityPreviewGroup({ facility, index }: {
               onClick={() => setVisibleCount((count) => count + PREVIEW_PAGE_SIZE)}
               data-testid={`button-show-more-import-records-${index}`}
             >
-              Show next {Math.min(PREVIEW_PAGE_SIZE, descendantCount - visibleCount)} records
+              Show next {Math.min(PREVIEW_PAGE_SIZE, matchingDescendantCount - visibleCount)} records
             </Button>
           )}
         </div>
@@ -239,6 +277,7 @@ export function PortfolioImportDialog({
   const [failure, setFailure] = useState<ImportFailure | null>(null);
   const [isDownloadingTemplate, setIsDownloadingTemplate] = useState(false);
   const [preview, setPreview] = useState<PortfolioImportPreview | null>(null);
+  const [previewFilter, setPreviewFilter] = useState('');
   const importPortfolio = useImportFacilityPortfolio();
   const validatePortfolio = useValidateFacilityPortfolioImport();
 
@@ -246,6 +285,7 @@ export function PortfolioImportDialog({
     setFile(null);
     setFailure(null);
     setPreview(null);
+    setPreviewFilter('');
     importPortfolio.reset();
     validatePortfolio.reset();
     if (inputRef.current) inputRef.current.value = '';
@@ -376,7 +416,8 @@ export function PortfolioImportDialog({
               onChange={(event) => {
                 setFile(event.target.files?.[0] ?? null);
                 setFailure(null);
-                 setPreview(null);
+                setPreview(null);
+                setPreviewFilter('');
               }}
               data-testid="input-portfolio-import-file"
             />
@@ -411,15 +452,66 @@ export function PortfolioImportDialog({
                 </dl>
                 <div className="mt-4">
                   <p className="mb-2 text-sm font-medium">Planned hierarchy by facility</p>
+                  <div className="relative mb-2">
+                    <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" aria-hidden="true" />
+                    <Input
+                      type="search"
+                      value={previewFilter}
+                      onChange={(event) => setPreviewFilter(event.target.value)}
+                      placeholder="Filter by name, code, reference, or kind"
+                      aria-label="Filter planned hierarchy"
+                      className="pl-9 pr-9"
+                      data-testid="input-filter-import-preview"
+                    />
+                    {previewFilter && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-0.5 top-0.5 size-8"
+                        onClick={() => setPreviewFilter('')}
+                        aria-label="Clear preview filter"
+                        data-testid="button-clear-import-preview-filter"
+                      >
+                        <X className="size-4" />
+                      </Button>
+                    )}
+                  </div>
                   <ScrollArea className="h-[280px] pr-3">
                     <div className="space-y-2" data-testid="list-import-facility-groups">
-                      {preview.facilityGroups.map((facility, index) => (
-                        <FacilityPreviewGroup
-                          key={`${facility.clientRef}-${index}`}
-                          facility={facility}
-                          index={index}
-                        />
-                      ))}
+                      {preview.facilityGroups
+                        .map((facility, index) => ({ facility, index }))
+                        .filter(({ facility }) => {
+                          const query = previewFilter.trim().toLowerCase();
+                          if (!query) return true;
+                          return includesPreviewQuery({
+                            name: facility.name,
+                            code: facility.code,
+                            clientRef: facility.clientRef,
+                            kind: 'FACILITY',
+                          }, query) || facility.records.some((record) => includesPreviewQuery(record, query));
+                        })
+                        .map(({ facility, index }) => (
+                          <FacilityPreviewGroup
+                            key={`${facility.clientRef}-${index}`}
+                            facility={facility}
+                            index={index}
+                            filter={previewFilter}
+                          />
+                        ))}
+                      {previewFilter.trim() && !preview.facilityGroups.some((facility) => {
+                        const query = previewFilter.trim().toLowerCase();
+                        return includesPreviewQuery({
+                          name: facility.name,
+                          code: facility.code,
+                          clientRef: facility.clientRef,
+                          kind: 'FACILITY',
+                        }, query) || facility.records.some((record) => includesPreviewQuery(record, query));
+                      }) && (
+                        <p className="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">
+                          No planned records match this filter.
+                        </p>
+                      )}
                     </div>
                   </ScrollArea>
                 </div>
