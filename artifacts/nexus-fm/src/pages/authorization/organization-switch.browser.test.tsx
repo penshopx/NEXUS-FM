@@ -3,6 +3,10 @@ import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-quer
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type {
+  AuthorizationApiOverrides,
+  AuthorizationHookParameters,
+} from './authorization-api-mocks';
 
 let activeOrganizationId = 'org-admin';
 
@@ -39,7 +43,13 @@ const organizations = {
       { code: 'USER.MANAGE', effect: 'ALLOW', scopeType: 'ORGANIZATION' },
       { code: 'AUDIT_LOG.VIEW_AUDIT', effect: 'ALLOW', scopeType: 'ORGANIZATION' },
     ],
-    roles: [{ id: 'admin-role', code: 'ADMIN_ORG_ROLE', policyVersion: 'admin-v1', status: 'ACTIVE' }],
+    roles: [{
+      id: 'admin-role',
+      code: 'PLATFORM_ADMIN',
+      policyVersion: 'admin-v1',
+      status: 'ACTIVE',
+      updatedAt: '2026-09-17T12:00:00.000Z',
+    }],
     members: [{
       userId: 'admin-member',
       organizationId: 'org-admin',
@@ -52,7 +62,7 @@ const organizations = {
       id: 'admin-binding',
       userId: 'admin-member',
       roleId: 'admin-role',
-      roleCode: 'ADMIN_ORG_ROLE',
+      roleCode: 'PLATFORM_ADMIN',
       version: 'binding-v1',
       organizationId: 'org-admin',
       scopeType: 'ORGANIZATION',
@@ -81,7 +91,13 @@ const organizations = {
     permissions: [
       { code: 'USER.VIEW', effect: 'ALLOW', scopeType: 'ORGANIZATION' },
     ],
-    roles: [{ id: 'viewer-role', code: 'VIEWER_ORG_ROLE', policyVersion: 'viewer-v1', status: 'ACTIVE' }],
+    roles: [{
+      id: 'viewer-role',
+      code: 'VENDOR',
+      policyVersion: 'viewer-v1',
+      status: 'ACTIVE',
+      updatedAt: '2026-09-17T12:00:00.000Z',
+    }],
     members: [{
       userId: 'viewer-member',
       organizationId: 'org-viewer',
@@ -94,7 +110,7 @@ const organizations = {
       id: 'viewer-binding',
       userId: 'viewer-member',
       roleId: 'viewer-role',
-      roleCode: 'VIEWER_ORG_ROLE',
+      roleCode: 'VENDOR',
       version: 'binding-v1',
       organizationId: 'org-viewer',
       scopeType: 'ORGANIZATION',
@@ -117,26 +133,31 @@ const api = vi.hoisted(() => ({
 vi.mock('@workspace/api-client-react', async () => {
   const actual = await vi.importActual<typeof import('@workspace/api-client-react')>('@workspace/api-client-react');
   const tenant = () => organizations[activeOrganizationId as keyof typeof organizations];
-  return {
-    ...actual,
-    useGetMyPermissions: () => useQuery({
+  const overrides = {
+    useGetMyPermissions: (
+      ..._args: AuthorizationHookParameters<'useGetMyPermissions'>
+    ) => useQuery({
       queryKey: actual.getGetMyPermissionsQueryKey(),
       queryFn: () => organizationResponse('permissions', () => ({
         organizationId: activeOrganizationId,
         permissions: tenant().permissions,
       })),
     }),
-    useListRoles: (options?: { query?: { enabled?: boolean } }) => useQuery({
+    useListRoles: (
+      ...[options]: AuthorizationHookParameters<'useListRoles'>
+    ) => useQuery({
       queryKey: actual.getListRolesQueryKey(),
-      queryFn: () => organizationResponse('roles', () => tenant().roles),
+      queryFn: () => organizationResponse('roles', () => [...tenant().roles]),
       enabled: options?.query?.enabled,
     }),
-    useGetRolePermissions: (roleId: string) => useQuery({
+    useGetRolePermissions: (
+      ...[roleId]: AuthorizationHookParameters<'useGetRolePermissions'>
+    ) => useQuery({
       queryKey: actual.getGetRolePermissionsQueryKey(roleId),
       queryFn: async () => ({ policyVersion: `${activeOrganizationId}-policy`, permissions: [] }),
     }),
     useSearchOrganizationMembers: (
-      params: Parameters<typeof actual.getSearchOrganizationMembersQueryKey>[0],
+      ...[params]: AuthorizationHookParameters<'useSearchOrganizationMembers'>
     ) => useQuery({
       queryKey: actual.getSearchOrganizationMembersQueryKey(params),
       queryFn: () => organizationResponse('members', () => ({
@@ -147,29 +168,58 @@ vi.mock('@workspace/api-client-react', async () => {
       })),
       enabled: (params?.query.length ?? 0) >= 2,
     }),
-    useGetUserRoleBindings: (userId: string) => useQuery({
+    useGetUserRoleBindings: (
+      ...[userId]: AuthorizationHookParameters<'useGetUserRoleBindings'>
+    ) => useQuery({
       queryKey: actual.getGetUserRoleBindingsQueryKey(userId),
       queryFn: () => organizationResponse(
         'bindings',
         () => tenant().bindings.filter((binding) => binding.userId === userId),
       ),
     }),
-    useGetSession: () => useQuery({
+    useGetSession: (
+      ..._args: AuthorizationHookParameters<'useGetSession'>
+    ) => useQuery({
       queryKey: actual.getGetSessionQueryKey(),
       queryFn: async () => ({
         activeOrganization: { organization: { id: activeOrganizationId } },
       }),
     }),
     useGetAuthorizationAuditLogs: (
-      params: Parameters<typeof actual.getGetAuthorizationAuditLogsQueryKey>[0],
+      ...[params]: AuthorizationHookParameters<'useGetAuthorizationAuditLogs'>
     ) => useQuery({
       queryKey: actual.getGetAuthorizationAuditLogsQueryKey(params),
       queryFn: () => organizationResponse('audit', () => tenant().audit),
     }),
-    useUpdateRolePermissions: () => ({ mutate: api.updateRolePermissions, isPending: false }),
-    useCreateUserRoleBinding: () => ({ mutate: api.createBinding, isPending: false }),
-    useUpdateUserRoleBinding: () => ({ mutate: api.updateBinding, isPending: false }),
-    useRevokeUserRoleBinding: () => ({ mutate: api.revokeBinding, isPending: false }),
+    useUpdateRolePermissions: (
+      ..._args: AuthorizationHookParameters<'useUpdateRolePermissions'>
+    ) => ({ mutate: api.updateRolePermissions, isPending: false }),
+    useCreateUserRoleBinding: (
+      ..._args: AuthorizationHookParameters<'useCreateUserRoleBinding'>
+    ) => ({ mutate: api.createBinding, isPending: false }),
+    useUpdateUserRoleBinding: (
+      ..._args: AuthorizationHookParameters<'useUpdateUserRoleBinding'>
+    ) => ({ mutate: api.updateBinding, isPending: false }),
+    useRevokeUserRoleBinding: (
+      ..._args: AuthorizationHookParameters<'useRevokeUserRoleBinding'>
+    ) => ({ mutate: api.revokeBinding, isPending: false }),
+  } satisfies AuthorizationApiOverrides<
+    | 'useGetMyPermissions'
+    | 'useListRoles'
+    | 'useGetRolePermissions'
+    | 'useSearchOrganizationMembers'
+    | 'useGetUserRoleBindings'
+    | 'useGetSession'
+    | 'useGetAuthorizationAuditLogs'
+    | 'useUpdateRolePermissions'
+    | 'useCreateUserRoleBinding'
+    | 'useUpdateUserRoleBinding'
+    | 'useRevokeUserRoleBinding'
+  >;
+
+  return {
+    ...actual,
+    ...overrides,
   };
 });
 
@@ -282,7 +332,7 @@ describe('organization switching authorization isolation', () => {
     );
 
     expect(await screen.findByTestId('tab-roles')).toBeVisible();
-    expect(await screen.findByTestId('role-select-ADMIN_ORG_ROLE')).toBeVisible();
+    expect(await screen.findByTestId('role-select-PLATFORM_ADMIN')).toBeVisible();
 
     await user.click(screen.getByTestId('tab-bindings'));
     await user.type(screen.getByTestId('input-target-user'), 'member');
@@ -302,7 +352,7 @@ describe('organization switching authorization isolation', () => {
     expect(await screen.findByTestId('tab-bindings')).toHaveAttribute('data-state', 'active');
     expect(screen.queryByTestId('tab-roles')).not.toBeInTheDocument();
     expect(screen.queryByTestId('tab-audit')).not.toBeInTheDocument();
-    expect(screen.queryByText('ADMIN_ORG_ROLE')).not.toBeInTheDocument();
+    expect(screen.queryByText('PLATFORM_ADMIN')).not.toBeInTheDocument();
     expect(screen.queryByTestId('member-result-admin-member-org-admin')).not.toBeInTheDocument();
     expect(screen.queryByTestId('row-binding-admin-binding')).not.toBeInTheDocument();
     expect(screen.queryByTestId('row-audit-admin-audit')).not.toBeInTheDocument();
@@ -310,7 +360,7 @@ describe('organization switching authorization isolation', () => {
     expect(screen.getByTestId('input-target-user')).toHaveValue('member');
     await user.click(await screen.findByTestId('member-result-viewer-member-org-viewer'));
     expect(await screen.findByTestId('row-binding-viewer-binding')).toBeVisible();
-    expect(screen.queryByText('ADMIN_ORG_ROLE')).not.toBeInTheDocument();
+    expect(screen.queryByText('PLATFORM_ADMIN')).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Switch to admin organization' }));
 
@@ -321,8 +371,8 @@ describe('organization switching authorization isolation', () => {
 
     await user.click(screen.getByTestId('tab-roles'));
     await waitFor(() => expect(screen.getByTestId('tab-roles')).toHaveAttribute('data-state', 'active'));
-    expect(await screen.findByTestId('role-select-ADMIN_ORG_ROLE')).toBeVisible();
-    expect(screen.queryByText('VIEWER_ORG_ROLE')).not.toBeInTheDocument();
+    expect(await screen.findByTestId('role-select-PLATFORM_ADMIN')).toBeVisible();
+    expect(screen.queryByText('VENDOR')).not.toBeInTheDocument();
   });
 
   it('ignores previous-organization authorization responses that resolve after switching', async () => {
@@ -355,14 +405,14 @@ describe('organization switching authorization isolation', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('race-permissions')).toHaveTextContent('org-viewer');
-      expect(screen.getByTestId('race-roles')).toHaveTextContent('VIEWER_ORG_ROLE');
+      expect(screen.getByTestId('race-roles')).toHaveTextContent('VENDOR');
       expect(screen.getByTestId('race-members')).toHaveTextContent('Viewer Tenant Member');
-      expect(screen.getByTestId('race-bindings')).toHaveTextContent('VIEWER_ORG_ROLE');
+      expect(screen.getByTestId('race-bindings')).toHaveTextContent('VENDOR');
       expect(screen.getByTestId('race-audit')).toBeEmptyDOMElement();
     });
 
     expect(document.body).not.toHaveTextContent('org-admin');
-    expect(document.body).not.toHaveTextContent('ADMIN_ORG_ROLE');
+    expect(document.body).not.toHaveTextContent('PLATFORM_ADMIN');
     expect(document.body).not.toHaveTextContent('Admin Tenant Member');
     expect(document.body).not.toHaveTextContent('ADMIN_ORG_ACTION');
 
@@ -374,7 +424,7 @@ describe('organization switching authorization isolation', () => {
       client.getQueryData(getGetAuthorizationAuditLogsQueryKey(auditParams)),
     ];
     expect(JSON.stringify(cachedValues)).not.toContain('org-admin');
-    expect(JSON.stringify(cachedValues)).not.toContain('ADMIN_ORG_ROLE');
+    expect(JSON.stringify(cachedValues)).not.toContain('PLATFORM_ADMIN');
     expect(JSON.stringify(cachedValues)).not.toContain('Admin Tenant Member');
     expect(JSON.stringify(cachedValues)).not.toContain('ADMIN_ORG_ACTION');
   });

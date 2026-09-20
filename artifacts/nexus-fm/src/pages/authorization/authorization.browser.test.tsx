@@ -3,20 +3,21 @@ import { cleanup, render, screen, waitFor, within } from '@testing-library/react
 import userEvent from '@testing-library/user-event';
 import axe, { type Result } from 'axe-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { AuthorizationApiHookMock } from './authorization-api-mocks';
 
 const api = vi.hoisted(() => ({
-  myPermissions: vi.fn(),
-  listRoles: vi.fn(),
-  rolePermissions: vi.fn(),
-  updateRolePermissions: vi.fn(),
-  searchMembers: vi.fn(),
-  searchOrganizations: vi.fn(),
-  bindings: vi.fn(),
-  createBinding: vi.fn(),
-  updateBinding: vi.fn(),
-  revokeBinding: vi.fn(),
-  session: vi.fn(),
-  auditLogs: vi.fn(),
+  myPermissions: vi.fn<AuthorizationApiHookMock<'useGetMyPermissions'>>(),
+  listRoles: vi.fn<AuthorizationApiHookMock<'useListRoles'>>(),
+  rolePermissions: vi.fn<AuthorizationApiHookMock<'useGetRolePermissions'>>(),
+  updateRolePermissions: vi.fn<AuthorizationApiHookMock<'useUpdateRolePermissions'>>(),
+  searchMembers: vi.fn<AuthorizationApiHookMock<'useSearchOrganizationMembers'>>(),
+  searchOrganizations: vi.fn<AuthorizationApiHookMock<'useSearchPlatformOrganizations'>>(),
+  bindings: vi.fn<AuthorizationApiHookMock<'useGetUserRoleBindings'>>(),
+  createBinding: vi.fn<AuthorizationApiHookMock<'useCreateUserRoleBinding'>>(),
+  updateBinding: vi.fn<AuthorizationApiHookMock<'useUpdateUserRoleBinding'>>(),
+  revokeBinding: vi.fn<AuthorizationApiHookMock<'useRevokeUserRoleBinding'>>(),
+  session: vi.fn<AuthorizationApiHookMock<'useGetSession'>>(),
+  auditLogs: vi.fn<AuthorizationApiHookMock<'useGetAuthorizationAuditLogs'>>(),
 }));
 
 vi.mock('@workspace/api-client-react', () => ({
@@ -374,7 +375,7 @@ describe('authorization administration browser regressions', () => {
           endsAt: '2026-01-01T00:00:00.000Z',
         },
       ];
-    api.bindings.mockImplementation((_userId: string, params?: { roleCode?: string; status?: string }) => ({
+    api.bindings.mockImplementation((_userId, params) => ({
       data: params?.status === 'SUSPENDED' ? [] : visibleBindings,
       isLoading: false,
     }));
