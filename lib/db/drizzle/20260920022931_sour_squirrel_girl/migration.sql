@@ -1,0 +1,2 @@
+CREATE INDEX "organizations_name_trgm_idx" ON "organizations" USING gin ("name" gin_trgm_ops);--> statement-breakpoint
+CREATE INDEX "organizations_slug_trgm_idx" ON "organizations" USING gin ("slug" gin_trgm_ops);

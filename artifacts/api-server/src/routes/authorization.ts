@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { randomUUID } from "node:crypto";
-import { and, asc, count, desc, eq, gt, ilike, inArray, isNull, lte, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, ilike, inArray, isNull, lte, or, sql } from "drizzle-orm";
 import {
   GetUserRoleBindingsQueryParams,
   SearchPlatformOrganizationsQueryParams,
@@ -372,6 +372,14 @@ router.get("/organizations/search", async (req, res): Promise<void> => {
     res.status(400).json({ error: "query must contain at least 2 non-whitespace characters" });
     return;
   }
+  const exactPattern = query;
+  const prefixPattern = `${query}%`;
+  const containsPattern = `%${query}%`;
+  const matchRank = sql<number>`case
+    when ${organizationsTable.name} ilike ${exactPattern} or ${organizationsTable.slug} ilike ${exactPattern} then 0
+    when ${organizationsTable.name} ilike ${prefixPattern} or ${organizationsTable.slug} ilike ${prefixPattern} then 1
+    else 2
+  end`;
   const rows = await database.select({
     id: organizationsTable.id,
     name: organizationsTable.name,
@@ -380,11 +388,11 @@ router.get("/organizations/search", async (req, res): Promise<void> => {
     .where(and(
       eq(organizationsTable.isActive, true),
       or(
-        ilike(organizationsTable.name, `%${query}%`),
-        ilike(organizationsTable.slug, `%${query}%`),
+        ilike(organizationsTable.name, containsPattern),
+        ilike(organizationsTable.slug, containsPattern),
       ),
     ))
-    .orderBy(asc(organizationsTable.name), asc(organizationsTable.slug), asc(organizationsTable.id))
+    .orderBy(asc(matchRank), asc(organizationsTable.name), asc(organizationsTable.slug), asc(organizationsTable.id))
     .limit(parsed.data.limit ?? 20);
 
   res.json(SearchPlatformOrganizationsResponse.parse(rows));

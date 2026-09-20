@@ -689,6 +689,21 @@ test("authorization routes run through a real HTTP app with injected currentUser
     const [targetOrganization] = await db.select().from(organizationsTable)
       .where(eq(organizationsTable.id, target.organizationId));
     assert.ok(targetOrganization);
+    const rankingToken = `rank-${randomUUID()}`;
+    const rankedOrganizations = await db.insert(organizationsTable).values([
+      { name: rankingToken, slug: `exact-name-${randomUUID()}` },
+      { name: `${rankingToken} prefix`, slug: `prefix-name-${randomUUID()}` },
+      { name: `contains ${rankingToken} value`, slug: `contains-name-${randomUUID()}` },
+      { name: `Inactive ${rankingToken}`, slug: `inactive-${randomUUID()}`, isActive: false },
+    ]).returning();
+    const rankedOrganizationSearch = await request(
+      `/organizations/search?query=${encodeURIComponent(rankingToken)}`,
+    );
+    assert.equal(rankedOrganizationSearch.response.status, 200);
+    assert.deepEqual(
+      (rankedOrganizationSearch.body as Array<{ id: string }>).map((row) => row.id),
+      rankedOrganizations.slice(0, 3).map((row) => row.id),
+    );
     const organizationByName = await request(
       `/organizations/search?query=${encodeURIComponent(targetOrganization.name.slice(0, 4))}`,
     );
@@ -1023,6 +1038,66 @@ test("authorization routes run through a real HTTP app with injected currentUser
         effect: "ALLOW" as const,
       })));
     await db.insert(rolePermissionsTable).values(restored).onConflictDoNothing();
+  }
+});
+
+test("large organization directory contains searches use trigram indexes", async () => {
+  const marker = randomUUID();
+  const slugPrefix = `org-search-perf-${marker}`;
+  await pool.query(
+    `INSERT INTO organizations (name, slug)
+     SELECT 'Organization ' || value, $1 || '-' || value
+       FROM generate_series(1, 32_768) AS value`,
+    [slugPrefix],
+  );
+  await pool.query(
+    `INSERT INTO organizations (name, slug)
+     VALUES ($1, $2), ($3, $4)`,
+    [
+      `Organization UniqueNameNeedle ${marker}`,
+      `${slugPrefix}-name-needle`,
+      `Organization Slug Match ${marker}`,
+      `${slugPrefix}-UniqueSlugNeedle`,
+    ],
+  );
+
+  type PlanNode = {
+    "Node Type": string;
+    "Relation Name"?: string;
+    "Index Name"?: string;
+    Plans?: PlanNode[];
+  };
+  const planNodes = (node: PlanNode): PlanNode[] => [
+    node,
+    ...(node.Plans?.flatMap(planNodes) ?? []),
+  ];
+  const assertIndexPlan = async (column: "name" | "slug", expectedIndex: string, search: string) => {
+    const result = await pool.query(
+      `EXPLAIN (ANALYZE, FORMAT JSON)
+       SELECT id FROM organizations
+        WHERE is_active = true AND ${column} ILIKE $1`,
+      [`%${search}%`],
+    );
+    const root = result.rows[0]?.["QUERY PLAN"]?.[0];
+    assert.ok(root);
+    const nodes = planNodes(root.Plan as PlanNode);
+    assert.ok(
+      nodes.some((node) => node["Index Name"] === expectedIndex),
+      `organization search must use ${expectedIndex}`,
+    );
+    assert.ok(
+      !nodes.some((node) => node["Relation Name"] === "organizations" && node["Node Type"] === "Seq Scan"),
+      "organization search must not scan the full directory",
+    );
+    assert.ok(Number(root["Execution Time"]) < 250, "organization search exceeded the 250ms plan budget");
+  };
+
+  try {
+    await pool.query("ANALYZE organizations");
+    await assertIndexPlan("name", "organizations_name_trgm_idx", `UniqueNameNeedle ${marker}`);
+    await assertIndexPlan("slug", "organizations_slug_trgm_idx", "UniqueSlugNeedle");
+  } finally {
+    await pool.query("DELETE FROM organizations WHERE slug LIKE $1", [`${slugPrefix}%`]);
   }
 });
 
