@@ -1064,7 +1064,7 @@ components:
     PortfolioImportPreview:
       type: object
       additionalProperties: false
-      required: [total, facilities, buildings, spaces, systems, assets]
+      required: [total, facilities, buildings, spaces, systems, assets, facilityGroups]
       properties:
         total: {type: integer, minimum: 1}
         facilities: {type: integer, minimum: 0}
@@ -1072,6 +1072,46 @@ components:
         spaces: {type: integer, minimum: 0}
         systems: {type: integer, minimum: 0}
         assets: {type: integer, minimum: 0}
+        facilityGroups:
+          type: array
+          items:
+            $ref: "#/components/schemas/PortfolioImportFacilityGroup"
+    PortfolioImportFacilityGroup:
+      type: object
+      additionalProperties: false
+      required: [name, clientRef, counts, records]
+      properties:
+        name: {type: string}
+        clientRef: {type: string}
+        id: {type: [string, "null"], format: uuid}
+        code: {type: [string, "null"]}
+        counts:
+          type: object
+          additionalProperties: false
+          required: [buildings, spaces, systems, assets]
+          properties:
+            buildings: {type: integer, minimum: 0}
+            spaces: {type: integer, minimum: 0}
+            systems: {type: integer, minimum: 0}
+            assets: {type: integer, minimum: 0}
+        records:
+          type: array
+          items:
+            $ref: "#/components/schemas/PortfolioImportPreviewRecord"
+    PortfolioImportPreviewRecord:
+      type: object
+      additionalProperties: false
+      required: [row, kind, name, clientRef, status]
+      properties:
+        row: {type: integer, minimum: 2}
+        kind: {type: string, enum: [BUILDING, SPACE, SYSTEM, ASSET]}
+        name: {type: string}
+        clientRef: {type: string}
+        id: {type: [string, "null"], format: uuid}
+        parentRef: {type: [string, "null"]}
+        systemRef: {type: [string, "null"]}
+        code: {type: [string, "null"]}
+        status: {type: string, enum: [ACTIVE, INACTIVE]}
     BuildingInput:
       allOf:
         - $ref: "#/components/schemas/RegistryInput"

@@ -5,6 +5,7 @@
  * NEXUS-FM foundation API
  * OpenAPI spec version: 0.1.0
  */
+import type { PortfolioImportFacilityGroup } from './portfolioImportFacilityGroup';
 
 export interface PortfolioImportPreview {
   /** @minimum 1 */
@@ -19,4 +20,5 @@ export interface PortfolioImportPreview {
   systems: number;
   /** @minimum 0 */
   assets: number;
+  facilityGroups: PortfolioImportFacilityGroup[];
 }

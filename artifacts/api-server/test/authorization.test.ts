@@ -271,6 +271,31 @@ test("portfolio import preview summarizes the hierarchy without registry or audi
       spaces: 1,
       systems: 1,
       assets: 1,
+      facilityGroups: [{
+        name: "Preview Campus",
+        clientRef: "facility-preview",
+        id: null,
+        code: "FACILITY-PREVIEW",
+        counts: { buildings: 1, spaces: 1, systems: 1, assets: 1 },
+        records: [
+          {
+            row: 3, kind: "BUILDING", name: "Preview Building", clientRef: "building-preview",
+            id: null, parentRef: "facility-preview", systemRef: null, code: "BUILDING-PREVIEW", status: "ACTIVE",
+          },
+          {
+            row: 4, kind: "SPACE", name: "Preview Space", clientRef: "space-preview",
+            id: null, parentRef: "building-preview", systemRef: null, code: "SPACE-PREVIEW", status: "ACTIVE",
+          },
+          {
+            row: 5, kind: "SYSTEM", name: "Preview System", clientRef: "system-preview",
+            id: null, parentRef: "space-preview", systemRef: null, code: "SYSTEM-PREVIEW", status: "ACTIVE",
+          },
+          {
+            row: 6, kind: "ASSET", name: "Preview Asset", clientRef: "asset-preview",
+            id: null, parentRef: "space-preview", systemRef: "system-preview", code: "ASSET-PREVIEW", status: "ACTIVE",
+          },
+        ],
+      }],
     });
     const [facility] = await db.select().from(facilitiesTable).where(and(
       eq(facilitiesTable.organizationId, manager.organizationId),

@@ -1,11 +1,15 @@
 import { useRef, useState } from 'react';
-import { CheckCircle2, Download, FileWarning, Upload } from 'lucide-react';
+import { CheckCircle2, ChevronDown, ChevronRight, Download, FileWarning, Upload } from 'lucide-react';
 import {
   downloadFacilityPortfolioImportTemplate,
   useImportFacilityPortfolio,
   useValidateFacilityPortfolioImport,
 } from '@workspace/api-client-react';
 import type { PortfolioImportPreview } from '@workspace/api-client-react';
+import type {
+  PortfolioImportFacilityGroup,
+  PortfolioImportPreviewRecord,
+} from '@workspace/api-client-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,6 +22,8 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const MAX_IMPORT_BYTES = 2 * 1024 * 1024;
 
@@ -25,6 +31,141 @@ type ImportFailure = {
   message: string;
   report?: string;
 };
+
+const PREVIEW_PAGE_SIZE = 100;
+
+type HierarchyRecord = {
+  record: PortfolioImportPreviewRecord;
+  depth: number;
+};
+
+function flattenFacilityHierarchy(facility: PortfolioImportFacilityGroup): HierarchyRecord[] {
+  const recordsByRef = new Map(facility.records.map((record) => [record.clientRef.toLowerCase(), record]));
+  const childrenByRef = new Map<string, PortfolioImportPreviewRecord[]>();
+  const roots: PortfolioImportPreviewRecord[] = [];
+
+  for (const record of facility.records) {
+    const parentRef = (record.kind === 'ASSET' && record.systemRef
+      ? record.systemRef
+      : record.parentRef)?.toLowerCase();
+    if (!parentRef || !recordsByRef.has(parentRef)) {
+      roots.push(record);
+      continue;
+    }
+    const children = childrenByRef.get(parentRef) ?? [];
+    children.push(record);
+    childrenByRef.set(parentRef, children);
+  }
+
+  const flattened: HierarchyRecord[] = [];
+  const visited = new Set<string>();
+  const appendSubtree = (record: PortfolioImportPreviewRecord, depth: number) => {
+    const key = record.clientRef.toLowerCase();
+    if (visited.has(key)) return;
+    visited.add(key);
+    flattened.push({ record, depth });
+    for (const child of childrenByRef.get(key) ?? []) appendSubtree(child, depth + 1);
+  };
+
+  for (const root of roots) appendSubtree(root, 0);
+  // Validation rejects cycles, but this keeps the preview complete if a future
+  // contract permits references to an ancestor that is not included in the CSV.
+  for (const record of facility.records) appendSubtree(record, 0);
+  return flattened;
+}
+
+function FacilityPreviewGroup({ facility, index }: {
+  facility: PortfolioImportFacilityGroup;
+  index: number;
+}) {
+  const [open, setOpen] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(PREVIEW_PAGE_SIZE);
+  const hierarchy = flattenFacilityHierarchy(facility);
+  const visibleRecords = hierarchy.slice(0, visibleCount);
+  const descendantCount = facility.records.length;
+  const identifier = facility.code || facility.clientRef;
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen} className="rounded-md border bg-background">
+      <CollapsibleTrigger asChild>
+        <button
+          type="button"
+          className="flex w-full items-start gap-2 rounded-md p-3 text-left hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          data-testid={`button-toggle-import-facility-${index}`}
+        >
+          {open
+            ? <ChevronDown className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+            : <ChevronRight className="mt-0.5 size-4 shrink-0" aria-hidden="true" />}
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-medium">{facility.name}</span>
+            <span className="block truncate font-mono text-xs text-muted-foreground">
+              {identifier}
+            </span>
+          </span>
+          <span className="shrink-0 text-xs text-muted-foreground">
+            {descendantCount} {descendantCount === 1 ? 'descendant' : 'descendants'}
+          </span>
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="border-t px-3 py-2">
+          <p className="mb-2 text-xs text-muted-foreground">
+            {facility.counts.buildings} buildings · {facility.counts.spaces} spaces ·{' '}
+            {facility.counts.systems} systems · {facility.counts.assets} assets
+          </p>
+          {descendantCount === 0 ? (
+            <p className="py-2 text-xs text-muted-foreground">No descendants are planned for this facility.</p>
+          ) : (
+            <ul className="space-y-1" data-testid={`list-import-facility-records-${index}`}>
+              {visibleRecords.map(({ record, depth }) => {
+                return (
+                  <li
+                    key={`${record.kind}-${record.clientRef}`}
+                    className="rounded border border-border/70 px-2 py-1.5 text-xs"
+                    style={{ marginLeft: `${depth * 0.75}rem` }}
+                    data-parent-ref={record.kind === 'ASSET' && record.systemRef
+                      ? record.systemRef
+                      : record.parentRef}
+                    data-testid={`row-import-preview-${record.row}`}
+                  >
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <span className="font-medium">{record.name}</span>
+                      <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-muted-foreground">
+                        {record.kind}
+                      </span>
+                      {record.status === 'INACTIVE' && (
+                        <span className="text-[10px] font-medium text-muted-foreground">INACTIVE</span>
+                      )}
+                    </div>
+                    <div className="mt-1 break-all font-mono text-[11px] text-muted-foreground">
+                      ref: {record.clientRef}
+                      {record.code ? ` · code: ${record.code}` : ''}
+                      {record.parentRef ? ` · parent: ${record.parentRef}` : ''}
+                      {record.systemRef ? ` · system: ${record.systemRef}` : ''}
+                      {record.id ? ` · id: ${record.id}` : ''}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          {visibleCount < descendantCount && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-2 w-full"
+              onClick={() => setVisibleCount((count) => count + PREVIEW_PAGE_SIZE)}
+              data-testid={`button-show-more-import-records-${index}`}
+            >
+              Show next {Math.min(PREVIEW_PAGE_SIZE, descendantCount - visibleCount)} records
+            </Button>
+          )}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
 
 function downloadTextFile(contents: string, fileName: string) {
   const url = URL.createObjectURL(new Blob([contents], { type: 'text/csv;charset=utf-8' }));
@@ -148,7 +289,7 @@ export function PortfolioImportDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[640px]" data-testid="dialog-portfolio-import">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[760px]" data-testid="dialog-portfolio-import">
         <DialogHeader>
           <DialogTitle>Import portfolio from CSV</DialogTitle>
           <DialogDescription>
@@ -220,6 +361,20 @@ export function PortfolioImportDialog({
                     </div>
                   ))}
                 </dl>
+                <div className="mt-4">
+                  <p className="mb-2 text-sm font-medium">Planned hierarchy by facility</p>
+                  <ScrollArea className="h-[280px] pr-3">
+                    <div className="space-y-2" data-testid="list-import-facility-groups">
+                      {preview.facilityGroups.map((facility, index) => (
+                        <FacilityPreviewGroup
+                          key={`${facility.clientRef}-${index}`}
+                          facility={facility}
+                          index={index}
+                        />
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
                 <p className="mt-3 text-xs text-muted-foreground">
                   The file will be validated again when you commit.
                 </p>

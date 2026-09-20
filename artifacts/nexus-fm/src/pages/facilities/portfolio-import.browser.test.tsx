@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -110,12 +110,32 @@ describe('facility portfolio import browser regressions', () => {
     const user = userEvent.setup();
     const validate = vi.fn((_variables: unknown, options: MutationOptions<unknown>) => {
       options.onSuccess?.({
-        total: 5,
-        facilities: 1,
-        buildings: 1,
+        total: 8,
+        facilities: 2,
+        buildings: 3,
         spaces: 1,
         systems: 1,
         assets: 1,
+        facilityGroups: [{
+          name: 'North Campus',
+          clientRef: 'facility-a',
+          code: 'FACILITY-A',
+          counts: { buildings: 2, spaces: 1, systems: 1, assets: 1 },
+          records: [
+            { row: 3, kind: 'BUILDING', name: 'Main Building', clientRef: 'building-a', parentRef: 'facility-a', code: 'BLDG-A', status: 'ACTIVE' },
+            { row: 4, kind: 'BUILDING', name: 'Annex', clientRef: 'building-b', parentRef: 'facility-a', status: 'ACTIVE' },
+            { row: 5, kind: 'SPACE', name: 'Mechanical Room', clientRef: 'space-a', parentRef: 'building-a', status: 'ACTIVE' },
+            { row: 6, kind: 'SYSTEM', name: 'HVAC', clientRef: 'system-a', parentRef: 'space-a', status: 'ACTIVE' },
+            { row: 7, kind: 'ASSET', name: 'Air Handler', clientRef: 'asset-a', parentRef: 'space-a', systemRef: 'system-a', status: 'ACTIVE' },
+          ],
+        }, {
+          name: 'South Campus',
+          clientRef: 'facility-south',
+          counts: { buildings: 1, spaces: 0, systems: 0, assets: 0 },
+          records: [
+            { row: 9, kind: 'BUILDING', name: 'South Building', clientRef: 'building-south', parentRef: 'facility-south', status: 'ACTIVE' },
+          ],
+        }],
       });
     });
     const commit = vi.fn((_variables: unknown, options: MutationOptions<{ imported: number }>) => {
@@ -142,8 +162,27 @@ describe('facility portfolio import browser regressions', () => {
       expect.objectContaining({ onSuccess: expect.any(Function), onError: expect.any(Function) }),
     );
     expect(await screen.findByTestId('alert-import-preview')).toHaveTextContent(
-      'Validation passed. Committing will create 5 records.',
+      'Validation passed. Committing will create 8 records.',
     );
+    expect(screen.getByText('North Campus')).toBeVisible();
+    expect(screen.getByText('South Campus')).toBeVisible();
+    expect(screen.queryByText('Main Building')).not.toBeInTheDocument();
+    await user.click(screen.getByTestId('button-toggle-import-facility-0'));
+    expect(screen.getByText('Main Building')).toBeVisible();
+    expect(screen.getByTestId('row-import-preview-7')).toHaveTextContent('system: system-a');
+    const northRecords = within(screen.getByTestId('list-import-facility-records-0'))
+      .getAllByRole('listitem');
+    expect(northRecords.map((record) => record.textContent)).toEqual([
+      expect.stringContaining('Main Building'),
+      expect.stringContaining('Mechanical Room'),
+      expect.stringContaining('HVAC'),
+      expect.stringContaining('Air Handler'),
+      expect.stringContaining('Annex'),
+    ]);
+    expect(screen.getByTestId('row-import-preview-5')).toHaveAttribute('data-parent-ref', 'building-a');
+    expect(screen.getByTestId('row-import-preview-7')).toHaveAttribute('data-parent-ref', 'system-a');
+    await user.click(screen.getByTestId('button-toggle-import-facility-1'));
+    expect(within(screen.getByTestId('list-import-facility-records-1')).getByText('South Building')).toBeVisible();
 
     await user.click(screen.getByTestId('button-submit-portfolio-import'));
 

@@ -38,6 +38,63 @@ export interface PortfolioImportResult {
   importId: string;
 }
 
+export type PortfolioImportPreviewRecordKind = typeof PortfolioImportPreviewRecordKind[keyof typeof PortfolioImportPreviewRecordKind];
+
+
+export const PortfolioImportPreviewRecordKind = {
+  BUILDING: 'BUILDING',
+  SPACE: 'SPACE',
+  SYSTEM: 'SYSTEM',
+  ASSET: 'ASSET',
+} as const;
+
+export type PortfolioImportPreviewRecordStatus = typeof PortfolioImportPreviewRecordStatus[keyof typeof PortfolioImportPreviewRecordStatus];
+
+
+export const PortfolioImportPreviewRecordStatus = {
+  ACTIVE: 'ACTIVE',
+  INACTIVE: 'INACTIVE',
+} as const;
+
+export interface PortfolioImportPreviewRecord {
+  /** @minimum 2 */
+  row: number;
+  kind: PortfolioImportPreviewRecordKind;
+  name: string;
+  clientRef: string;
+  /** @nullable */
+  id?: string | null;
+  /** @nullable */
+  parentRef?: string | null;
+  /** @nullable */
+  systemRef?: string | null;
+  /** @nullable */
+  code?: string | null;
+  status: PortfolioImportPreviewRecordStatus;
+}
+
+export type PortfolioImportFacilityGroupCounts = {
+  /** @minimum 0 */
+  buildings: number;
+  /** @minimum 0 */
+  spaces: number;
+  /** @minimum 0 */
+  systems: number;
+  /** @minimum 0 */
+  assets: number;
+};
+
+export interface PortfolioImportFacilityGroup {
+  name: string;
+  clientRef: string;
+  /** @nullable */
+  id?: string | null;
+  /** @nullable */
+  code?: string | null;
+  counts: PortfolioImportFacilityGroupCounts;
+  records: PortfolioImportPreviewRecord[];
+}
+
 export interface PortfolioImportPreview {
   /** @minimum 1 */
   total: number;
@@ -51,6 +108,7 @@ export interface PortfolioImportPreview {
   systems: number;
   /** @minimum 0 */
   assets: number;
+  facilityGroups: PortfolioImportFacilityGroup[];
 }
 
 export type BuildingInput = RegistryInput & {

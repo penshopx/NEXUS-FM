@@ -634,6 +634,24 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
         const summary: Record<RegistryKind, number> = {
           FACILITY: 0, BUILDING: 0, SPACE: 0, SYSTEM: 0, ASSET: 0,
         };
+        const previewGroups = new Map<string, {
+          name: string;
+          clientRef: string;
+          id: string | null;
+          code: string | null;
+          counts: { buildings: number; spaces: number; systems: number; assets: number };
+          records: Array<{
+            row: number;
+            kind: Exclude<RegistryKind, "FACILITY">;
+            name: string;
+            clientRef: string;
+            id: string | null;
+            parentRef: string | null;
+            systemRef: string | null;
+            code: string | null;
+            status: "ACTIVE" | "INACTIVE";
+          }>;
+        }>();
         for (const record of validation.records) {
           const parentKind = record.kind === "BUILDING" ? "FACILITY"
             : record.kind === "SPACE" ? "BUILDING"
@@ -711,6 +729,47 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
           if (!decision.allowed) {
             throw new PortfolioImportAuthorizationError(decision.reasonCode, record.kind, record.rowNumber);
           }
+          const facilityId = String(verifiedContext.facilityId);
+          if (!commit) {
+            if (record.kind === "FACILITY") {
+              previewGroups.set(facilityId, {
+                name: record.name,
+                clientRef: record.clientRef,
+                id: record.id ?? null,
+                code: record.code ?? null,
+                counts: { buildings: 0, spaces: 0, systems: 0, assets: 0 },
+                records: [],
+              });
+            } else {
+              let group = previewGroups.get(facilityId);
+              if (!group) {
+                const facility = await resolveRegistryObject(transaction, "FACILITY", facilityId, actor.organizationId);
+                if (!facility.found) throw new Error("Validated facility changed before preview");
+                group = {
+                  name: facility.value.row.name,
+                  clientRef: facility.value.row.id,
+                  id: facility.value.row.id,
+                  code: facility.value.row.code ?? null,
+                  counts: { buildings: 0, spaces: 0, systems: 0, assets: 0 },
+                  records: [],
+                };
+                previewGroups.set(facilityId, group);
+              }
+              const countKey = `${record.kind.toLowerCase()}s` as keyof typeof group.counts;
+              group.counts[countKey] += 1;
+              group.records.push({
+                row: record.rowNumber,
+                kind: record.kind,
+                name: record.name,
+                clientRef: record.clientRef,
+                id: record.id ?? null,
+                parentRef: record.parentRef ?? null,
+                systemRef: record.systemRef ?? null,
+                code: record.code ?? null,
+                status: record.status,
+              });
+            }
+          }
           const created = commit ? await insertRegistryRow(transaction, record.kind, values) : { id };
           if (!created) throw new Error(`Failed to create ${record.kind} row`);
           if (commit) {
@@ -744,6 +803,7 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
             spaces: summary.SPACE,
             systems: summary.SYSTEM,
             assets: summary.ASSET,
+            facilityGroups: [...previewGroups.values()],
           };
         }
         const importId = randomUUID();

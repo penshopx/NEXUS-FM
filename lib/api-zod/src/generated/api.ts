@@ -588,6 +588,16 @@ export const validateFacilityPortfolioImportResponseSystemsMin = 0;
 
 export const validateFacilityPortfolioImportResponseAssetsMin = 0;
 
+export const validateFacilityPortfolioImportResponseFacilityGroupsItemCountsBuildingsMin = 0;
+
+export const validateFacilityPortfolioImportResponseFacilityGroupsItemCountsSpacesMin = 0;
+
+export const validateFacilityPortfolioImportResponseFacilityGroupsItemCountsSystemsMin = 0;
+
+export const validateFacilityPortfolioImportResponseFacilityGroupsItemCountsAssetsMin = 0;
+
+export const validateFacilityPortfolioImportResponseFacilityGroupsItemRecordsItemRowMin = 2;
+
 
 
 export const ValidateFacilityPortfolioImportResponse = zod.object({
@@ -596,7 +606,30 @@ export const ValidateFacilityPortfolioImportResponse = zod.object({
   "buildings": zod.number().int().min(validateFacilityPortfolioImportResponseBuildingsMin),
   "spaces": zod.number().int().min(validateFacilityPortfolioImportResponseSpacesMin),
   "systems": zod.number().int().min(validateFacilityPortfolioImportResponseSystemsMin),
-  "assets": zod.number().int().min(validateFacilityPortfolioImportResponseAssetsMin)
+  "assets": zod.number().int().min(validateFacilityPortfolioImportResponseAssetsMin),
+  "facilityGroups": zod.array(zod.object({
+  "name": zod.string(),
+  "clientRef": zod.string(),
+  "id": zod.string().uuid().nullish(),
+  "code": zod.string().nullish(),
+  "counts": zod.object({
+  "buildings": zod.number().int().min(validateFacilityPortfolioImportResponseFacilityGroupsItemCountsBuildingsMin),
+  "spaces": zod.number().int().min(validateFacilityPortfolioImportResponseFacilityGroupsItemCountsSpacesMin),
+  "systems": zod.number().int().min(validateFacilityPortfolioImportResponseFacilityGroupsItemCountsSystemsMin),
+  "assets": zod.number().int().min(validateFacilityPortfolioImportResponseFacilityGroupsItemCountsAssetsMin)
+}),
+  "records": zod.array(zod.object({
+  "row": zod.number().int().min(validateFacilityPortfolioImportResponseFacilityGroupsItemRecordsItemRowMin),
+  "kind": zod.enum(['BUILDING', 'SPACE', 'SYSTEM', 'ASSET']),
+  "name": zod.string(),
+  "clientRef": zod.string(),
+  "id": zod.string().uuid().nullish(),
+  "parentRef": zod.string().nullish(),
+  "systemRef": zod.string().nullish(),
+  "code": zod.string().nullish(),
+  "status": zod.enum(['ACTIVE', 'INACTIVE'])
+}))
+}))
 })
 
 
