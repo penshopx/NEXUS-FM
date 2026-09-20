@@ -28,6 +28,7 @@ import { trackEvent } from '@/lib/analytics';
 
 const MAX_IMPORT_BYTES = 2 * 1024 * 1024;
 const MAX_ANALYTICS_COUNT = 100_000;
+const MAX_ANALYTICS_ATTEMPT = 10;
 
 type ImportFailure = {
   message: string;
@@ -285,6 +286,8 @@ export function PortfolioImportDialog({
   onImported,
 }: PortfolioImportDialogProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const validationAttemptRef = useRef(0);
+  const reportDownloadedRef = useRef(false);
   const [file, setFile] = useState<File | null>(null);
   const [failure, setFailure] = useState<ImportFailure | null>(null);
   const [isDownloadingTemplate, setIsDownloadingTemplate] = useState(false);
@@ -294,6 +297,8 @@ export function PortfolioImportDialog({
   const validatePortfolio = useValidateFacilityPortfolioImport();
 
   const reset = () => {
+    validationAttemptRef.current = 0;
+    reportDownloadedRef.current = false;
     setFile(null);
     setFailure(null);
     setPreview(null);
@@ -332,12 +337,22 @@ export function PortfolioImportDialog({
 
   const handleValidate = () => {
     if (!file) return;
+    validationAttemptRef.current = Math.min(
+      validationAttemptRef.current + 1,
+      MAX_ANALYTICS_ATTEMPT,
+    );
+    const attemptNumber = validationAttemptRef.current;
+    const isRetry = attemptNumber > 1;
+
     if (file.size > MAX_IMPORT_BYTES) {
       setFailure({ message: 'This CSV is larger than the 2 MB upload limit. Split it into smaller files and try again.' });
       trackEvent('portfolio_import', {
         stage: 'validation_failure',
         workflow_stage: 'validation',
         reason: 'file_too_large',
+        attempt_number: attemptNumber,
+        is_retry: isRetry,
+        report_available: false,
       });
       return;
     }
@@ -353,6 +368,9 @@ export function PortfolioImportDialog({
             workflow_stage: 'review',
             record_count: boundedCount(result.total),
             facility_count: boundedCount(result.facilities),
+            attempt_number: attemptNumber,
+            is_retry: isRetry,
+            report_downloaded: reportDownloadedRef.current,
           });
         },
         onError: (error) => {
@@ -361,6 +379,9 @@ export function PortfolioImportDialog({
             stage: 'validation_failure',
             workflow_stage: 'validation',
             reason: validationFailureReason(error),
+            attempt_number: attemptNumber,
+            is_retry: isRetry,
+            report_available: Boolean(getErrorReport(error)),
           });
         },
       },
@@ -384,6 +405,18 @@ export function PortfolioImportDialog({
         setPreview(null);
         setFailure(describeImportFailure(error));
       },
+    });
+  };
+
+  const handleValidationReportDownload = () => {
+    if (!failure?.report) return;
+
+    downloadTextFile(failure.report, 'portfolio-import-errors.csv');
+    reportDownloadedRef.current = true;
+    trackEvent('portfolio_validation_report_download', {
+      workflow_stage: 'validation',
+      attempt_number: Math.max(validationAttemptRef.current, 1),
+      is_retry: validationAttemptRef.current > 1,
     });
   };
 
@@ -546,7 +579,7 @@ export function PortfolioImportDialog({
                     variant="outline"
                     size="sm"
                     className="mt-3"
-                    onClick={() => downloadTextFile(failure.report!, 'portfolio-import-errors.csv')}
+                    onClick={handleValidationReportDownload}
                     data-testid="button-download-validation-report"
                   >
                     <Download className="mr-2 size-4" />

@@ -182,6 +182,9 @@ describe('facility portfolio import browser regressions', () => {
       workflow_stage: 'review',
       record_count: 8,
       facility_count: 2,
+      attempt_number: 1,
+      is_retry: false,
+      report_downloaded: false,
     });
     expect(screen.getByText('North Campus')).toBeVisible();
     expect(screen.getByText('South Campus')).toBeVisible();
@@ -290,9 +293,23 @@ describe('facility portfolio import browser regressions', () => {
   it('offers the generated validation report for download', async () => {
     const user = userEvent.setup();
     const report = 'row,error\n2,facility_name is required';
+    let validationCount = 0;
     api.validateImport.mockReturnValue(idleMutation(
-      vi.fn((_variables: unknown, options: MutationOptions<never>) => {
-        options.onError?.({ status: 400, data: report });
+      vi.fn((_variables: unknown, options: MutationOptions<unknown>) => {
+        validationCount += 1;
+        if (validationCount === 1) {
+          options.onError?.({ status: 400, data: report });
+          return;
+        }
+        options.onSuccess?.({
+          total: 1,
+          facilities: 1,
+          buildings: 0,
+          spaces: 0,
+          systems: 0,
+          assets: 0,
+          facilityGroups: [],
+        });
       }),
     ));
     renderPage();
@@ -308,12 +325,33 @@ describe('facility portfolio import browser regressions', () => {
       stage: 'validation_failure',
       workflow_stage: 'validation',
       reason: 'invalid_csv',
+      attempt_number: 1,
+      is_retry: false,
+      report_available: true,
     });
     await user.click(screen.getByTestId('button-download-validation-report'));
 
     const downloadedBlob = vi.mocked(URL.createObjectURL).mock.calls[0]?.[0] as Blob;
     expect(await downloadedBlob.text()).toBe(report);
     expect(HTMLAnchorElement.prototype.click).toHaveBeenCalledOnce();
+    expect(analytics.track).toHaveBeenCalledWith('portfolio_validation_report_download', {
+      workflow_stage: 'validation',
+      attempt_number: 1,
+      is_retry: false,
+    });
+
+    await selectCsv(user, 'facility_name\nCorrected HQ');
+    await user.click(screen.getByTestId('button-submit-portfolio-import'));
+    expect(await screen.findByTestId('alert-import-preview')).toBeVisible();
+    expect(analytics.track).toHaveBeenCalledWith('portfolio_import', {
+      stage: 'validation_success',
+      workflow_stage: 'review',
+      record_count: 1,
+      facility_count: 1,
+      attempt_number: 2,
+      is_retry: true,
+      report_downloaded: true,
+    });
   });
 
   it.each([
