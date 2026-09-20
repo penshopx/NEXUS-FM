@@ -6,6 +6,31 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 let activeOrganizationId = 'org-admin';
 
+const race = vi.hoisted(() => {
+  type HeldRequest = {
+    organizationId: string;
+    kind: string;
+    resolve: () => void;
+  };
+
+  return {
+    holdOrganizationId: null as string | null,
+    held: [] as HeldRequest[],
+  };
+});
+
+async function organizationResponse<T>(kind: string, getValue: () => T): Promise<T> {
+  const organizationId = activeOrganizationId;
+  const value = getValue();
+
+  if (race.holdOrganizationId !== organizationId) return value;
+
+  await new Promise<void>((resolve) => {
+    race.held.push({ organizationId, kind, resolve });
+  });
+  return value;
+}
+
 const organizations = {
   'org-admin': {
     permissions: [
@@ -96,14 +121,14 @@ vi.mock('@workspace/api-client-react', async () => {
     ...actual,
     useGetMyPermissions: () => useQuery({
       queryKey: actual.getGetMyPermissionsQueryKey(),
-      queryFn: async () => ({
+      queryFn: () => organizationResponse('permissions', () => ({
         organizationId: activeOrganizationId,
         permissions: tenant().permissions,
-      }),
+      })),
     }),
     useListRoles: (options?: { query?: { enabled?: boolean } }) => useQuery({
       queryKey: actual.getListRolesQueryKey(),
-      queryFn: async () => tenant().roles,
+      queryFn: () => organizationResponse('roles', () => tenant().roles),
       enabled: options?.query?.enabled,
     }),
     useGetRolePermissions: (roleId: string) => useQuery({
@@ -114,12 +139,20 @@ vi.mock('@workspace/api-client-react', async () => {
       params: Parameters<typeof actual.getSearchOrganizationMembersQueryKey>[0],
     ) => useQuery({
       queryKey: actual.getSearchOrganizationMembersQueryKey(params),
-      queryFn: async () => ({ items: tenant().members, page: 1, limit: 20, total: 1 }),
+      queryFn: () => organizationResponse('members', () => ({
+        items: tenant().members,
+        page: 1,
+        limit: 20,
+        total: 1,
+      })),
       enabled: (params?.query.length ?? 0) >= 2,
     }),
     useGetUserRoleBindings: (userId: string) => useQuery({
       queryKey: actual.getGetUserRoleBindingsQueryKey(userId),
-      queryFn: async () => tenant().bindings.filter((binding) => binding.userId === userId),
+      queryFn: () => organizationResponse(
+        'bindings',
+        () => tenant().bindings.filter((binding) => binding.userId === userId),
+      ),
     }),
     useGetSession: () => useQuery({
       queryKey: actual.getGetSessionQueryKey(),
@@ -131,7 +164,7 @@ vi.mock('@workspace/api-client-react', async () => {
       params: Parameters<typeof actual.getGetAuthorizationAuditLogsQueryKey>[0],
     ) => useQuery({
       queryKey: actual.getGetAuthorizationAuditLogsQueryKey(params),
-      queryFn: async () => tenant().audit,
+      queryFn: () => organizationResponse('audit', () => tenant().audit),
     }),
     useUpdateRolePermissions: () => ({ mutate: api.updateRolePermissions, isPending: false }),
     useCreateUserRoleBinding: () => ({ mutate: api.createBinding, isPending: false }),
@@ -140,7 +173,19 @@ vi.mock('@workspace/api-client-react', async () => {
   };
 });
 
-import { getGetSessionQueryKey } from '@workspace/api-client-react';
+import {
+  getGetAuthorizationAuditLogsQueryKey,
+  getGetMyPermissionsQueryKey,
+  getGetSessionQueryKey,
+  getGetUserRoleBindingsQueryKey,
+  getListRolesQueryKey,
+  getSearchOrganizationMembersQueryKey,
+  useGetAuthorizationAuditLogs,
+  useGetMyPermissions,
+  useGetUserRoleBindings,
+  useListRoles,
+  useSearchOrganizationMembers,
+} from '@workspace/api-client-react';
 import { replaceOrganizationContext } from '@/lib/organization-context';
 import { AuthorizationPage } from './index';
 
@@ -169,9 +214,57 @@ function OrganizationSwitchHarness({ client }: { client: QueryClient }) {
   );
 }
 
+const memberSearchParams = { query: 'member', page: 1, limit: 20 };
+const auditParams = {};
+
+function InFlightAuthorizationHarness({ client }: { client: QueryClient }) {
+  const [organizationId, setOrganizationId] = useState(activeOrganizationId);
+  const permissions = useGetMyPermissions();
+  const roles = useListRoles();
+  const members = useSearchOrganizationMembers(memberSearchParams);
+  const bindings = useGetUserRoleBindings(
+    organizationId === 'org-admin' ? 'admin-member' : 'viewer-member',
+  );
+  const audit = useGetAuthorizationAuditLogs(auditParams);
+
+  const switchOrganization = () => {
+    activeOrganizationId = 'org-viewer';
+    replaceOrganizationContext(client, {
+      activeOrganization: {
+        organization: { id: 'org-viewer' },
+      },
+    } as never);
+    setOrganizationId('org-viewer');
+  };
+
+  return (
+    <>
+      <button onClick={switchOrganization}>Switch while requests are pending</button>
+      <div data-testid="race-active-organization">{organizationId}</div>
+      <div data-testid="race-permissions">
+        {permissions.data?.organizationId}
+      </div>
+      <div data-testid="race-roles">
+        {roles.data?.map((role) => role.code).join(',')}
+      </div>
+      <div data-testid="race-members">
+        {members.data?.items.map((member) => member.displayName).join(',')}
+      </div>
+      <div data-testid="race-bindings">
+        {bindings.data?.map((binding) => binding.roleCode).join(',')}
+      </div>
+      <div data-testid="race-audit">
+        {audit.data?.map((entry) => entry.action).join(',')}
+      </div>
+    </>
+  );
+}
+
 describe('organization switching authorization isolation', () => {
   beforeEach(() => {
     activeOrganizationId = 'org-admin';
+    race.holdOrganizationId = null;
+    race.held = [];
   });
 
   afterEach(cleanup);
@@ -230,5 +323,59 @@ describe('organization switching authorization isolation', () => {
     await waitFor(() => expect(screen.getByTestId('tab-roles')).toHaveAttribute('data-state', 'active'));
     expect(await screen.findByTestId('role-select-ADMIN_ORG_ROLE')).toBeVisible();
     expect(screen.queryByText('VIEWER_ORG_ROLE')).not.toBeInTheDocument();
+  });
+
+  it('ignores previous-organization authorization responses that resolve after switching', async () => {
+    const user = userEvent.setup();
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+    });
+    race.holdOrganizationId = 'org-admin';
+
+    render(
+      <QueryClientProvider client={client}>
+        <InFlightAuthorizationHarness client={client} />
+      </QueryClientProvider>,
+    );
+
+    await waitFor(() => {
+      expect(race.held.map(({ kind }) => kind).sort()).toEqual([
+        'audit',
+        'bindings',
+        'members',
+        'permissions',
+        'roles',
+      ]);
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Switch while requests are pending' }));
+    expect(screen.getByTestId('race-active-organization')).toHaveTextContent('org-viewer');
+
+    for (const request of race.held) request.resolve();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('race-permissions')).toHaveTextContent('org-viewer');
+      expect(screen.getByTestId('race-roles')).toHaveTextContent('VIEWER_ORG_ROLE');
+      expect(screen.getByTestId('race-members')).toHaveTextContent('Viewer Tenant Member');
+      expect(screen.getByTestId('race-bindings')).toHaveTextContent('VIEWER_ORG_ROLE');
+      expect(screen.getByTestId('race-audit')).toBeEmptyDOMElement();
+    });
+
+    expect(document.body).not.toHaveTextContent('org-admin');
+    expect(document.body).not.toHaveTextContent('ADMIN_ORG_ROLE');
+    expect(document.body).not.toHaveTextContent('Admin Tenant Member');
+    expect(document.body).not.toHaveTextContent('ADMIN_ORG_ACTION');
+
+    const cachedValues = [
+      client.getQueryData(getGetMyPermissionsQueryKey()),
+      client.getQueryData(getListRolesQueryKey()),
+      client.getQueryData(getSearchOrganizationMembersQueryKey(memberSearchParams)),
+      client.getQueryData(getGetUserRoleBindingsQueryKey('admin-member')),
+      client.getQueryData(getGetAuthorizationAuditLogsQueryKey(auditParams)),
+    ];
+    expect(JSON.stringify(cachedValues)).not.toContain('org-admin');
+    expect(JSON.stringify(cachedValues)).not.toContain('ADMIN_ORG_ROLE');
+    expect(JSON.stringify(cachedValues)).not.toContain('Admin Tenant Member');
+    expect(JSON.stringify(cachedValues)).not.toContain('ADMIN_ORG_ACTION');
   });
 });
