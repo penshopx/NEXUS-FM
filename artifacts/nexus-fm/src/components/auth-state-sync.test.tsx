@@ -3,6 +3,9 @@ import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const getSession = vi.hoisted(() => vi.fn());
+const getAccessRevision = vi.hoisted(() => vi.fn());
+const getPermissions = vi.hoisted(() => vi.fn());
+const getScope = vi.hoisted(() => vi.fn());
 
 vi.mock('@clerk/react', () => ({
   useAuth: () => ({ userId: 'user-1', isLoaded: true }),
@@ -17,6 +20,18 @@ vi.mock('@workspace/api-client-react', async () => {
     getGetSessionQueryOptions: () => ({
       queryKey: actual.getGetSessionQueryKey(),
       queryFn: getSession,
+    }),
+    getGetMyAccessRevisionQueryOptions: () => ({
+      queryKey: actual.getGetMyAccessRevisionQueryKey(),
+      queryFn: getAccessRevision,
+    }),
+    getGetMyPermissionsQueryOptions: () => ({
+      queryKey: actual.getGetMyPermissionsQueryKey(),
+      queryFn: getPermissions,
+    }),
+    getGetMyScopeQueryOptions: () => ({
+      queryKey: actual.getGetMyScopeQueryKey(),
+      queryFn: getScope,
     }),
   };
 });
@@ -52,6 +67,12 @@ function MountedAccessConsumer() {
 describe('AuthStateSync organization context', () => {
   beforeEach(() => {
     getSession.mockReset();
+    getAccessRevision.mockReset();
+    getPermissions.mockReset();
+    getScope.mockReset();
+    getAccessRevision.mockResolvedValue({ organizationId: 'org-old', revision: 'revision-1' });
+    getPermissions.mockResolvedValue({ organizationId: 'org-old', permissions: [] });
+    getScope.mockResolvedValue([]);
     visibleOrganizationId = 'org-old';
   });
 
@@ -81,7 +102,7 @@ describe('AuthStateSync organization context', () => {
       </QueryClientProvider>,
     );
 
-    expect(screen.getByTestId('visible-session-organization')).toHaveTextContent('org-old');
+    expect(await screen.findByTestId('visible-session-organization')).toHaveTextContent('org-old');
     expect(screen.getByTestId('visible-permission-organization')).toHaveTextContent('org-old');
     visibleOrganizationId = 'org-new';
 

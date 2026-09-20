@@ -1,8 +1,11 @@
-import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '@clerk/react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   getGetSessionQueryOptions,
+  getGetMyAccessRevisionQueryOptions,
+  getGetMyPermissionsQueryOptions,
+  getGetMyScopeQueryOptions,
   type AppSession,
 } from '@workspace/api-client-react';
 import {
@@ -16,7 +19,48 @@ export function AuthStateSync({ children }: { children?: ReactNode }) {
   const queryClient = useQueryClient();
   const previousUserId = useRef(userId);
   const syncSequence = useRef(0);
+  const accessRevision = useRef<string | null>(null);
   const [syncState, setSyncState] = useState<'idle' | 'syncing' | 'failed'>('idle');
+
+  const refreshAuthorization = useCallback(async (force = false) => {
+    const sequence = ++syncSequence.current;
+    setSyncState('syncing');
+
+    try {
+      const revision = await queryClient.fetchQuery({
+        ...getGetMyAccessRevisionQueryOptions(),
+        staleTime: 0,
+      });
+      if (!force && accessRevision.current === null) {
+        accessRevision.current = revision.revision;
+        if (sequence === syncSequence.current) setSyncState('idle');
+        return;
+      }
+      if (!force && accessRevision.current === revision.revision) {
+        if (sequence === syncSequence.current) setSyncState('idle');
+        return;
+      }
+
+      clearOrganizationContext(queryClient);
+      const session = await queryClient.fetchQuery({
+        ...getGetSessionQueryOptions(),
+        staleTime: 0,
+      });
+      if (sequence !== syncSequence.current) return;
+
+      installOrganizationContext(queryClient, session as AppSession);
+      await Promise.all([
+        queryClient.fetchQuery({ ...getGetMyAccessRevisionQueryOptions(), staleTime: 0 }),
+        queryClient.fetchQuery({ ...getGetMyPermissionsQueryOptions(), staleTime: 0 }),
+        queryClient.fetchQuery({ ...getGetMyScopeQueryOptions(), staleTime: 0 }),
+      ]);
+      if (sequence !== syncSequence.current) return;
+      accessRevision.current = revision.revision;
+      setSyncState('idle');
+    } catch {
+      if (sequence === syncSequence.current) setSyncState('failed');
+    }
+  }, [queryClient]);
 
   useEffect(() => {
     if (isLoaded && previousUserId.current !== userId) {
@@ -32,32 +76,43 @@ export function AuthStateSync({ children }: { children?: ReactNode }) {
 
     const handleStorage = (event: StorageEvent) => {
       if (event.key !== ORGANIZATION_CONTEXT_STORAGE_KEY || !event.newValue) return;
-
-      const sequence = ++syncSequence.current;
-
-      // Remove every organization-scoped query before yielding back to the UI.
-      // This also cancels observers for requests started in the old context.
       clearOrganizationContext(queryClient);
-      setSyncState('syncing');
-
-      void queryClient
-        .fetchQuery({
-          ...getGetSessionQueryOptions(),
-          staleTime: 0,
-        })
-        .then((session) => {
-          if (sequence !== syncSequence.current) return;
-          installOrganizationContext(queryClient, session as AppSession);
-          setSyncState('idle');
-        })
-        .catch(() => {
-          if (sequence === syncSequence.current) setSyncState('failed');
-        });
+      accessRevision.current = null;
+      void refreshAuthorization(true);
     };
 
     window.addEventListener('storage', handleStorage);
     return () => window.removeEventListener('storage', handleStorage);
-  }, [isLoaded, userId, queryClient]);
+  }, [isLoaded, userId, queryClient, refreshAuthorization]);
+
+  useEffect(() => {
+    if (!isLoaded || !userId) return;
+
+    void refreshAuthorization();
+    const eventSource = typeof EventSource === 'undefined'
+      ? null
+      : new EventSource('/api/me/access-revision/events', { withCredentials: true });
+    eventSource?.addEventListener('access-revision', () => {
+      clearOrganizationContext(queryClient);
+      void refreshAuthorization(true);
+    });
+    eventSource?.addEventListener('open', () => void refreshAuthorization());
+
+    const recheck = () => void refreshAuthorization();
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') recheck();
+    };
+    window.addEventListener('online', recheck);
+    window.addEventListener('focus', recheck);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      eventSource?.close();
+      window.removeEventListener('online', recheck);
+      window.removeEventListener('focus', recheck);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [isLoaded, userId, queryClient, refreshAuthorization]);
 
   if (syncState === 'idle') return children ?? null;
 

@@ -20,6 +20,8 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AccessMembership,
+  AccessRevision,
   AppSession,
   Asset,
   AssetInput,
@@ -1436,6 +1438,82 @@ export const useCreateUserRoleBinding = <TError = ErrorType<BadRequestResponse |
       return useMutation(getCreateUserRoleBindingMutationOptions(options));
     }
 
+export const getRevokeUserMembershipUrl = (userId: string,
+    organizationId: string,) => {
+
+
+
+
+  return `/api/users/${userId}/memberships/${organizationId}`
+}
+
+/**
+ * @summary Revoke a user's organization membership
+ */
+export const revokeUserMembership = async (userId: string,
+    organizationId: string, options?: Parameters<typeof customFetch>[1]): Promise<AccessMembership> => {
+
+  return customFetch<AccessMembership>(getRevokeUserMembershipUrl(userId,organizationId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getRevokeUserMembershipMutationKey = () => ['revokeUserMembership'] as const;
+
+export const getRevokeUserMembershipMutationOptions = <TError = ErrorType<ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeUserMembership>>, TError,RevokeUserMembershipMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof revokeUserMembership>>, TError,RevokeUserMembershipMutationVariables, TContext> => {
+
+const mutationKey = getRevokeUserMembershipMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revokeUserMembership>>, RevokeUserMembershipMutationVariables> = (props) => {
+          const {userId,organizationId} = props ?? {};
+
+          return  revokeUserMembership(userId,organizationId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RevokeUserMembershipMutationResult = NonNullable<Awaited<ReturnType<typeof revokeUserMembership>>>
+
+    export type RevokeUserMembershipMutationError = ErrorType<ForbiddenResponse | NotFoundResponse>
+    export type RevokeUserMembershipMutationVariables = {userId: string;organizationId: string}
+
+    /**
+ * @summary Revoke a user's organization membership
+ */
+export const useRevokeUserMembership = <TError = ErrorType<ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeUserMembership>>, TError,RevokeUserMembershipMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof revokeUserMembership>>,
+        TError,
+        RevokeUserMembershipMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRevokeUserMembershipMutationOptions(options));
+    }
+
 export const getExportUserRoleBindingsUrl = (userId: string,
     params?: ExportUserRoleBindingsParams,) => {
   const normalizedParams = new URLSearchParams();
@@ -1758,6 +1836,83 @@ export function useGetMyPermissions<TData = Awaited<ReturnType<typeof getMyPermi
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetMyPermissionsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetMyAccessRevisionUrl = () => {
+
+
+
+
+  return `/api/me/access-revision`
+}
+
+/**
+ * @summary Read the current persistent access revision
+ */
+export const getMyAccessRevision = async ( options?: Parameters<typeof customFetch>[1]): Promise<AccessRevision> => {
+
+  return customFetch<AccessRevision>(getGetMyAccessRevisionUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMyAccessRevisionQueryKey = () => {
+    return [
+    `/api/me/access-revision`
+    ] as const;
+    }
+
+
+export const getGetMyAccessRevisionQueryOptions = <TData = Awaited<ReturnType<typeof getMyAccessRevision>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyAccessRevision>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMyAccessRevisionQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyAccessRevision>>> = ({ signal }) => getMyAccessRevision({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMyAccessRevision>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMyAccessRevisionQueryResult = NonNullable<Awaited<ReturnType<typeof getMyAccessRevision>>>
+export type GetMyAccessRevisionQueryError = ErrorType<UnauthorizedResponse | ForbiddenResponse>
+
+
+/**
+ * @summary Read the current persistent access revision
+ */
+
+export function useGetMyAccessRevision<TData = Awaited<ReturnType<typeof getMyAccessRevision>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyAccessRevision>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMyAccessRevisionQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

@@ -420,6 +420,26 @@ paths:
                 $ref: "#/components/schemas/UserRoleBinding"
         "400": {$ref: "#/components/responses/BadRequest"}
         "403": {$ref: "#/components/responses/Forbidden"}
+  /users/{userId}/memberships/{organizationId}:
+    parameters:
+      - {$ref: "#/components/parameters/UserId"}
+      - name: organizationId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    delete:
+      operationId: revokeUserMembership
+      tags: [authorization]
+      summary: Revoke a user's organization membership
+      responses:
+        "200":
+          description: Revoked membership
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccessMembership"
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
   /users/{userId}/role-bindings/export:
     parameters:
       - {$ref: "#/components/parameters/UserId"}
@@ -500,6 +520,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/MyPermissions"
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /me/access-revision:
+    get:
+      operationId: getMyAccessRevision
+      tags: [authorization]
+      summary: Read the current persistent access revision
+      responses:
+        "200":
+          description: Current access revision
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccessRevision"
         "401": {$ref: "#/components/responses/Unauthorized"}
         "403": {$ref: "#/components/responses/Forbidden"}
   /me/scope:
@@ -1612,6 +1646,20 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/PermissionGrant"
+    AccessRevision:
+      type: object
+      required: [organizationId, revision]
+      properties:
+        organizationId: {type: string, format: uuid}
+        revision: {type: string}
+    AccessMembership:
+      type: object
+      required: [userId, organizationId, role, isActive]
+      properties:
+        userId: {type: string, format: uuid}
+        organizationId: {type: string, format: uuid}
+        role: {$ref: "#/components/schemas/CanonicalRole"}
+        isActive: {type: boolean}
     AuthorizationAuditLog:
       type: object
       required: [id, organizationId, actorUserId, action, resource, resourceId, decision, reasonCode, scopeEvaluated, requestId, beforeState, afterState, createdAt]

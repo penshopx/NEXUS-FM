@@ -530,6 +530,18 @@ export interface MyPermissions {
   permissions: PermissionGrant[];
 }
 
+export interface AccessRevision {
+  organizationId: string;
+  revision: string;
+}
+
+export interface AccessMembership {
+  userId: string;
+  organizationId: string;
+  role: CanonicalRole;
+  isActive: boolean;
+}
+
 export type AuthorizationAuditLogDecision = typeof AuthorizationAuditLogDecision[keyof typeof AuthorizationAuditLogDecision];
 
 

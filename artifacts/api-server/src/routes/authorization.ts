@@ -47,6 +47,11 @@ import {
   isPlatformOperationalPermission,
   roleCapabilityRows,
 } from "../services/authorization-catalog";
+import {
+  getAccessRevision,
+  publishAccessRevision,
+  subscribeToAccessRevisions,
+} from "../services/access-revisions";
 
 type PermissionUpdate = { permissionId: string; defaultScopeType?: string; effect?: string };
 
@@ -373,6 +378,13 @@ router.put("/roles/:roleId/permissions", async (req, res): Promise<void> => {
     throw error;
   }
   const rows = await database.select().from(rolePermissionsTable).where(eq(rolePermissionsTable.roleId, req.params.roleId));
+  const affectedBindings = await database.select({
+    userId: userRoleBindingsTable.userId,
+    organizationId: userRoleBindingsTable.organizationId,
+  }).from(userRoleBindingsTable).where(eq(userRoleBindingsTable.roleId, req.params.roleId));
+  for (const binding of affectedBindings) {
+    publishAccessRevision({ ...binding, reason: "ROLE_PERMISSIONS_CHANGED" });
+  }
   res.set("ETag", updatedRole!.policyVersion);
   res.json({ permissions: rows, policyVersion: updatedRole!.policyVersion });
 });
@@ -757,6 +769,60 @@ router.get("/users/:userId/role-bindings/export", async (req, res): Promise<void
     .send(csv);
 });
 
+router.delete("/users/:userId/memberships/:organizationId", async (req, res): Promise<void> => {
+  const admin = await requireAdmin(req, res, "USER.MANAGE", resolveCurrentUser, database);
+  if (!admin) return;
+  if (!canCrossOrganizationFoundation(admin.scopeType, admin.organizationId, req.params.organizationId)) {
+    res.status(403).json({ error: "Target organization is outside active organization scope" });
+    return;
+  }
+  if (admin.user.id === req.params.userId) {
+    res.status(403).json({ error: "Self membership revocation is denied" });
+    return;
+  }
+
+  let revoked: typeof membershipsTable.$inferSelect | undefined;
+  await database.transaction(async (tx) => {
+    [revoked] = await tx.update(membershipsTable)
+      .set({ isActive: false })
+      .where(and(
+        eq(membershipsTable.userId, req.params.userId),
+        eq(membershipsTable.organizationId, req.params.organizationId),
+        eq(membershipsTable.isActive, true),
+      ))
+      .returning();
+    if (!revoked) return;
+    await tx.insert(authorizationAuditLogsTable).values({
+      actorUserId: admin.user.id,
+      organizationId: req.params.organizationId,
+      action: "MEMBERSHIP_REVOKED",
+      resource: "MEMBERSHIP",
+      resourceId: req.params.userId,
+      decision: "ALLOW",
+      reasonCode: "ALLOWED",
+      beforeState: JSON.stringify({ isActive: true, role: revoked.role }),
+      afterState: JSON.stringify({ isActive: false, role: revoked.role }),
+      requestId: String(req.id),
+    });
+  });
+  if (!revoked) {
+    res.status(404).json({ error: "Active membership not found" });
+    return;
+  }
+
+  publishAccessRevision({
+    userId: revoked.userId,
+    organizationId: revoked.organizationId,
+    reason: "MEMBERSHIP_CHANGED",
+  });
+  res.json({
+    userId: revoked.userId,
+    organizationId: revoked.organizationId,
+    role: revoked.role,
+    isActive: revoked.isActive,
+  });
+});
+
 router.post("/users/:userId/role-bindings", async (req, res): Promise<void> => {
   const body = (req.body ?? {}) as Record<string, unknown>;
   const state = validateRoleBindingState({
@@ -863,6 +929,11 @@ router.post("/users/:userId/role-bindings", async (req, res): Promise<void> => {
     return;
   }
   const [scopeTarget] = await resolveBindingScopeTargets([binding], database);
+  publishAccessRevision({
+    userId: binding.userId,
+    organizationId: binding.organizationId,
+    reason: "ROLE_BINDING_CHANGED",
+  });
   res.status(201).json({ ...binding, roleCode: targetRole.code, ...scopeTarget });
 });
 
@@ -953,6 +1024,11 @@ router.patch("/users/:userId/role-bindings/:bindingId", async (req, res): Promis
     .from(rolesTable)
     .where(eq(rolesTable.id, after.roleId));
   const [scopeTarget] = await resolveBindingScopeTargets([after], database);
+  publishAccessRevision({
+    userId: after.userId,
+    organizationId: after.organizationId,
+    reason: "ROLE_BINDING_CHANGED",
+  });
   res.json({ ...after, roleCode: role!.code, ...scopeTarget });
 });
 
@@ -1006,7 +1082,62 @@ router.delete("/users/:userId/role-bindings/:bindingId", async (req, res): Promi
     .from(rolesTable)
     .where(eq(rolesTable.id, after.roleId));
   const [scopeTarget] = await resolveBindingScopeTargets([after], database);
+  publishAccessRevision({
+    userId: after.userId,
+    organizationId: after.organizationId,
+    reason: "ROLE_BINDING_CHANGED",
+  });
   res.json({ ...after, roleCode: role!.code, ...scopeTarget });
+});
+
+router.get("/me/access-revision", async (req, res): Promise<void> => {
+  const user = await resolveCurrentUser(req);
+  if (!user) {
+    res.status(401).json({ error: "Authentication required" });
+    return;
+  }
+  const organizationId = await getActiveOrganizationId(user.id, database);
+  if (!organizationId) {
+    res.status(403).json({ error: "Active organization context required" });
+    return;
+  }
+  res.set("Cache-Control", "private, no-store");
+  res.json({
+    organizationId,
+    revision: await getAccessRevision(user.id, organizationId, database),
+  });
+});
+
+router.get("/me/access-revision/events", async (req, res): Promise<void> => {
+  const user = await resolveCurrentUser(req);
+  if (!user) {
+    res.status(401).json({ error: "Authentication required" });
+    return;
+  }
+  const organizationId = await getActiveOrganizationId(user.id, database);
+  if (!organizationId) {
+    res.status(403).json({ error: "Active organization context required" });
+    return;
+  }
+
+  res.status(200);
+  res.set({
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "private, no-cache, no-transform",
+    Connection: "keep-alive",
+    "X-Accel-Buffering": "no",
+  });
+  res.flushHeaders();
+  res.write("retry: 3000\n\n");
+
+  const unsubscribe = subscribeToAccessRevisions(user.id, organizationId, (event) => {
+    res.write(`event: access-revision\ndata: ${JSON.stringify({ reason: event.reason })}\n\n`);
+  });
+  const heartbeat = setInterval(() => res.write(": heartbeat\n\n"), 20_000);
+  req.on("close", () => {
+    clearInterval(heartbeat);
+    unsubscribe();
+  });
 });
 
 router.get("/me/permissions", async (req, res): Promise<void> => {

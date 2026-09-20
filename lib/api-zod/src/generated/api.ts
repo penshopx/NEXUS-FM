@@ -427,6 +427,22 @@ export const CreateUserRoleBindingResponse = zod.object({
 
 
 /**
+ * @summary Revoke a user's organization membership
+ */
+export const RevokeUserMembershipParams = zod.object({
+  "userId": zod.coerce.string().uuid(),
+  "organizationId": zod.coerce.string().uuid()
+})
+
+export const RevokeUserMembershipResponse = zod.object({
+  "userId": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "role": zod.enum(['PLATFORM_ADMIN', 'FACILITY_MANAGER', 'FACILITY_SUPERVISOR', 'INSPECTOR', 'MAINTENANCE_TECHNICIAN', 'WAREHOUSE_SUPERVISOR', 'VENDOR']),
+  "isActive": zod.boolean()
+})
+
+
+/**
  * Applies the same canonical-role, lifecycle-status, platform, and active-organization restrictions as the on-screen role-binding list. The export is not paginated.
  * @summary Export a user's filtered scoped role bindings as CSV
  */
@@ -509,6 +525,15 @@ export const GetMyPermissionsResponse = zod.object({
   "scopeType": zod.enum(['PLATFORM', 'ORGANIZATION', 'PORTFOLIO', 'FACILITY', 'BUILDING', 'SPACE', 'ASSET', 'ASSIGNED', 'TEAM', 'VENDOR_ASSIGNMENT', 'OWNED_REQUEST']),
   "effect": zod.enum(['ALLOW', 'DENY'])
 }))
+})
+
+
+/**
+ * @summary Read the current persistent access revision
+ */
+export const GetMyAccessRevisionResponse = zod.object({
+  "organizationId": zod.string().uuid(),
+  "revision": zod.string()
 })
 
 
