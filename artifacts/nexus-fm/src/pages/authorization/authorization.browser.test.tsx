@@ -302,6 +302,74 @@ describe('authorization administration browser regressions', () => {
     );
   });
 
+  it('bookmarks and restores an authorized selected member from the URL', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await openBindingsForMember(user);
+
+    expect(window.location.search).toContain('memberId=target-user');
+    expect(window.location.search).toContain('memberOrganizationId=org-1');
+    expect(screen.getByText('Role Bindings for Target Admin')).toBeVisible();
+
+    cleanup();
+    window.history.replaceState(
+      null,
+      '',
+      '/authorization?query=Target&memberId=target-user&memberOrganizationId=org-1',
+    );
+    renderPage();
+
+    expect(await screen.findByText('Role Bindings for Target Admin')).toBeVisible();
+    expect(api.bindings).toHaveBeenLastCalledWith(
+      'target-user',
+      {},
+      expect.anything(),
+    );
+  });
+
+  it('does not expose bindings for an invalid or unauthorized bookmarked member', async () => {
+    window.history.replaceState(
+      null,
+      '',
+      '/authorization?query=Target&memberId=unauthorized-user&memberOrganizationId=org-secret',
+    );
+    renderPage();
+
+    expect(await screen.findByTestId('member-search-results')).toBeVisible();
+    expect(screen.queryByText(/Role Bindings for/)).not.toBeInTheDocument();
+    expect(api.bindings).not.toHaveBeenCalled();
+  });
+
+  it('restores selected members through browser back and forward navigation', async () => {
+    const secondMember = {
+      ...member,
+      userId: 'second-user',
+      displayName: 'Second Admin',
+      email: 'second@example.test',
+    };
+    api.searchMembers.mockReturnValue({
+      data: { items: [member, secondMember], page: 1, limit: 20, total: 2 },
+      isFetching: false,
+      isError: false,
+    });
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(screen.getByTestId('tab-bindings'));
+    await user.type(screen.getByTestId('input-target-user'), 'Admin');
+    await user.click(screen.getByTestId('button-search-user'));
+    await user.click(await screen.findByTestId('member-result-target-user-org-1'));
+    await user.click(screen.getByTestId('member-result-second-user-org-1'));
+    expect(screen.getByText('Role Bindings for Second Admin')).toBeVisible();
+
+    window.history.back();
+    await waitFor(() => expect(screen.getByText('Role Bindings for Target Admin')).toBeVisible());
+
+    window.history.forward();
+    await waitFor(() => expect(screen.getByText('Role Bindings for Second Admin')).toBeVisible());
+  });
+
   it('restores earlier search state through browser navigation', async () => {
     const user = userEvent.setup();
     renderPage();
