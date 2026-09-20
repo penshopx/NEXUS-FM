@@ -375,7 +375,7 @@ paths:
       operationId: getUserRoleBindings
       tags: [authorization]
       summary: Read a user's scoped role bindings
-      description: Filters are applied only after the caller's platform or active-organization scope restriction.
+      description: Filters and pagination are applied only after the caller's platform or active-organization scope restriction. Results are ordered newest first with binding ID as a stable tie-breaker.
       parameters:
         - name: roleCode
           in: query
@@ -387,15 +387,18 @@ paths:
           required: false
           schema:
             $ref: "#/components/schemas/UserRoleBindingStatus"
+        - {$ref: "#/components/parameters/Page"}
+        - name: limit
+          in: query
+          required: false
+          schema: {type: integer, minimum: 1, maximum: 50, default: 20}
       responses:
         "200":
-          description: Role bindings
+          description: Paginated role bindings
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/UserRoleBinding"
+                $ref: "#/components/schemas/UserRoleBindingPage"
         "400": {$ref: "#/components/responses/BadRequest"}
         "403": {$ref: "#/components/responses/Forbidden"}
     post:
@@ -1517,6 +1520,17 @@ components:
         status: {$ref: "#/components/schemas/UserRoleBindingStatus"}
         startsAt: {type: string, format: date-time, nullable: true}
         endsAt: {type: string, format: date-time, nullable: true}
+    UserRoleBindingPage:
+      type: object
+      required: [items, page, limit, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserRoleBinding"
+        page: {type: integer, minimum: 1}
+        limit: {type: integer, minimum: 1, maximum: 50}
+        total: {type: integer, minimum: 0}
     UserRoleBindingInput:
       type: object
       required: [organizationId, roleId, scopeType]

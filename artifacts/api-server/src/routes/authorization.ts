@@ -5,6 +5,7 @@ import {
   CreateRoleBindingScopeTargetBody,
   CreateRoleBindingScopeTargetResponse,
   GetUserRoleBindingsQueryParams,
+  GetUserRoleBindingsResponse,
   SearchRoleBindingScopeTargetsQueryParams,
   SearchRoleBindingScopeTargetsResponse,
   SearchPlatformOrganizationsQueryParams,
@@ -636,6 +637,11 @@ router.get("/users/:userId/role-bindings", async (req, res): Promise<void> => {
   }
   if (parsed.data.roleCode) filters.push(eq(rolesTable.code, parsed.data.roleCode));
   if (parsed.data.status) filters.push(eq(userRoleBindingsTable.status, parsed.data.status));
+  const where = and(...filters);
+  const [totalRow] = await database.select({ value: count() })
+    .from(userRoleBindingsTable)
+    .innerJoin(rolesTable, eq(userRoleBindingsTable.roleId, rolesTable.id))
+    .where(where);
   const rows = await database.select({
     id: userRoleBindingsTable.id,
     userId: userRoleBindingsTable.userId,
@@ -650,9 +656,17 @@ router.get("/users/:userId/role-bindings", async (req, res): Promise<void> => {
     endsAt: userRoleBindingsTable.endsAt,
   }).from(userRoleBindingsTable)
     .innerJoin(rolesTable, eq(userRoleBindingsTable.roleId, rolesTable.id))
-    .where(and(...filters));
+    .where(where)
+    .orderBy(desc(userRoleBindingsTable.createdAt), desc(userRoleBindingsTable.id))
+    .limit(parsed.data.limit)
+    .offset((parsed.data.page - 1) * parsed.data.limit);
   const scopeTargets = await resolveBindingScopeTargets(rows, database);
-  res.json(rows.map((row, index) => ({ ...row, ...scopeTargets[index]! })));
+  res.json(GetUserRoleBindingsResponse.parse({
+    items: rows.map((row, index) => ({ ...row, ...scopeTargets[index]! })),
+    page: parsed.data.page,
+    limit: parsed.data.limit,
+    total: Number(totalRow?.value ?? 0),
+  }));
 });
 
 router.post("/users/:userId/role-bindings", async (req, res): Promise<void> => {

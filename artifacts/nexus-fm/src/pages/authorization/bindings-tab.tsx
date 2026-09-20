@@ -445,9 +445,12 @@ function BindingsManager({ userId, member, canManage }: {
 }) {
   const [roleFilter, setRoleFilter] = useState<CanonicalRole | 'ALL'>('ALL');
   const [statusFilter, setStatusFilter] = useState<UserRoleBindingStatus | 'ALL'>('ALL');
+  const [bindingPage, setBindingPage] = useState(1);
   const bindingFilters = {
     ...(roleFilter === 'ALL' ? {} : { roleCode: roleFilter }),
     ...(statusFilter === 'ALL' ? {} : { status: statusFilter }),
+    page: bindingPage,
+    limit: 20,
   };
   const { data: bindings, isLoading } = useGetUserRoleBindings(userId, bindingFilters, {
     query: {
@@ -468,10 +471,12 @@ function BindingsManager({ userId, member, canManage }: {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingBinding, setEditingBinding] = useState<UserRoleBinding | null>(null);
   const hasActiveFilters = roleFilter !== 'ALL' || statusFilter !== 'ALL';
+  const bindingTotalPages = bindings ? Math.max(1, Math.ceil(bindings.total / bindings.limit)) : 1;
 
   useEffect(() => {
     setRoleFilter('ALL');
     setStatusFilter('ALL');
+    setBindingPage(1);
   }, [userId]);
 
   if (isLoading) {
@@ -509,7 +514,10 @@ function BindingsManager({ userId, member, canManage }: {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <div className="flex-1 space-y-1.5">
             <label className="text-sm font-medium" htmlFor="binding-role-filter">Role</label>
-            <Select value={roleFilter} onValueChange={(value) => setRoleFilter(value as CanonicalRole | 'ALL')}>
+            <Select value={roleFilter} onValueChange={(value) => {
+              setRoleFilter(value as CanonicalRole | 'ALL');
+              setBindingPage(1);
+            }}>
               <SelectTrigger id="binding-role-filter" data-testid="select-binding-role-filter">
                 <SelectValue placeholder="All roles" />
               </SelectTrigger>
@@ -523,7 +531,10 @@ function BindingsManager({ userId, member, canManage }: {
           </div>
           <div className="flex-1 space-y-1.5">
             <label className="text-sm font-medium" htmlFor="binding-status-filter">Status</label>
-            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as UserRoleBindingStatus | 'ALL')}>
+            <Select value={statusFilter} onValueChange={(value) => {
+              setStatusFilter(value as UserRoleBindingStatus | 'ALL');
+              setBindingPage(1);
+            }}>
               <SelectTrigger id="binding-status-filter" data-testid="select-binding-status-filter">
                 <SelectValue placeholder="All statuses" />
               </SelectTrigger>
@@ -542,6 +553,7 @@ function BindingsManager({ userId, member, canManage }: {
               onClick={() => {
                 setRoleFilter('ALL');
                 setStatusFilter('ALL');
+                setBindingPage(1);
               }}
               data-testid="button-clear-binding-filters"
             >
@@ -551,7 +563,7 @@ function BindingsManager({ userId, member, canManage }: {
         </div>
       </div>
 
-      {bindings?.length === 0 ? (
+      {bindings?.items.length === 0 ? (
         <div className="p-12 text-center text-muted-foreground">
           <div className="size-12 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
             <Search className="size-6 opacity-50" />
@@ -567,7 +579,7 @@ function BindingsManager({ userId, member, canManage }: {
         </div>
       ) : (
         <div className="divide-y divide-border">
-          {bindings?.map(binding => (
+          {bindings?.items.map(binding => (
             <BindingRow 
               key={binding.id} 
               binding={binding} 
@@ -576,6 +588,36 @@ function BindingsManager({ userId, member, canManage }: {
               onEdit={() => setEditingBinding(binding)}
             />
           ))}
+        </div>
+      )}
+
+      {bindings && bindings.total > 0 && (
+        <div className="p-3 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm">
+          <div className="text-muted-foreground" data-testid="binding-page-summary">
+            Page {bindings.page} of {bindingTotalPages} · {bindings.total} results
+          </div>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setBindingPage((current) => Math.max(1, current - 1))}
+              disabled={bindingPage <= 1}
+              data-testid="button-binding-previous-page"
+            >
+              <ChevronLeft className="size-4 mr-1" /> Previous
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setBindingPage((current) => current + 1)}
+              disabled={bindingPage >= bindingTotalPages}
+              data-testid="button-binding-next-page"
+            >
+              Next <ChevronRight className="size-4 ml-1" />
+            </Button>
+          </div>
         </div>
       )}
 

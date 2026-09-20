@@ -343,19 +343,36 @@ export const CreateRoleBindingScopeTargetResponse = zod.object({
 
 
 /**
- * Filters are applied only after the caller's platform or active-organization scope restriction.
+ * Filters and pagination are applied only after the caller's platform or active-organization scope restriction. Results are ordered newest first with binding ID as a stable tie-breaker.
  * @summary Read a user's scoped role bindings
  */
 export const GetUserRoleBindingsParams = zod.object({
   "userId": zod.coerce.string().uuid()
 })
 
+export const getUserRoleBindingsQueryPageDefault = 1;
+
+export const getUserRoleBindingsQueryLimitDefault = 20;
+export const getUserRoleBindingsQueryLimitMax = 50;
+
+
+
 export const GetUserRoleBindingsQueryParams = zod.object({
   "roleCode": zod.enum(['PLATFORM_ADMIN', 'FACILITY_MANAGER', 'FACILITY_SUPERVISOR', 'INSPECTOR', 'MAINTENANCE_TECHNICIAN', 'WAREHOUSE_SUPERVISOR', 'VENDOR']).optional(),
-  "status": zod.enum(['ACTIVE', 'SUSPENDED', 'EXPIRED']).optional()
+  "status": zod.enum(['ACTIVE', 'SUSPENDED', 'EXPIRED']).optional(),
+  "page": zod.coerce.number().int().min(1).default(getUserRoleBindingsQueryPageDefault),
+  "limit": zod.coerce.number().int().min(1).max(getUserRoleBindingsQueryLimitMax).default(getUserRoleBindingsQueryLimitDefault)
 })
 
-export const GetUserRoleBindingsResponseItem = zod.object({
+
+export const getUserRoleBindingsResponseLimitMax = 50;
+
+export const getUserRoleBindingsResponseTotalMin = 0;
+
+
+
+export const GetUserRoleBindingsResponse = zod.object({
+  "items": zod.array(zod.object({
   "id": zod.string().uuid(),
   "userId": zod.string().uuid(),
   "organizationId": zod.string().uuid(),
@@ -369,8 +386,11 @@ export const GetUserRoleBindingsResponseItem = zod.object({
   "status": zod.enum(['ACTIVE', 'SUSPENDED', 'EXPIRED']),
   "startsAt": zod.coerce.date().nullish(),
   "endsAt": zod.coerce.date().nullish()
+})),
+  "page": zod.number().int().min(1),
+  "limit": zod.number().int().min(1).max(getUserRoleBindingsResponseLimitMax),
+  "total": zod.number().int().min(getUserRoleBindingsResponseTotalMin)
 })
-export const GetUserRoleBindingsResponse = zod.array(GetUserRoleBindingsResponseItem)
 
 
 /**

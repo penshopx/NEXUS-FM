@@ -189,7 +189,10 @@ describe('authorization administration browser regressions', () => {
       isFetching: false,
       isError: false,
     });
-    api.bindings.mockReturnValue({ data: [], isLoading: false });
+    api.bindings.mockReturnValue({
+      data: { items: [], page: 1, limit: 20, total: 0 },
+      isLoading: false,
+    });
     api.createBinding.mockReturnValue(mutation());
     api.updateBinding.mockReturnValue(mutation());
     api.revokeBinding.mockReturnValue(mutation());
@@ -218,7 +221,7 @@ describe('authorization administration browser regressions', () => {
   it('has no serious or critical accessibility violations on administration tabs and dialogs', async () => {
     const user = userEvent.setup();
     api.bindings.mockReturnValue({
-      data: [{
+      data: { items: [{
         id: 'active',
         userId: member.userId,
         roleId: role.id,
@@ -232,7 +235,7 @@ describe('authorization administration browser regressions', () => {
         status: 'ACTIVE',
         startsAt: null,
         endsAt: null,
-      }],
+      }], page: 1, limit: 20, total: 1 },
       isLoading: false,
     });
     api.auditLogs.mockReturnValue({
@@ -403,7 +406,7 @@ describe('authorization administration browser regressions', () => {
   it('shows a historical target without offering it as a current choice', async () => {
     const user = userEvent.setup();
     api.bindings.mockReturnValue({
-      data: [{
+      data: { items: [{
         id: 'historical',
         userId: member.userId,
         roleId: role.id,
@@ -417,7 +420,7 @@ describe('authorization administration browser regressions', () => {
         status: 'ACTIVE',
         startsAt: null,
         endsAt: null,
-      }],
+      }], page: 1, limit: 20, total: 1 },
       isLoading: false,
     });
     renderPage();
@@ -475,7 +478,7 @@ describe('authorization administration browser regressions', () => {
     expect(await screen.findByText('Role Bindings for Target Admin')).toBeVisible();
     expect(api.bindings).toHaveBeenLastCalledWith(
       'target-user',
-      {},
+      { page: 1, limit: 20 },
       expect.anything(),
     );
   });
@@ -635,7 +638,12 @@ describe('authorization administration browser regressions', () => {
         },
       ];
     api.bindings.mockImplementation((_userId, params) => ({
-      data: params?.status === 'SUSPENDED' ? [] : visibleBindings,
+      data: {
+        items: params?.status === 'SUSPENDED' ? [] : visibleBindings,
+        page: params?.page ?? 1,
+        limit: params?.limit ?? 20,
+        total: params?.status === 'SUSPENDED' ? 0 : 42,
+      },
       isLoading: false,
     }));
     renderPage();
@@ -656,6 +664,13 @@ describe('authorization administration browser regressions', () => {
     expect(screen.getByTestId('display-scope-view-only-binding')).toHaveTextContent('Scope ID: None');
     expect(screen.getByTestId('display-scopename-historical-binding')).toHaveTextContent('FACILITY: Missing or historical target');
     expect(screen.getByTestId('display-scope-historical-binding')).toHaveTextContent('Scope ID: facility-deleted');
+    expect(screen.getByTestId('binding-page-summary')).toHaveTextContent('Page 1 of 3 · 42 results');
+    await user.click(screen.getByTestId('button-binding-next-page'));
+    expect(api.bindings).toHaveBeenLastCalledWith(
+      member.userId,
+      { page: 2, limit: 20 },
+      expect.anything(),
+    );
     expect(api.listRoles).toHaveBeenCalledWith(expect.objectContaining({
       query: expect.objectContaining({ enabled: false }),
     }));
@@ -665,7 +680,7 @@ describe('authorization administration browser regressions', () => {
     await user.click(await screen.findByRole('option', { name: 'PLATFORM ADMIN' }));
     expect(api.bindings).toHaveBeenLastCalledWith(
       member.userId,
-      { roleCode: 'PLATFORM_ADMIN' },
+      { roleCode: 'PLATFORM_ADMIN', page: 1, limit: 20 },
       expect.anything(),
     );
 
@@ -673,7 +688,7 @@ describe('authorization administration browser regressions', () => {
     await user.click(await screen.findByRole('option', { name: 'SUSPENDED' }));
     expect(api.bindings).toHaveBeenLastCalledWith(
       member.userId,
-      { roleCode: 'PLATFORM_ADMIN', status: 'SUSPENDED' },
+      { roleCode: 'PLATFORM_ADMIN', status: 'SUSPENDED', page: 1, limit: 20 },
       expect.anything(),
     );
     expect(screen.getByText('No bindings match these filters.')).toBeVisible();
@@ -717,7 +732,7 @@ describe('authorization administration browser regressions', () => {
     );
     api.updateBinding.mockReturnValue({ mutate: selfEscalation, isPending: false });
     api.bindings.mockReturnValue({
-      data: [{
+      data: { items: [{
         id: 'self-binding',
         userId: 'target-user',
         roleId: role.id,
@@ -729,7 +744,7 @@ describe('authorization administration browser regressions', () => {
         status: 'ACTIVE',
         startsAt: null,
         endsAt: null,
-      }],
+      }], page: 1, limit: 20, total: 1 },
       isLoading: false,
     });
 
@@ -746,7 +761,7 @@ describe('authorization administration browser regressions', () => {
     const revoke = vi.fn((_variables, options) => options.onSuccess());
     api.revokeBinding.mockReturnValue({ mutate: revoke, isPending: false });
     api.bindings.mockReturnValue({
-      data: [
+      data: { items: [
         {
           id: 'suspended',
           userId: 'target-user',
@@ -786,7 +801,7 @@ describe('authorization administration browser regressions', () => {
           startsAt: null,
           endsAt: null,
         },
-      ],
+      ], page: 1, limit: 20, total: 2 },
       isLoading: false,
     });
     api.auditLogs.mockReturnValue({
@@ -827,7 +842,7 @@ describe('authorization administration browser regressions', () => {
     const revoke = vi.fn((_variables, options) => options.onSuccess());
     api.revokeBinding.mockReturnValue({ mutate: revoke, isPending: false });
     api.bindings.mockReturnValue({
-      data: [{
+      data: { items: [{
         id: 'active',
         userId: 'target-user',
         roleId: role.id,
@@ -839,7 +854,7 @@ describe('authorization administration browser regressions', () => {
         status: 'ACTIVE',
         startsAt: null,
         endsAt: null,
-      }],
+      }], page: 1, limit: 20, total: 1 },
       isLoading: false,
     });
     renderPage();

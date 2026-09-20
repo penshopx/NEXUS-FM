@@ -1078,49 +1078,88 @@ test("authorization routes run through a real HTTP app with injected currentUser
     assert.ok(inactiveScopeBinding);
     const listed = await request(`/users/${target.userId}/role-bindings`);
     assert.equal(listed.response.status, 200);
-    const listedBindings = listed.body as Array<{ roleId: string; roleCode: string; organizationId: string }>;
+    const listedPage = listed.body as {
+      items: Array<{
+        id: string;
+        roleId: string;
+        roleCode: string;
+        organizationId: string;
+        scopeId: string | null;
+        scopeTargetName: string | null;
+        scopeTargetStatus: string;
+      }>;
+      page: number;
+      limit: number;
+      total: number;
+    };
+    const listedBindings = listedPage.items;
     assert.ok(listedBindings.length > 0);
+    assert.equal(listedPage.page, 1);
+    assert.equal(listedPage.limit, 20);
+    assert.ok(listedPage.total >= listedBindings.length);
     assert.ok(listedBindings.every((binding) => canonicalRoleValues.includes(binding.roleCode as typeof canonicalRoleValues[number])));
     assert.ok(listedBindings.some((binding) =>
       binding.roleId === manager.roleId && binding.roleCode === "FACILITY_MANAGER"));
-    assert.ok((listed.body as unknown[]).some((row) => (row as { id: string }).id === createdBindingId));
-    assert.ok((listed.body as Array<{ scopeId: string | null; scopeTargetName: string | null; scopeTargetStatus: string }>)
+    assert.ok(listedBindings.some((row) => row.id === createdBindingId));
+    assert.ok(listedBindings
       .some((row) => row.scopeId === namedFacility.id &&
         row.scopeTargetName === "North Campus" &&
         row.scopeTargetStatus === "RESOLVED"));
-    assert.ok((listed.body as Array<{ scopeId: string | null; scopeTargetName: string | null; scopeTargetStatus: string }>)
+    assert.ok(listedBindings
       .some((row) => row.scopeId === missingScopeId &&
         row.scopeTargetName === null &&
         row.scopeTargetStatus === "MISSING"));
-    assert.ok((listed.body as Array<{ scopeId: string | null; scopeTargetName: string | null; scopeTargetStatus: string }>)
+    assert.ok(listedBindings
       .some((row) => row.scopeId === inactiveFacility.id &&
         row.scopeTargetName === "Retired Campus" &&
         row.scopeTargetStatus === "MISSING"));
-    assert.ok((listed.body as Array<{ scopeId: string | null; scopeTargetName: string | null; scopeTargetStatus: string }>)
+    assert.ok(listedBindings
       .some((row) => row.scopeId === inactiveTeam.id &&
         row.scopeTargetName === "Retired Response Team" &&
         row.scopeTargetStatus === "MISSING"));
-    assert.ok((listed.body as Array<{ scopeId: string | null; scopeTargetName: string | null; scopeTargetStatus: string }>)
+    assert.ok(listedBindings
       .some((row) => row.scopeId === deletedVendorAssignment.id &&
         row.scopeTargetName === null &&
         row.scopeTargetStatus === "MISSING"));
-    assert.ok((listed.body as Array<{ scopeId: string | null; scopeTargetName: string | null; scopeTargetStatus: string }>)
+    assert.ok(listedBindings
       .some((row) => row.scopeId === foreignOrganizationTeam.id &&
         row.scopeTargetName === null &&
         row.scopeTargetStatus === "MISSING"));
+    const firstBindingPage = await request(
+      `/users/${target.userId}/role-bindings?roleCode=FACILITY_MANAGER&page=1&limit=2`,
+    );
+    const secondBindingPage = await request(
+      `/users/${target.userId}/role-bindings?roleCode=FACILITY_MANAGER&page=2&limit=2`,
+    );
+    assert.equal(firstBindingPage.response.status, 200);
+    assert.equal(secondBindingPage.response.status, 200);
+    const firstPageBody = firstBindingPage.body as { items: Array<{ id: string; roleCode: string }>; page: number; limit: number; total: number };
+    const secondPageBody = secondBindingPage.body as { items: Array<{ id: string; roleCode: string }>; page: number; limit: number; total: number };
+    assert.equal(firstPageBody.page, 1);
+    assert.equal(secondPageBody.page, 2);
+    assert.equal(firstPageBody.limit, 2);
+    assert.equal(secondPageBody.limit, 2);
+    assert.equal(firstPageBody.total, secondPageBody.total);
+    assert.ok(firstPageBody.total > firstPageBody.items.length);
+    assert.ok(firstPageBody.items.every((row) => row.roleCode === "FACILITY_MANAGER"));
+    assert.ok(secondPageBody.items.every((row) => row.roleCode === "FACILITY_MANAGER"));
+    assert.equal(
+      firstPageBody.items.some((first) => secondPageBody.items.some((second) => first.id === second.id)),
+      false,
+    );
     const managerBindings = await request(
       `/users/${target.userId}/role-bindings?roleCode=FACILITY_MANAGER`,
     );
     assert.equal(managerBindings.response.status, 200);
-    assert.ok((managerBindings.body as Array<{ roleCode: string }>).length > 0);
-    assert.ok((managerBindings.body as Array<{ roleCode: string }>)
+    assert.ok((managerBindings.body as { items: Array<{ roleCode: string }> }).items.length > 0);
+    assert.ok((managerBindings.body as { items: Array<{ roleCode: string }> }).items
       .every((row) => row.roleCode === "FACILITY_MANAGER"));
     const activeManagerBindings = await request(
       `/users/${target.userId}/role-bindings?roleCode=FACILITY_MANAGER&status=ACTIVE`,
     );
     assert.equal(activeManagerBindings.response.status, 200);
-    assert.ok((activeManagerBindings.body as Array<{ roleCode: string; status: string }>).length > 0);
-    assert.ok((activeManagerBindings.body as Array<{ roleCode: string; status: string }>)
+    assert.ok((activeManagerBindings.body as { items: Array<{ roleCode: string; status: string }> }).items.length > 0);
+    assert.ok((activeManagerBindings.body as { items: Array<{ roleCode: string; status: string }> }).items
       .every((row) => row.roleCode === "FACILITY_MANAGER" && row.status === "ACTIVE"));
     const invalidBindingFilter = await request(
       `/users/${target.userId}/role-bindings?status=REVOKED`,

@@ -79,6 +79,7 @@ import type {
   UnauthorizedResponse,
   UserRoleBinding,
   UserRoleBindingInput,
+  UserRoleBindingPage,
   UserRoleBindingUpdate
 } from './api.schemas';
 
@@ -1272,13 +1273,13 @@ export const getGetUserRoleBindingsUrl = (userId: string,
 }
 
 /**
- * Filters are applied only after the caller's platform or active-organization scope restriction.
+ * Filters and pagination are applied only after the caller's platform or active-organization scope restriction. Results are ordered newest first with binding ID as a stable tie-breaker.
  * @summary Read a user's scoped role bindings
  */
 export const getUserRoleBindings = async (userId: string,
-    params?: GetUserRoleBindingsParams, options?: Parameters<typeof customFetch>[1]): Promise<UserRoleBinding[]> => {
+    params?: GetUserRoleBindingsParams, options?: Parameters<typeof customFetch>[1]): Promise<UserRoleBindingPage> => {
 
-  return customFetch<UserRoleBinding[]>(getGetUserRoleBindingsUrl(userId,params),
+  return customFetch<UserRoleBindingPage>(getGetUserRoleBindingsUrl(userId,params),
   {
     ...options,
     method: 'GET'

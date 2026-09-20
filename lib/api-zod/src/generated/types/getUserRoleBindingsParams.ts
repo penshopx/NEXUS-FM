@@ -6,9 +6,19 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { CanonicalRole } from './canonicalRole';
+import type { PageParameter } from './pageParameter';
 import type { UserRoleBindingStatus } from './userRoleBindingStatus';
 
 export type GetUserRoleBindingsParams = {
 roleCode?: CanonicalRole;
 status?: UserRoleBindingStatus;
+/**
+ * @minimum 1
+ */
+page?: PageParameter;
+/**
+ * @minimum 1
+ * @maximum 50
+ */
+limit?: number;
 };

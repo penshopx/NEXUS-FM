@@ -457,6 +457,19 @@ export interface UserRoleBinding {
   endsAt?: string | null;
 }
 
+export interface UserRoleBindingPage {
+  items: UserRoleBinding[];
+  /** @minimum 1 */
+  page: number;
+  /**
+     * @minimum 1
+     * @maximum 50
+     */
+  limit: number;
+  /** @minimum 0 */
+  total: number;
+}
+
 export interface UserRoleBindingInput {
   organizationId: string;
   roleId: string;
@@ -649,6 +662,15 @@ limit?: number;
 export type GetUserRoleBindingsParams = {
 roleCode?: CanonicalRole;
 status?: UserRoleBindingStatus;
+/**
+ * @minimum 1
+ */
+page?: PageParameter;
+/**
+ * @minimum 1
+ * @maximum 50
+ */
+limit?: number;
 };
 
 export type ListFacilitiesParams = {

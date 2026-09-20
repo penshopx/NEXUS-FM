@@ -169,12 +169,20 @@ vi.mock('@workspace/api-client-react', async () => {
       enabled: (params?.query.length ?? 0) >= 2,
     }),
     useGetUserRoleBindings: (
-      ...[userId]: AuthorizationHookParameters<'useGetUserRoleBindings'>
+      ...[userId, params]: AuthorizationHookParameters<'useGetUserRoleBindings'>
     ) => useQuery({
-      queryKey: actual.getGetUserRoleBindingsQueryKey(userId),
+      queryKey: actual.getGetUserRoleBindingsQueryKey(userId, params),
       queryFn: () => organizationResponse(
         'bindings',
-        () => tenant().bindings.filter((binding) => binding.userId === userId),
+        () => {
+          const items = tenant().bindings.filter((binding) => binding.userId === userId);
+          return {
+            items,
+            page: params?.page ?? 1,
+            limit: params?.limit ?? 20,
+            total: items.length,
+          };
+        },
       ),
     }),
     useGetSession: (
@@ -301,7 +309,7 @@ function InFlightAuthorizationHarness({ client }: { client: QueryClient }) {
         {members.data?.items.map((member) => member.displayName).join(',')}
       </div>
       <div data-testid="race-bindings">
-        {bindings.data?.map((binding) => binding.roleCode).join(',')}
+        {bindings.data?.items.map((binding) => binding.roleCode).join(',')}
       </div>
       <div data-testid="race-audit">
         {audit.data?.map((entry) => entry.action).join(',')}
