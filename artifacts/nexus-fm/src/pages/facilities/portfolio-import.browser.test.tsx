@@ -1,0 +1,227 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const api = vi.hoisted(() => ({
+  listFacilities: vi.fn(),
+  createFacility: vi.fn(),
+  updateFacility: vi.fn(),
+  deleteFacility: vi.fn(),
+  validateImport: vi.fn(),
+  importPortfolio: vi.fn(),
+  downloadTemplate: vi.fn(),
+}));
+
+vi.mock('@workspace/api-client-react', async () => {
+  const actual = await vi.importActual<typeof import('@workspace/api-client-react')>(
+    '@workspace/api-client-react',
+  );
+  return {
+    ...actual,
+    useListFacilities: api.listFacilities,
+    useCreateFacility: api.createFacility,
+    useUpdateFacility: api.updateFacility,
+    useDeleteFacility: api.deleteFacility,
+    useValidateFacilityPortfolioImport: api.validateImport,
+    useImportFacilityPortfolio: api.importPortfolio,
+    downloadFacilityPortfolioImportTemplate: api.downloadTemplate,
+    getListFacilitiesQueryKey: (params?: unknown) =>
+      params ? ['/api/facilities', params] : ['/api/facilities'],
+  };
+});
+
+import { Toaster } from '@/components/ui/toaster';
+import { FacilitiesPage } from './index';
+
+type MutationOptions<T> = {
+  onSuccess?: (result: T) => void;
+  onError?: (error: unknown) => void;
+};
+
+function idleMutation(mutate = vi.fn()) {
+  return { mutate, isPending: false, reset: vi.fn() };
+}
+
+function renderPage() {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  const invalidateQueries = vi.spyOn(client, 'invalidateQueries');
+
+  render(
+    <QueryClientProvider client={client}>
+      <FacilitiesPage />
+      <Toaster />
+    </QueryClientProvider>,
+  );
+
+  return { client, invalidateQueries };
+}
+
+async function openImportDialog(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByTestId('button-import-registry'));
+  return screen.getByRole('dialog', { name: 'Import portfolio from CSV' });
+}
+
+async function selectCsv(user: ReturnType<typeof userEvent.setup>, contents = 'facility_name\nHQ') {
+  const file = new File([contents], 'portfolio.csv', { type: 'text/csv' });
+  await user.upload(screen.getByTestId('input-portfolio-import-file'), file);
+  return file;
+}
+
+describe('facility portfolio import browser regressions', () => {
+  beforeEach(() => {
+    api.listFacilities.mockReturnValue({
+      data: {
+        items: [],
+        page: 1,
+        limit: 10,
+        total: 0,
+        collectionCapabilities: { create: true },
+      },
+      isLoading: false,
+      error: null,
+    });
+    api.createFacility.mockReturnValue(idleMutation());
+    api.updateFacility.mockReturnValue(idleMutation());
+    api.deleteFacility.mockReturnValue(idleMutation());
+    api.validateImport.mockReturnValue(idleMutation());
+    api.importPortfolio.mockReturnValue(idleMutation());
+    api.downloadTemplate.mockResolvedValue('facility_name,building_name\nHQ,North');
+
+    Object.defineProperty(URL, 'createObjectURL', {
+      configurable: true,
+      value: vi.fn(() => 'blob:portfolio-import'),
+    });
+    Object.defineProperty(URL, 'revokeObjectURL', {
+      configurable: true,
+      value: vi.fn(),
+    });
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
+
+  it('downloads the template, imports a validated CSV, reports the count, and refreshes the registry', async () => {
+    const user = userEvent.setup();
+    const validate = vi.fn((_variables: unknown, options: MutationOptions<unknown>) => {
+      options.onSuccess?.({
+        total: 5,
+        facilities: 1,
+        buildings: 1,
+        spaces: 1,
+        systems: 1,
+        assets: 1,
+      });
+    });
+    const commit = vi.fn((_variables: unknown, options: MutationOptions<{ imported: number }>) => {
+      options.onSuccess?.({ imported: 5 });
+    });
+    api.validateImport.mockReturnValue(idleMutation(validate));
+    api.importPortfolio.mockReturnValue(idleMutation(commit));
+    const { invalidateQueries } = renderPage();
+
+    await openImportDialog(user);
+    await user.click(screen.getByTestId('button-download-import-template'));
+
+    await waitFor(() => expect(api.downloadTemplate).toHaveBeenCalledOnce());
+    expect(URL.createObjectURL).toHaveBeenCalledWith(expect.any(Blob));
+    expect(HTMLAnchorElement.prototype.click).toHaveBeenCalledOnce();
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:portfolio-import');
+
+    const file = await selectCsv(user);
+    expect(screen.getByTestId('text-selected-import-file')).toHaveTextContent('portfolio.csv');
+    await user.click(screen.getByTestId('button-submit-portfolio-import'));
+
+    expect(validate).toHaveBeenCalledWith(
+      { data: file },
+      expect.objectContaining({ onSuccess: expect.any(Function), onError: expect.any(Function) }),
+    );
+    expect(await screen.findByTestId('alert-import-preview')).toHaveTextContent(
+      'Validation passed. Committing will create 5 records.',
+    );
+
+    await user.click(screen.getByTestId('button-submit-portfolio-import'));
+
+    expect(commit).toHaveBeenCalledWith(
+      { data: file },
+      expect.objectContaining({ onSuccess: expect.any(Function), onError: expect.any(Function) }),
+    );
+    expect(await screen.findByText('Portfolio imported successfully')).toBeVisible();
+    expect(screen.getByText('5 records were created.')).toBeVisible();
+    expect(screen.queryByTestId('dialog-portfolio-import')).not.toBeInTheDocument();
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ['/api/facilities'] });
+  });
+
+  it('offers the generated validation report for download', async () => {
+    const user = userEvent.setup();
+    const report = 'row,error\n2,facility_name is required';
+    api.validateImport.mockReturnValue(idleMutation(
+      vi.fn((_variables: unknown, options: MutationOptions<never>) => {
+        options.onError?.({ status: 400, data: report });
+      }),
+    ));
+    renderPage();
+
+    await openImportDialog(user);
+    await selectCsv(user);
+    await user.click(screen.getByTestId('button-submit-portfolio-import'));
+
+    expect(await screen.findByTestId('text-import-failure')).toHaveTextContent(
+      'The CSV contains validation errors.',
+    );
+    await user.click(screen.getByTestId('button-download-validation-report'));
+
+    const downloadedBlob = vi.mocked(URL.createObjectURL).mock.calls[0]?.[0] as Blob;
+    expect(await downloadedBlob.text()).toBe(report);
+    expect(HTMLAnchorElement.prototype.click).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    [
+      403,
+      'You do not have permission to import this portfolio. Ask an administrator to grant the required registry access.',
+    ],
+    [
+      413,
+      'This CSV is larger than the 2 MB upload limit. Split it into smaller files and try again.',
+    ],
+  ])('shows specific guidance when validation fails with status %s', async (status, guidance) => {
+    const user = userEvent.setup();
+    api.validateImport.mockReturnValue(idleMutation(
+      vi.fn((_variables: unknown, options: MutationOptions<never>) => {
+        options.onError?.({ status });
+      }),
+    ));
+    renderPage();
+
+    await openImportDialog(user);
+    await selectCsv(user);
+    await user.click(screen.getByTestId('button-submit-portfolio-import'));
+
+    expect(await screen.findByTestId('text-import-failure')).toHaveTextContent(guidance);
+  });
+
+  it('hides import controls from users without facility creation access', () => {
+    api.listFacilities.mockReturnValue({
+      data: {
+        items: [],
+        page: 1,
+        limit: 10,
+        total: 0,
+        collectionCapabilities: { create: false },
+      },
+      isLoading: false,
+      error: null,
+    });
+
+    renderPage();
+
+    expect(screen.queryByTestId('button-import-registry')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('dialog-portfolio-import')).not.toBeInTheDocument();
+  });
+});
