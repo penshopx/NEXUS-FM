@@ -420,6 +420,38 @@ paths:
                 $ref: "#/components/schemas/UserRoleBinding"
         "400": {$ref: "#/components/responses/BadRequest"}
         "403": {$ref: "#/components/responses/Forbidden"}
+  /users/{userId}/role-bindings/export:
+    parameters:
+      - {$ref: "#/components/parameters/UserId"}
+    get:
+      operationId: exportUserRoleBindings
+      tags: [authorization]
+      summary: Export a user's filtered scoped role bindings as CSV
+      description: Applies the same canonical-role, lifecycle-status, platform, and active-organization restrictions as the on-screen role-binding list. The export is not paginated.
+      parameters:
+        - name: roleCode
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/CanonicalRole"
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/UserRoleBindingStatus"
+      responses:
+        "200":
+          description: Filtered role-binding review CSV
+          headers:
+            Content-Disposition:
+              description: Attachment filename for the exported review.
+              schema: {type: string}
+          content:
+            text/csv:
+              schema: {type: string}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
   /users/{userId}/role-bindings/{bindingId}:
     parameters:
       - {$ref: "#/components/parameters/UserId"}

@@ -11,6 +11,7 @@ import {
   useSearchOrganizationMembers,
   useSearchPlatformOrganizations,
   useSearchRoleBindingScopeTargets,
+  exportUserRoleBindings,
   UserRoleBinding,
   OrganizationMemberSearchResult,
   PlatformOrganizationSearchResult,
@@ -43,7 +44,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Search, UserPlus, Trash2, Calendar, Edit2, Play, Pause, AlertTriangle, Mail, Building2, UserRound, ChevronLeft, ChevronRight, Check, ChevronsUpDown, X } from 'lucide-react';
+import { Search, UserPlus, Trash2, Calendar, Edit2, Play, Pause, AlertTriangle, Mail, Building2, UserRound, ChevronLeft, ChevronRight, Check, ChevronsUpDown, X, Download } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
@@ -470,8 +471,40 @@ function BindingsManager({ userId, member, canManage }: {
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingBinding, setEditingBinding] = useState<UserRoleBinding | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const { toast } = useToast();
   const hasActiveFilters = roleFilter !== 'ALL' || statusFilter !== 'ALL';
   const bindingTotalPages = bindings ? Math.max(1, Math.ceil(bindings.total / bindings.limit)) : 1;
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      const contents = await exportUserRoleBindings(userId, {
+        ...(roleFilter === 'ALL' ? {} : { roleCode: roleFilter }),
+        ...(statusFilter === 'ALL' ? {} : { status: statusFilter }),
+      });
+      const url = URL.createObjectURL(new Blob([contents], { type: 'text/csv;charset=utf-8' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `member-access-review-${userId}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      toast({ title: 'Access review exported' });
+    } catch (error) {
+      const description = error && typeof error === 'object' && 'data' in error
+        ? (error.data as { error?: string })?.error
+        : undefined;
+      toast({
+        title: 'Failed to export access review',
+        description: description ?? 'Check your access and try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   useEffect(() => {
     setRoleFilter('ALL');
@@ -496,11 +529,23 @@ function BindingsManager({ userId, member, canManage }: {
             <code data-testid={`display-userid-${userId}`}>{userId}</code>
           </div>
         </div>
-        {canManage && (
-          <Button size="sm" onClick={() => setIsCreateOpen(true)} disabled={!activeOrgId} data-testid="button-new-binding">
-            <UserPlus className="size-4 mr-2" /> New Binding
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={handleExport}
+            disabled={isExporting}
+            data-testid="button-export-bindings"
+          >
+            <Download className="size-4 mr-2" /> {isExporting ? 'Exporting...' : 'Export CSV'}
           </Button>
-        )}
+          {canManage && (
+            <Button size="sm" onClick={() => setIsCreateOpen(true)} disabled={!activeOrgId} data-testid="button-new-binding">
+              <UserPlus className="size-4 mr-2" /> New Binding
+            </Button>
+          )}
+        </div>
       </div>
 
       {canManage && !activeOrgId && (

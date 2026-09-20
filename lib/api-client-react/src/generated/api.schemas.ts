@@ -673,6 +673,11 @@ page?: PageParameter;
 limit?: number;
 };
 
+export type ExportUserRoleBindingsParams = {
+roleCode?: CanonicalRole;
+status?: UserRoleBindingStatus;
+};
+
 export type ListFacilitiesParams = {
 q?: SearchParameter;
 /**

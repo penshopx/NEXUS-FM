@@ -30,6 +30,7 @@ import type {
   Building,
   BuildingInput,
   ErrorResponse,
+  ExportUserRoleBindingsParams,
   Facility,
   ForbiddenResponse,
   FoundationSummary,
@@ -1434,6 +1435,96 @@ export const useCreateUserRoleBinding = <TError = ErrorType<BadRequestResponse |
       > => {
       return useMutation(getCreateUserRoleBindingMutationOptions(options));
     }
+
+export const getExportUserRoleBindingsUrl = (userId: string,
+    params?: ExportUserRoleBindingsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/users/${userId}/role-bindings/export?${stringifiedParams}` : `/api/users/${userId}/role-bindings/export`
+}
+
+/**
+ * Applies the same canonical-role, lifecycle-status, platform, and active-organization restrictions as the on-screen role-binding list. The export is not paginated.
+ * @summary Export a user's filtered scoped role bindings as CSV
+ */
+export const exportUserRoleBindings = async (userId: string,
+    params?: ExportUserRoleBindingsParams, options?: Parameters<typeof customFetch>[1]): Promise<string> => {
+
+  return customFetch<string>(getExportUserRoleBindingsUrl(userId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getExportUserRoleBindingsQueryKey = (userId: string,
+    params?: ExportUserRoleBindingsParams,) => {
+    return [
+    `/api/users/${userId}/role-bindings/export`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getExportUserRoleBindingsQueryOptions = <TData = Awaited<ReturnType<typeof exportUserRoleBindings>>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(userId: string,
+    params?: ExportUserRoleBindingsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportUserRoleBindings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExportUserRoleBindingsQueryKey(userId,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof exportUserRoleBindings>>> = ({ signal }) => exportUserRoleBindings(userId,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: userId !== null && userId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof exportUserRoleBindings>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ExportUserRoleBindingsQueryResult = NonNullable<Awaited<ReturnType<typeof exportUserRoleBindings>>>
+export type ExportUserRoleBindingsQueryError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>
+
+
+/**
+ * @summary Export a user's filtered scoped role bindings as CSV
+ */
+
+export function useExportUserRoleBindings<TData = Awaited<ReturnType<typeof exportUserRoleBindings>>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(
+ userId: string,
+    params?: ExportUserRoleBindingsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportUserRoleBindings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getExportUserRoleBindingsQueryOptions(userId,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getUpdateUserRoleBindingUrl = (userId: string,
     bindingId: string,) => {

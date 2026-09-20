@@ -1161,6 +1161,30 @@ test("authorization routes run through a real HTTP app with injected currentUser
     assert.ok((activeManagerBindings.body as { items: Array<{ roleCode: string; status: string }> }).items.length > 0);
     assert.ok((activeManagerBindings.body as { items: Array<{ roleCode: string; status: string }> }).items
       .every((row) => row.roleCode === "FACILITY_MANAGER" && row.status === "ACTIVE"));
+    const filteredExport = await fetch(
+      `${base}/users/${target.userId}/role-bindings/export?roleCode=FACILITY_MANAGER&status=ACTIVE`,
+    );
+    assert.equal(filteredExport.status, 200);
+    assert.match(filteredExport.headers.get("content-type") ?? "", /^text\/csv/);
+    assert.equal(
+      filteredExport.headers.get("content-disposition"),
+      `attachment; filename="member-access-review-${target.userId}.csv"`,
+    );
+    const exportedCsv = await filteredExport.text();
+    const exportedLines = exportedCsv.trim().split("\n");
+    assert.equal(
+      exportedLines[0],
+      '"member_id","member_name","member_email","organization_id","organization_name","role","status","scope_type","scope_id","scope_name","scope_target_status","starts_at","ends_at"',
+    );
+    assert.ok(exportedLines.length > 1);
+    assert.ok(exportedLines.slice(1).every((line) =>
+      line.includes(`"${target.userId}"`) &&
+      line.includes('"FACILITY_MANAGER"') &&
+      line.includes('"ACTIVE"')));
+    const invalidExportFilter = await fetch(
+      `${base}/users/${target.userId}/role-bindings/export?status=REVOKED`,
+    );
+    assert.equal(invalidExportFilter.status, 400);
     const invalidBindingFilter = await request(
       `/users/${target.userId}/role-bindings?status=REVOKED`,
     );
@@ -1229,6 +1253,8 @@ test("authorization routes run through a real HTTP app with injected currentUser
     assert.equal(organizationAudit.response.status, 403);
     const crossOrgList = await request(`/users/${target.userId}/role-bindings`);
     assert.equal(crossOrgList.response.status, 403);
+    const crossOrgExport = await request(`/users/${target.userId}/role-bindings/export`);
+    assert.equal(crossOrgExport.response.status, 403);
     const crossOrgCreate = await request(`/users/${target.userId}/role-bindings`, {
       method: "POST",
       body: JSON.stringify({ organizationId: target.organizationId, roleId: manager.roleId, scopeType: "ORGANIZATION" }),

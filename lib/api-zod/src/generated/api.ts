@@ -427,6 +427,22 @@ export const CreateUserRoleBindingResponse = zod.object({
 
 
 /**
+ * Applies the same canonical-role, lifecycle-status, platform, and active-organization restrictions as the on-screen role-binding list. The export is not paginated.
+ * @summary Export a user's filtered scoped role bindings as CSV
+ */
+export const ExportUserRoleBindingsParams = zod.object({
+  "userId": zod.coerce.string().uuid()
+})
+
+export const ExportUserRoleBindingsQueryParams = zod.object({
+  "roleCode": zod.enum(['PLATFORM_ADMIN', 'FACILITY_MANAGER', 'FACILITY_SUPERVISOR', 'INSPECTOR', 'MAINTENANCE_TECHNICIAN', 'WAREHOUSE_SUPERVISOR', 'VENDOR']).optional(),
+  "status": zod.enum(['ACTIVE', 'SUSPENDED', 'EXPIRED']).optional()
+})
+
+export const ExportUserRoleBindingsResponse = zod.unknown()
+
+
+/**
  * @summary Update or revoke a scoped role binding
  */
 export const UpdateUserRoleBindingParams = zod.object({

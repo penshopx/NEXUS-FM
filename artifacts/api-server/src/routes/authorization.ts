@@ -4,6 +4,7 @@ import { and, asc, count, desc, eq, gt, ilike, inArray, isNull, lte, or, sql } f
 import {
   CreateRoleBindingScopeTargetBody,
   CreateRoleBindingScopeTargetResponse,
+  ExportUserRoleBindingsQueryParams,
   GetUserRoleBindingsQueryParams,
   GetUserRoleBindingsResponse,
   SearchRoleBindingScopeTargetsQueryParams,
@@ -59,6 +60,13 @@ type ScopeTarget = {
   scopeTargetName: string | null;
   scopeTargetStatus: "RESOLVED" | "MISSING" | "NOT_APPLICABLE";
 };
+
+function csvCell(value: unknown) {
+  if (value === null || value === undefined) return "";
+  let text = value instanceof Date ? value.toISOString() : String(value);
+  if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
+  return `"${text.replaceAll('"', '""')}"`;
+}
 
 async function resolveBindingScopeTargets(
   rows: BindingScope[],
@@ -667,6 +675,86 @@ router.get("/users/:userId/role-bindings", async (req, res): Promise<void> => {
     limit: parsed.data.limit,
     total: Number(totalRow?.value ?? 0),
   }));
+});
+
+router.get("/users/:userId/role-bindings/export", async (req, res): Promise<void> => {
+  const admin = await requireAdmin(req, res, "USER.VIEW", resolveCurrentUser, database);
+  if (!admin) return;
+  const parsed = ExportUserRoleBindingsQueryParams.safeParse(req.query);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  if (admin.scopeType !== "PLATFORM" && !admin.organizationId) {
+    res.status(403).json({ error: "Active organization context required" });
+    return;
+  }
+
+  const filters = [eq(userRoleBindingsTable.userId, req.params.userId)];
+  if (admin.scopeType !== "PLATFORM") {
+    filters.push(eq(userRoleBindingsTable.organizationId, admin.organizationId!));
+  }
+  if (parsed.data.roleCode) filters.push(eq(rolesTable.code, parsed.data.roleCode));
+  if (parsed.data.status) filters.push(eq(userRoleBindingsTable.status, parsed.data.status));
+
+  const rows = await database.select({
+    memberId: usersTable.id,
+    memberName: usersTable.displayName,
+    memberEmail: usersTable.email,
+    organizationId: userRoleBindingsTable.organizationId,
+    organizationName: organizationsTable.name,
+    roleCode: rolesTable.code,
+    status: userRoleBindingsTable.status,
+    scopeType: userRoleBindingsTable.scopeType,
+    scopeId: userRoleBindingsTable.scopeId,
+    startsAt: userRoleBindingsTable.startsAt,
+    endsAt: userRoleBindingsTable.endsAt,
+  }).from(userRoleBindingsTable)
+    .innerJoin(usersTable, eq(userRoleBindingsTable.userId, usersTable.id))
+    .innerJoin(organizationsTable, eq(userRoleBindingsTable.organizationId, organizationsTable.id))
+    .innerJoin(rolesTable, eq(userRoleBindingsTable.roleId, rolesTable.id))
+    .where(and(...filters))
+    .orderBy(desc(userRoleBindingsTable.createdAt), desc(userRoleBindingsTable.id));
+  const scopeTargets = await resolveBindingScopeTargets(rows, database);
+  const header = [
+    "member_id",
+    "member_name",
+    "member_email",
+    "organization_id",
+    "organization_name",
+    "role",
+    "status",
+    "scope_type",
+    "scope_id",
+    "scope_name",
+    "scope_target_status",
+    "starts_at",
+    "ends_at",
+  ];
+  const csv = [
+    header.map(csvCell).join(","),
+    ...rows.map((row, index) => {
+      const scopeTarget = scopeTargets[index]!;
+      return [
+        row.memberId,
+        row.memberName,
+        row.memberEmail,
+        row.organizationId,
+        row.organizationName,
+        row.roleCode,
+        row.status,
+        row.scopeType,
+        row.scopeId,
+        scopeTarget.scopeTargetName,
+        scopeTarget.scopeTargetStatus,
+        row.startsAt,
+        row.endsAt,
+      ].map(csvCell).join(",");
+    }),
+  ].join("\n") + "\n";
+  res.type("text/csv")
+    .set("Content-Disposition", `attachment; filename="member-access-review-${req.params.userId}.csv"`)
+    .send(csv);
 });
 
 router.post("/users/:userId/role-bindings", async (req, res): Promise<void> => {
