@@ -78,6 +78,14 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
   const submittedOrganizationId = urlSearchParams.get('organizationId') ?? '';
   const parsedPage = Number.parseInt(urlSearchParams.get('page') ?? '1', 10);
   const page = Number.isSafeInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+  const memberSearchParamNames = [
+    'query',
+    'organizationId',
+    'organizationName',
+    'organizationSlug',
+    'page',
+  ] as const;
+  const hasActiveMemberSearch = memberSearchParamNames.some((name) => urlSearchParams.has(name));
   const urlOrganization = submittedOrganizationId
     ? {
         id: submittedOrganizationId,
@@ -164,6 +172,19 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
     }
   };
 
+  const handleClearSearch = () => {
+    setSearchInput('');
+    setSelectedOrganization(null);
+    setOrganizationQuery('');
+    setOrganizationPickerOpen(false);
+    setSelectedMember(null);
+    setUrlSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      memberSearchParamNames.forEach((name) => next.delete(name));
+      return next;
+    });
+  };
+
   const totalPages = search.data ? Math.max(1, Math.ceil(search.data.total / search.data.limit)) : 1;
 
   return (
@@ -172,17 +193,28 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
         <div className="space-y-2">
           <label className="text-sm font-medium" htmlFor="member-search">Find a member</label>
           <form onSubmit={handleSearch} className="space-y-3">
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Input
                 id="member-search"
                 placeholder="Search by name or email"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
+                className="min-w-48 flex-1"
                 data-testid="input-target-user"
               />
               <Button type="submit" disabled={searchInput.trim().length < 2 || search.isFetching} data-testid="button-search-user">
                 <Search className="size-4 mr-2" /> {search.isFetching ? 'Searching...' : 'Search'}
               </Button>
+              {hasActiveMemberSearch && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleClearSearch}
+                  data-testid="button-clear-member-search"
+                >
+                  <X className="size-4 mr-2" /> Clear search
+                </Button>
+              )}
             </div>
             {isPlatformAdmin && (
               <div>
