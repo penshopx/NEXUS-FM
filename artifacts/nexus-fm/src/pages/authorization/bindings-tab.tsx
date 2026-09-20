@@ -10,9 +10,11 @@ import {
   useGetMyPermissions,
   useSearchOrganizationMembers,
   useSearchPlatformOrganizations,
+  useSearchRoleBindingScopeTargets,
   UserRoleBinding,
   OrganizationMemberSearchResult,
   PlatformOrganizationSearchResult,
+  RoleBindingScopeTarget,
   ScopeType,
   UserRoleBindingUpdateStatus,
   Role,
@@ -27,6 +29,7 @@ import {
   getGetAuthorizationAuditLogsQueryKey,
   getSearchOrganizationMembersQueryKey,
   getSearchPlatformOrganizationsQueryKey,
+  getSearchRoleBindingScopeTargetsQueryKey,
   getListRolesQueryKey
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -579,7 +582,8 @@ function BindingsManager({ userId, member, canManage }: {
       {canManage && activeOrgId && (
         <CreateBindingDialog 
           userId={userId}
-          orgId={activeOrgId}
+          orgId={member.organizationId}
+          organizationName={member.organizationName}
           roles={roles || []}
           open={isCreateOpen}
           onOpenChange={setIsCreateOpen}
@@ -589,6 +593,7 @@ function BindingsManager({ userId, member, canManage }: {
       {canManage && editingBinding && (
         <EditBindingDialog
           binding={editingBinding}
+          organizationName={member.organizationName}
           userId={userId}
           open={!!editingBinding}
           onOpenChange={(open: boolean) => !open && setEditingBinding(null)}
@@ -615,7 +620,9 @@ function BindingRow({ binding, userId, canManage, onEdit }: {
   const scopeTargetLabel = binding.scopeTargetStatus === 'RESOLVED'
     ? binding.scopeTargetName
     : binding.scopeTargetStatus === 'MISSING'
-      ? 'Missing or historical target'
+      ? binding.scopeTargetName
+        ? `${binding.scopeTargetName} (historical)`
+        : 'Missing or historical target'
       : 'No named target';
 
   const revokeMutation = useRevokeUserRoleBinding();
@@ -776,7 +783,7 @@ const createSchema = z.object({
   scopeId: z.string().optional(),
   endsAt: z.string().optional()
 }).refine(data => {
-  if (data.scopeType !== 'ORGANIZATION' && !data.scopeId) {
+  if (data.scopeType !== 'ORGANIZATION' && data.scopeType !== 'PLATFORM' && !data.scopeId) {
     return false;
   }
   return true;
@@ -787,9 +794,149 @@ const createSchema = z.object({
 
 type CreateValues = z.infer<typeof createSchema>;
 
-function CreateBindingDialog({ userId, orgId, roles, open, onOpenChange }: {
+const namedScopeTypes = new Set<ScopeType>(['FACILITY', 'BUILDING', 'SPACE', 'ASSET']);
+
+function ScopeTargetPicker({
+  organizationId,
+  organizationName,
+  scopeType,
+  value,
+  currentTarget,
+  onChange,
+  testId,
+}: {
+  organizationId: string;
+  organizationName: string;
+  scopeType: ScopeType;
+  value: string;
+  currentTarget?: { id: string; name: string | null; status: UserRoleBinding['scopeTargetStatus'] };
+  onChange: (value: string) => void;
+  testId: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [selectedTarget, setSelectedTarget] = useState<RoleBindingScopeTarget | null>(
+    currentTarget?.status === 'RESOLVED' && currentTarget.name
+      ? { id: currentTarget.id, name: currentTarget.name, scopeType, organizationId }
+      : null,
+  );
+  const params = { scopeType, organizationId, query: query || undefined, limit: 20 };
+  const search = useSearchRoleBindingScopeTargets(params, {
+    query: {
+      enabled: open && namedScopeTypes.has(scopeType),
+      queryKey: getSearchRoleBindingScopeTargetsQueryKey(params),
+    },
+  });
+
+  useEffect(() => {
+    setQuery('');
+    setOpen(false);
+    setSelectedTarget(
+      currentTarget?.id === value && currentTarget.status === 'RESOLVED' && currentTarget.name
+        ? { id: currentTarget.id, name: currentTarget.name, scopeType, organizationId }
+        : null,
+    );
+  }, [scopeType, organizationId, currentTarget?.id, currentTarget?.name, currentTarget?.status]);
+
+  if (scopeType === 'PLATFORM') {
+    return <div className="rounded-md border px-3 py-2 text-sm">Platform</div>;
+  }
+  if (scopeType === 'ORGANIZATION') {
+    return <div className="rounded-md border px-3 py-2 text-sm">{organizationName}</div>;
+  }
+  if (!namedScopeTypes.has(scopeType)) {
+    return (
+      <div className="space-y-1.5">
+        <Input
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder="Enter the stable target ID"
+          data-testid={testId}
+        />
+        <p className="text-xs text-muted-foreground">
+          A named directory is not available for this scope type. Enter its stable ID.
+        </p>
+      </div>
+    );
+  }
+
+  const historicalTarget = value && currentTarget?.id === value && currentTarget.status === 'MISSING';
+  return (
+    <div className="space-y-2">
+      {historicalTarget && (
+        <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm">
+          <div className="font-medium">
+            {currentTarget?.name ? `${currentTarget.name} (historical)` : 'Missing or historical target'}
+          </div>
+          <div className="mt-0.5 font-mono text-xs text-muted-foreground">{value}</div>
+          <div className="mt-1 text-xs text-muted-foreground">
+            This saved target remains visible, but choose a current target before changing the scope.
+          </div>
+        </div>
+      )}
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="w-full justify-between font-normal"
+            data-testid={testId}
+          >
+            <span className="truncate">
+              {selectedTarget?.name ?? (historicalTarget ? 'Choose a current target' : `Select ${scopeType.toLowerCase()}`)}
+            </span>
+            <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+          <Command shouldFilter={false}>
+            <CommandInput
+              placeholder={`Search ${scopeType.toLowerCase()}s by name or code`}
+              value={query}
+              onValueChange={setQuery}
+            />
+            <CommandList>
+              {search.isFetching ? (
+                <div className="py-6 text-center text-sm text-muted-foreground">Searching...</div>
+              ) : (
+                <>
+                  <CommandEmpty>No current targets found.</CommandEmpty>
+                  <CommandGroup>
+                    {search.data?.map((target) => (
+                      <CommandItem
+                        key={target.id}
+                        value={target.id}
+                        onSelect={() => {
+                          setSelectedTarget(target);
+                          onChange(target.id);
+                          setOpen(false);
+                        }}
+                        data-testid={`${testId}-option-${target.id}`}
+                      >
+                        <Check className={value === target.id ? 'opacity-100' : 'opacity-0'} />
+                        <span className="min-w-0">
+                          <span className="block truncate">{target.name}</span>
+                          <span className="block truncate font-mono text-xs text-muted-foreground">{target.id}</span>
+                        </span>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </>
+              )}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
+function CreateBindingDialog({ userId, orgId, organizationName, roles, open, onOpenChange }: {
   userId: string;
   orgId: string;
+  organizationName: string;
   roles: Role[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -807,6 +954,7 @@ function CreateBindingDialog({ userId, orgId, roles, open, onOpenChange }: {
       endsAt: ''
     }
   });
+  const scopeType = form.watch('scopeType');
 
   const onSubmit = (values: CreateValues) => {
     createMutation.mutate({
@@ -871,14 +1019,20 @@ function CreateBindingDialog({ userId, orgId, roles, open, onOpenChange }: {
               )}
             />
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormField
                 control={form.control}
                 name="scopeType"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Scope Type</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        form.setValue('scopeId', '');
+                      }}
+                      value={field.value}
+                    >
                       <FormControl>
                         <SelectTrigger data-testid="select-scopetype">
                           <SelectValue />
@@ -899,9 +1053,16 @@ function CreateBindingDialog({ userId, orgId, roles, open, onOpenChange }: {
                 name="scopeId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Scope ID (Optional)</FormLabel>
+                    <FormLabel>Scope Target</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="Target resource ID" data-testid="input-scopeid" />
+                      <ScopeTargetPicker
+                        organizationId={orgId}
+                        organizationName={organizationName}
+                        scopeType={scopeType}
+                        value={field.value ?? ''}
+                        onChange={field.onChange}
+                        testId="input-scopeid"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -940,7 +1101,7 @@ const editSchema = z.object({
   scopeId: z.string().optional(),
   endsAt: z.string().optional()
 }).refine(data => {
-  if (data.scopeType !== 'ORGANIZATION' && !data.scopeId) {
+  if (data.scopeType !== 'ORGANIZATION' && data.scopeType !== 'PLATFORM' && !data.scopeId) {
     return false;
   }
   return true;
@@ -951,9 +1112,10 @@ const editSchema = z.object({
 
 type EditValues = z.infer<typeof editSchema>;
 
-function EditBindingDialog({ userId, binding, open, onOpenChange }: {
+function EditBindingDialog({ userId, binding, organizationName, open, onOpenChange }: {
   userId: string;
   binding: UserRoleBinding;
+  organizationName: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
@@ -969,6 +1131,7 @@ function EditBindingDialog({ userId, binding, open, onOpenChange }: {
       endsAt: binding.endsAt ? new Date(binding.endsAt).toISOString().split('T')[0] : ''
     }
   });
+  const scopeType = form.watch('scopeType');
 
   const onSubmit = (values: EditValues) => {
     updateMutation.mutate({
@@ -1005,14 +1168,21 @@ function EditBindingDialog({ userId, binding, open, onOpenChange }: {
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormField
                 control={form.control}
                 name="scopeType"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Scope Type</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        if (value !== binding.scopeType) form.setValue('scopeId', '');
+                        else form.setValue('scopeId', binding.scopeId ?? '');
+                      }}
+                      value={field.value}
+                    >
                       <FormControl>
                         <SelectTrigger data-testid="select-edit-scopetype">
                           <SelectValue />
@@ -1033,9 +1203,21 @@ function EditBindingDialog({ userId, binding, open, onOpenChange }: {
                 name="scopeId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Scope ID (Optional)</FormLabel>
+                    <FormLabel>Scope Target</FormLabel>
                     <FormControl>
-                      <Input {...field} data-testid="input-edit-scopeid" />
+                      <ScopeTargetPicker
+                        organizationId={binding.organizationId}
+                        organizationName={organizationName}
+                        scopeType={scopeType}
+                        value={field.value ?? ''}
+                        currentTarget={scopeType === binding.scopeType && binding.scopeId ? {
+                          id: binding.scopeId,
+                          name: binding.scopeTargetName,
+                          status: binding.scopeTargetStatus,
+                        } : undefined}
+                        onChange={field.onChange}
+                        testId="input-edit-scopeid"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

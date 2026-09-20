@@ -307,6 +307,44 @@ paths:
         "400": {$ref: "#/components/responses/BadRequest"}
         "401": {$ref: "#/components/responses/Unauthorized"}
         "403": {$ref: "#/components/responses/Forbidden"}
+  /role-binding-scope-targets:
+    get:
+      operationId: searchRoleBindingScopeTargets
+      tags: [authorization]
+      summary: Search valid targets for a role binding scope
+      description: >-
+        Returns active targets in the requested organization. Platform
+        administrators may search any organization; other administrators are
+        restricted to their active organization.
+      parameters:
+        - name: scopeType
+          in: query
+          required: true
+          schema: {$ref: "#/components/schemas/ScopeType"}
+        - name: organizationId
+          in: query
+          required: true
+          schema: {type: string, format: uuid}
+        - name: query
+          in: query
+          required: false
+          schema: {type: string, maxLength: 100}
+        - name: limit
+          in: query
+          required: false
+          schema: {type: integer, minimum: 1, maximum: 50, default: 20}
+      responses:
+        "200":
+          description: Selectable scope targets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RoleBindingScopeTarget"
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
   /users/{userId}/role-bindings:
     parameters:
       - {$ref: "#/components/parameters/UserId"}
@@ -1421,6 +1459,14 @@ components:
         id: {type: string, format: uuid}
         name: {type: string}
         slug: {type: string}
+    RoleBindingScopeTarget:
+      type: object
+      required: [id, name, scopeType, organizationId]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        scopeType: {$ref: "#/components/schemas/ScopeType"}
+        organizationId: {type: string, format: uuid}
     UserRoleBinding:
       type: object
       required: [id, userId, organizationId, roleId, roleCode, version, scopeType, scopeTargetName, scopeTargetStatus, status]

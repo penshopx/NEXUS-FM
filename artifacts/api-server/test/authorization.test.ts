@@ -876,6 +876,29 @@ test("authorization routes run through a real HTTP app with injected currentUser
       }),
     });
     assert.equal(duplicate.response.status, 409);
+    for (const scopeType of ["ASSIGNED", "TEAM", "VENDOR_ASSIGNMENT", "OWNED_REQUEST"] as const) {
+      const initialScopeId = randomUUID();
+      const contextualBinding = await request(`/users/${target.userId}/role-bindings`, {
+        method: "POST",
+        body: JSON.stringify({
+          organizationId: target.organizationId,
+          roleId: manager.roleId,
+          scopeType,
+          scopeId: initialScopeId,
+        }),
+      });
+      assert.equal(contextualBinding.response.status, 201, `${scopeType}: ${JSON.stringify(contextualBinding.body)}`);
+      const replacementScopeId = randomUUID();
+      const retargetedBinding = await request(
+        `/users/${target.userId}/role-bindings/${(contextualBinding.body as { id: string }).id}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({ scopeType, scopeId: replacementScopeId }),
+        },
+      );
+      assert.equal(retargetedBinding.response.status, 200, `${scopeType}: ${JSON.stringify(retargetedBinding.body)}`);
+      assert.equal((retargetedBinding.body as { scopeId: string }).scopeId, replacementScopeId);
+    }
     const [namedFacility] = await db.insert(facilitiesTable).values({
       organizationId: target.organizationId,
       name: "North Campus",
@@ -893,6 +916,18 @@ test("authorization routes run through a real HTTP app with injected currentUser
     assert.equal(namedScopeBinding.response.status, 201, JSON.stringify(namedScopeBinding.body));
     assert.equal((namedScopeBinding.body as { scopeTargetName: string }).scopeTargetName, "North Campus");
     assert.equal((namedScopeBinding.body as { scopeTargetStatus: string }).scopeTargetStatus, "RESOLVED");
+    const scopeTargetSearch = await request(
+      `/role-binding-scope-targets?scopeType=FACILITY&organizationId=${target.organizationId}&query=North`,
+    );
+    assert.equal(scopeTargetSearch.response.status, 200, JSON.stringify(scopeTargetSearch.body));
+    assert.deepEqual(
+      (scopeTargetSearch.body as Array<{ id: string; name: string; organizationId: string }>).map((row) => ({
+        id: row.id,
+        name: row.name,
+        organizationId: row.organizationId,
+      })),
+      [{ id: namedFacility.id, name: "North Campus", organizationId: target.organizationId }],
+    );
     const missingScopeId = randomUUID();
     const missingScopeBinding = await request(`/users/${target.userId}/role-bindings`, {
       method: "POST",
@@ -903,9 +938,31 @@ test("authorization routes run through a real HTTP app with injected currentUser
         scopeId: missingScopeId,
       }),
     });
-    assert.equal(missingScopeBinding.response.status, 201, JSON.stringify(missingScopeBinding.body));
-    assert.equal((missingScopeBinding.body as { scopeTargetName: null }).scopeTargetName, null);
-    assert.equal((missingScopeBinding.body as { scopeTargetStatus: string }).scopeTargetStatus, "MISSING");
+    assert.equal(missingScopeBinding.response.status, 400, JSON.stringify(missingScopeBinding.body));
+    const [historicalScopeBinding] = await db.insert(userRoleBindingsTable).values({
+      userId: target.userId,
+      organizationId: target.organizationId,
+      roleId: manager.roleId,
+      scopeType: "BUILDING",
+      scopeId: missingScopeId,
+      grantedBy: platform.userId,
+    }).returning();
+    assert.ok(historicalScopeBinding);
+    const [inactiveFacility] = await db.insert(facilitiesTable).values({
+      organizationId: target.organizationId,
+      name: "Retired Campus",
+      code: `RETIRED-${randomUUID()}`,
+      status: "INACTIVE",
+    }).returning();
+    const [inactiveScopeBinding] = await db.insert(userRoleBindingsTable).values({
+      userId: target.userId,
+      organizationId: target.organizationId,
+      roleId: manager.roleId,
+      scopeType: "FACILITY",
+      scopeId: inactiveFacility.id,
+      grantedBy: platform.userId,
+    }).returning();
+    assert.ok(inactiveScopeBinding);
     const listed = await request(`/users/${target.userId}/role-bindings`);
     assert.equal(listed.response.status, 200);
     const listedBindings = listed.body as Array<{ roleId: string; roleCode: string; organizationId: string }>;
@@ -921,6 +978,10 @@ test("authorization routes run through a real HTTP app with injected currentUser
     assert.ok((listed.body as Array<{ scopeId: string | null; scopeTargetName: string | null; scopeTargetStatus: string }>)
       .some((row) => row.scopeId === missingScopeId &&
         row.scopeTargetName === null &&
+        row.scopeTargetStatus === "MISSING"));
+    assert.ok((listed.body as Array<{ scopeId: string | null; scopeTargetName: string | null; scopeTargetStatus: string }>)
+      .some((row) => row.scopeId === inactiveFacility.id &&
+        row.scopeTargetName === "Retired Campus" &&
         row.scopeTargetStatus === "MISSING"));
     const managerBindings = await request(
       `/users/${target.userId}/role-bindings?roleCode=FACILITY_MANAGER`,
@@ -993,6 +1054,10 @@ test("authorization routes run through a real HTTP app with injected currentUser
     const selfDelete = await request(`/users/${platform.userId}/role-bindings/${platform.bindingId}`, { method: "DELETE" });
     assert.equal(selfDelete.response.status, 403);
     actorId = manager.userId;
+    const forbiddenCrossOrganizationTargets = await request(
+      `/role-binding-scope-targets?scopeType=FACILITY&organizationId=${target.organizationId}`,
+    );
+    assert.equal(forbiddenCrossOrganizationTargets.response.status, 403);
     const organizationAudit = await request("/audit-logs");
     // The role replacement above intentionally persisted explicit DENY rows,
     // including AUDIT_LOG.VIEW_AUDIT; the manager must remain denied until

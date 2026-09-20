@@ -3,6 +3,8 @@ import { randomUUID } from "node:crypto";
 import { and, asc, count, desc, eq, gt, ilike, inArray, isNull, lte, or, sql } from "drizzle-orm";
 import {
   GetUserRoleBindingsQueryParams,
+  SearchRoleBindingScopeTargetsQueryParams,
+  SearchRoleBindingScopeTargetsResponse,
   SearchPlatformOrganizationsQueryParams,
   SearchPlatformOrganizationsResponse,
 } from "@workspace/api-zod";
@@ -74,7 +76,7 @@ async function resolveBindingScopeTargets(
     for (const organization of organizations) organizationNames.set(organization.id, organization.name);
   }
 
-  const registryNames = new Map<string, string>();
+  const registryTargets = new Map<string, { name: string; status: string }>();
   await Promise.all(Object.entries(registryTables).map(async ([scopeType, table]) => {
     const ids = [...new Set(rows
       .filter((row) => row.scopeType === scopeType && row.scopeId)
@@ -84,12 +86,16 @@ async function resolveBindingScopeTargets(
       id: table.id,
       organizationId: table.organizationId,
       name: table.name,
+      status: table.status,
     }).from(table).where(and(
       inArray(table.id, ids),
       inArray(table.organizationId, organizationIds),
     ));
     for (const target of targets) {
-      registryNames.set(`${scopeType}:${target.organizationId}:${target.id}`, target.name);
+      registryTargets.set(`${scopeType}:${target.organizationId}:${target.id}`, {
+        name: target.name,
+        status: target.status,
+      });
     }
   }));
 
@@ -104,15 +110,45 @@ async function resolveBindingScopeTargets(
         : { scopeTargetName: null, scopeTargetStatus: "MISSING" };
     }
     if (row.scopeType in registryTables && row.scopeId) {
-      const name = registryNames.get(`${row.scopeType}:${row.organizationId}:${row.scopeId}`);
-      return name
-        ? { scopeTargetName: name, scopeTargetStatus: "RESOLVED" }
+      const target = registryTargets.get(`${row.scopeType}:${row.organizationId}:${row.scopeId}`);
+      return target
+        ? {
+            scopeTargetName: target.name,
+            scopeTargetStatus: target.status === "ACTIVE" ? "RESOLVED" : "MISSING",
+          }
         : { scopeTargetName: null, scopeTargetStatus: "MISSING" };
     }
     return row.scopeId
       ? { scopeTargetName: null, scopeTargetStatus: "MISSING" }
       : { scopeTargetName: null, scopeTargetStatus: "NOT_APPLICABLE" };
   });
+}
+
+const selectableScopeTables = {
+  FACILITY: facilitiesTable,
+  BUILDING: buildingsTable,
+  SPACE: spacesTable,
+  ASSET: assetsTable,
+} as const;
+
+function hasScopeTargetDirectory(scopeType: string): scopeType is keyof typeof selectableScopeTables {
+  return scopeType in selectableScopeTables;
+}
+
+async function isCurrentScopeTarget(
+  scopeType: string,
+  scopeId: string | null,
+  organizationId: string,
+  database: typeof db,
+) {
+  if (!hasScopeTargetDirectory(scopeType) || !scopeId) return false;
+  const table = selectableScopeTables[scopeType];
+  const [target] = await database.select({ id: table.id }).from(table).where(and(
+    eq(table.id, scopeId),
+    eq(table.organizationId, organizationId),
+    eq(table.status, "ACTIVE"),
+  ));
+  return Boolean(target);
 }
 
 function bindingAuditState(input: Record<string, unknown>) {
@@ -398,6 +434,46 @@ router.get("/organizations/search", async (req, res): Promise<void> => {
   res.json(SearchPlatformOrganizationsResponse.parse(rows));
 });
 
+router.get("/role-binding-scope-targets", async (req, res): Promise<void> => {
+  const admin = await requireAdmin(req, res, "USER.MANAGE", resolveCurrentUser, database);
+  if (!admin) return;
+  const parsed = SearchRoleBindingScopeTargetsQueryParams.safeParse(req.query);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  if (!canCrossOrganizationFoundation(admin.scopeType, admin.organizationId, parsed.data.organizationId)) {
+    res.status(403).json({ error: "Target organization is outside active organization scope" });
+    return;
+  }
+
+  const table = selectableScopeTables[parsed.data.scopeType as keyof typeof selectableScopeTables];
+  if (!table) {
+    res.json(SearchRoleBindingScopeTargetsResponse.parse([]));
+    return;
+  }
+  const query = parsed.data.query?.trim() ?? "";
+  const filters = [
+    eq(table.organizationId, parsed.data.organizationId),
+    eq(table.status, "ACTIVE"),
+  ];
+  if (query) {
+    filters.push(or(ilike(table.name, `%${query}%`), ilike(table.code, `%${query}%`))!);
+  }
+  const rows = await database.select({
+    id: table.id,
+    name: table.name,
+    organizationId: table.organizationId,
+  }).from(table)
+    .where(and(...filters))
+    .orderBy(asc(table.name), asc(table.id))
+    .limit(parsed.data.limit);
+  res.json(SearchRoleBindingScopeTargetsResponse.parse(rows.map((row) => ({
+    ...row,
+    scopeType: parsed.data.scopeType,
+  }))));
+});
+
 router.get("/users/search", async (req, res): Promise<void> => {
   const admin = await requireAdmin(req, res, "USER.VIEW", resolveCurrentUser, database);
   if (!admin) return;
@@ -553,6 +629,14 @@ router.post("/users/:userId/role-bindings", async (req, res): Promise<void> => {
     return;
   }
   const scopeId = state.state.scopeId;
+  if (
+    scopeId &&
+    hasScopeTargetDirectory(state.state.scopeType) &&
+    !await isCurrentScopeTarget(state.state.scopeType, scopeId, targetOrganizationId, database)
+  ) {
+    res.status(400).json({ error: "Scope target must be an active target in the binding organization" });
+    return;
+  }
   const duplicateWhere = and(
     eq(userRoleBindingsTable.userId, req.params.userId),
     eq(userRoleBindingsTable.organizationId, body.organizationId),
@@ -642,6 +726,16 @@ router.patch("/users/:userId/role-bindings/:bindingId", async (req, res): Promis
   }
   if (state.state.status === "ACTIVE" && before.status === "EXPIRED") {
     res.status(409).json({ error: "Expired bindings cannot be reactivated" });
+    return;
+  }
+  const scopeTargetChanged = state.state.scopeType !== before.scopeType || state.state.scopeId !== before.scopeId;
+  if (
+    scopeTargetChanged &&
+    state.state.scopeId &&
+    hasScopeTargetDirectory(state.state.scopeType) &&
+    !await isCurrentScopeTarget(state.state.scopeType, state.state.scopeId, before.organizationId, database)
+  ) {
+    res.status(400).json({ error: "Scope target must be an active target in the binding organization" });
     return;
   }
   let after: typeof userRoleBindingsTable.$inferSelect | undefined;

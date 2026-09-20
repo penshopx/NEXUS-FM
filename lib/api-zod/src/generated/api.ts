@@ -291,6 +291,33 @@ export const SearchPlatformOrganizationsResponse = zod.array(SearchPlatformOrgan
 
 
 /**
+ * Returns active targets in the requested organization. Platform administrators may search any organization; other administrators are restricted to their active organization.
+ * @summary Search valid targets for a role binding scope
+ */
+export const searchRoleBindingScopeTargetsQueryQueryMax = 100;
+
+export const searchRoleBindingScopeTargetsQueryLimitDefault = 20;
+export const searchRoleBindingScopeTargetsQueryLimitMax = 50;
+
+
+
+export const SearchRoleBindingScopeTargetsQueryParams = zod.object({
+  "scopeType": zod.enum(['PLATFORM', 'ORGANIZATION', 'PORTFOLIO', 'FACILITY', 'BUILDING', 'SPACE', 'ASSET', 'ASSIGNED', 'TEAM', 'VENDOR_ASSIGNMENT', 'OWNED_REQUEST']),
+  "organizationId": zod.coerce.string().uuid(),
+  "query": zod.coerce.string().max(searchRoleBindingScopeTargetsQueryQueryMax).optional(),
+  "limit": zod.coerce.number().int().min(1).max(searchRoleBindingScopeTargetsQueryLimitMax).default(searchRoleBindingScopeTargetsQueryLimitDefault)
+})
+
+export const SearchRoleBindingScopeTargetsResponseItem = zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "scopeType": zod.enum(['PLATFORM', 'ORGANIZATION', 'PORTFOLIO', 'FACILITY', 'BUILDING', 'SPACE', 'ASSET', 'ASSIGNED', 'TEAM', 'VENDOR_ASSIGNMENT', 'OWNED_REQUEST']),
+  "organizationId": zod.string().uuid()
+})
+export const SearchRoleBindingScopeTargetsResponse = zod.array(SearchRoleBindingScopeTargetsResponseItem)
+
+
+/**
  * Filters are applied only after the caller's platform or active-organization scope restriction.
  * @summary Read a user's scoped role bindings
  */

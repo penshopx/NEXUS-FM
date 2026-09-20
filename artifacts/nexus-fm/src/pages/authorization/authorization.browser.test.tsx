@@ -12,6 +12,7 @@ const api = vi.hoisted(() => ({
   updateRolePermissions: vi.fn<AuthorizationApiHookMock<'useUpdateRolePermissions'>>(),
   searchMembers: vi.fn<AuthorizationApiHookMock<'useSearchOrganizationMembers'>>(),
   searchOrganizations: vi.fn<AuthorizationApiHookMock<'useSearchPlatformOrganizations'>>(),
+  searchScopeTargets: vi.fn<AuthorizationApiHookMock<'useSearchRoleBindingScopeTargets'>>(),
   bindings: vi.fn<AuthorizationApiHookMock<'useGetUserRoleBindings'>>(),
   createBinding: vi.fn<AuthorizationApiHookMock<'useCreateUserRoleBinding'>>(),
   updateBinding: vi.fn<AuthorizationApiHookMock<'useUpdateUserRoleBinding'>>(),
@@ -40,6 +41,7 @@ vi.mock('@workspace/api-client-react', () => ({
   useUpdateRolePermissions: api.updateRolePermissions,
   useSearchOrganizationMembers: api.searchMembers,
   useSearchPlatformOrganizations: api.searchOrganizations,
+  useSearchRoleBindingScopeTargets: api.searchScopeTargets,
   useGetUserRoleBindings: api.bindings,
   useCreateUserRoleBinding: api.createBinding,
   useUpdateUserRoleBinding: api.updateBinding,
@@ -52,6 +54,7 @@ vi.mock('@workspace/api-client-react', () => ({
   getGetUserRoleBindingsQueryKey: (id: string) => ['bindings', id],
   getSearchOrganizationMembersQueryKey: (params: unknown) => ['members', params],
   getSearchPlatformOrganizationsQueryKey: (params: unknown) => ['organizations', params],
+  getSearchRoleBindingScopeTargetsQueryKey: (params: unknown) => ['scope-targets', params],
   getListRolesQueryKey: () => ['roles'],
 }));
 
@@ -159,6 +162,16 @@ describe('authorization administration browser regressions', () => {
     });
     api.searchOrganizations.mockReturnValue({
       data: [{ id: 'org-2', name: 'Acme Facilities', slug: 'acme-facilities' }],
+      isFetching: false,
+      isError: false,
+    });
+    api.searchScopeTargets.mockReturnValue({
+      data: [{
+        id: 'facility-1',
+        name: 'North Campus',
+        scopeType: 'FACILITY',
+        organizationId: 'org-1',
+      }],
       isFetching: false,
       isError: false,
     });
@@ -277,6 +290,94 @@ describe('authorization administration browser regressions', () => {
     );
     expect(window.location.search).toContain('query=Target');
     expect(window.location.search).toContain('organizationId=org-2');
+  });
+
+  it('creates an object-scoped binding by selecting a current target name', async () => {
+    const user = userEvent.setup();
+    const create = vi.fn((_variables, options) => options.onSuccess());
+    api.createBinding.mockReturnValue({ mutate: create, isPending: false });
+    renderPage();
+    await openBindingsForMember(user);
+
+    await user.click(screen.getByTestId('button-new-binding'));
+    await user.click(screen.getByTestId('select-role'));
+    await user.click(screen.getByRole('option', { name: 'PLATFORM_ADMIN' }));
+    await user.click(screen.getByTestId('select-scopetype'));
+    await user.click(screen.getByRole('option', { name: 'FACILITY' }));
+    await user.click(screen.getByTestId('input-scopeid'));
+    await user.click(await screen.findByTestId('input-scopeid-option-facility-1'));
+    await user.click(screen.getByTestId('button-create-binding'));
+
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: member.userId,
+        data: expect.objectContaining({
+          organizationId: member.organizationId,
+          scopeType: 'FACILITY',
+          scopeId: 'facility-1',
+        }),
+      }),
+      expect.any(Object),
+    );
+  });
+
+  it('preserves stable ID creation for contextual scope types without a directory', async () => {
+    const user = userEvent.setup();
+    const create = vi.fn();
+    api.createBinding.mockReturnValue({ mutate: create, isPending: false });
+    renderPage();
+    await openBindingsForMember(user);
+    await user.click(screen.getByTestId('button-new-binding'));
+    await user.click(screen.getByTestId('select-role'));
+    await user.click(screen.getByRole('option', { name: 'PLATFORM_ADMIN' }));
+
+    for (const scopeType of ['ASSIGNED', 'TEAM', 'VENDOR_ASSIGNMENT', 'OWNED_REQUEST']) {
+      await user.click(screen.getByTestId('select-scopetype'));
+      await user.click(screen.getByRole('option', { name: scopeType }));
+      const targetInput = screen.getByTestId('input-scopeid');
+      await user.type(targetInput, `${scopeType.toLowerCase()}-target`);
+      await user.click(screen.getByTestId('button-create-binding'));
+      expect(create).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            scopeType,
+            scopeId: `${scopeType.toLowerCase()}-target`,
+          }),
+        }),
+        expect.any(Object),
+      );
+    }
+  });
+
+  it('shows a historical target without offering it as a current choice', async () => {
+    const user = userEvent.setup();
+    api.bindings.mockReturnValue({
+      data: [{
+        id: 'historical',
+        userId: member.userId,
+        roleId: role.id,
+        roleCode: role.code,
+        version: 'historical-version',
+        organizationId: member.organizationId,
+        scopeType: 'FACILITY',
+        scopeId: 'missing-facility',
+        scopeTargetName: null,
+        scopeTargetStatus: 'MISSING',
+        status: 'ACTIVE',
+        startsAt: null,
+        endsAt: null,
+      }],
+      isLoading: false,
+    });
+    renderPage();
+    await openBindingsForMember(user);
+    await user.click(screen.getByTestId('button-edit-binding-historical'));
+
+    expect(screen.getByText('Missing or historical target')).toBeVisible();
+    expect(screen.getByText('missing-facility')).toBeVisible();
+    await user.click(screen.getByTestId('input-edit-scopeid'));
+    expect(screen.queryByTestId('input-edit-scopeid-option-missing-facility')).not.toBeInTheDocument();
+    expect(await screen.findByTestId('input-edit-scopeid-option-facility-1')).toBeVisible();
   });
 
   it('restores member search filters and pagination from the URL', async () => {

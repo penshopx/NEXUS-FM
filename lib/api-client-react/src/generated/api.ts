@@ -59,6 +59,7 @@ import type {
   RegistryInput,
   RegistryPage,
   Role,
+  RoleBindingScopeTarget,
   RolePermissionConflict,
   RolePermissionUpdate,
   RolePermissionsResponse,
@@ -67,6 +68,7 @@ import type {
   SearchFacilitiesParams,
   SearchOrganizationMembersParams,
   SearchPlatformOrganizationsParams,
+  SearchRoleBindingScopeTargetsParams,
   SearchSpacesParams,
   SearchSystemsParams,
   Space,
@@ -1066,6 +1068,91 @@ export function useSearchPlatformOrganizations<TData = Awaited<ReturnType<typeof
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getSearchPlatformOrganizationsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSearchRoleBindingScopeTargetsUrl = (params: SearchRoleBindingScopeTargetsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/role-binding-scope-targets?${stringifiedParams}` : `/api/role-binding-scope-targets`
+}
+
+/**
+ * Returns active targets in the requested organization. Platform administrators may search any organization; other administrators are restricted to their active organization.
+ * @summary Search valid targets for a role binding scope
+ */
+export const searchRoleBindingScopeTargets = async (params: SearchRoleBindingScopeTargetsParams, options?: Parameters<typeof customFetch>[1]): Promise<RoleBindingScopeTarget[]> => {
+
+  return customFetch<RoleBindingScopeTarget[]>(getSearchRoleBindingScopeTargetsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getSearchRoleBindingScopeTargetsQueryKey = (params?: SearchRoleBindingScopeTargetsParams,) => {
+    return [
+    `/api/role-binding-scope-targets`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getSearchRoleBindingScopeTargetsQueryOptions = <TData = Awaited<ReturnType<typeof searchRoleBindingScopeTargets>>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(params: SearchRoleBindingScopeTargetsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof searchRoleBindingScopeTargets>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getSearchRoleBindingScopeTargetsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof searchRoleBindingScopeTargets>>> = ({ signal }) => searchRoleBindingScopeTargets(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof searchRoleBindingScopeTargets>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type SearchRoleBindingScopeTargetsQueryResult = NonNullable<Awaited<ReturnType<typeof searchRoleBindingScopeTargets>>>
+export type SearchRoleBindingScopeTargetsQueryError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>
+
+
+/**
+ * @summary Search valid targets for a role binding scope
+ */
+
+export function useSearchRoleBindingScopeTargets<TData = Awaited<ReturnType<typeof searchRoleBindingScopeTargets>>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(
+ params: SearchRoleBindingScopeTargetsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof searchRoleBindingScopeTargets>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getSearchRoleBindingScopeTargetsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

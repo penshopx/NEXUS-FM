@@ -402,6 +402,13 @@ export interface PlatformOrganizationSearchResult {
   slug: string;
 }
 
+export interface RoleBindingScopeTarget {
+  id: string;
+  name: string;
+  scopeType: ScopeType;
+  organizationId: string;
+}
+
 export type UserRoleBindingScopeTargetStatus = typeof UserRoleBindingScopeTargetStatus[keyof typeof UserRoleBindingScopeTargetStatus];
 
 
@@ -595,6 +602,20 @@ export type SearchPlatformOrganizationsParams = {
  * @maxLength 100
  */
 query: string;
+/**
+ * @minimum 1
+ * @maximum 50
+ */
+limit?: number;
+};
+
+export type SearchRoleBindingScopeTargetsParams = {
+scopeType: ScopeType;
+organizationId: string;
+/**
+ * @maxLength 100
+ */
+query?: string;
 /**
  * @minimum 1
  * @maximum 50
