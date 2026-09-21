@@ -60,6 +60,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  parseMemberReviewUrlState,
+  transitionMemberReviewUrlState,
+} from './member-review-url-state';
 
 const canonicalRoleOptions = [
   'PLATFORM_ADMIN',
@@ -79,29 +83,14 @@ const bindingStatusOptions = [
 
 export function BindingsTab({ canManage }: { canManage: boolean }) {
   const [urlSearchParams, setUrlSearchParams] = useSearchParams();
-  const submittedQuery = (urlSearchParams.get('query') ?? '').trim();
-  const submittedOrganizationId = urlSearchParams.get('organizationId') ?? '';
-  const selectedMemberId = urlSearchParams.get('memberId') ?? '';
-  const selectedMemberOrganizationId = urlSearchParams.get('memberOrganizationId') ?? '';
-  const parsedPage = Number.parseInt(urlSearchParams.get('page') ?? '1', 10);
-  const page = Number.isSafeInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1;
-  const memberSearchParamNames = [
-    'query',
-    'organizationId',
-    'organizationName',
-    'organizationSlug',
-    'page',
-    'memberId',
-    'memberOrganizationId',
-  ] as const;
-  const hasActiveMemberSearch = memberSearchParamNames.some((name) => urlSearchParams.has(name));
-  const urlOrganization = submittedOrganizationId
-    ? {
-        id: submittedOrganizationId,
-        name: urlSearchParams.get('organizationName') ?? submittedOrganizationId,
-        slug: urlSearchParams.get('organizationSlug') ?? submittedOrganizationId,
-      }
-    : null;
+  const urlState = parseMemberReviewUrlState(urlSearchParams);
+  const submittedQuery = urlState.query;
+  const submittedOrganizationId = urlState.organization?.id ?? '';
+  const selectedMemberId = urlState.selection?.memberId ?? '';
+  const selectedMemberOrganizationId = urlState.selection?.organizationId ?? '';
+  const page = urlState.page;
+  const hasActiveMemberSearch = urlState.hasActiveState;
+  const urlOrganization = urlState.organization;
   const [searchInput, setSearchInput] = useState(submittedQuery);
   const [organizationPickerOpen, setOrganizationPickerOpen] = useState(false);
   const [organizationQuery, setOrganizationQuery] = useState('');
@@ -171,50 +160,29 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
     setSelectedMember(authorizedMember ?? null);
   }, [search.data, selectedMemberId, selectedMemberOrganizationId]);
 
-  const clearSelectedMemberParams = (params: URLSearchParams) => {
-    params.delete('memberId');
-    params.delete('memberOrganizationId');
-  };
-
   const handleClearUnavailableMember = () => {
     setSelectedMember(null);
-    setUrlSearchParams((current) => {
-      const next = new URLSearchParams(current);
-      clearSelectedMemberParams(next);
-      return next;
-    });
+    setUrlSearchParams((current) => transitionMemberReviewUrlState(current, {
+      type: 'clear-selection',
+    }));
   };
 
   const updatePage = (nextPage: number) => {
-    setUrlSearchParams((current) => {
-      const next = new URLSearchParams(current);
-      if (nextPage > 1) next.set('page', String(nextPage));
-      else next.delete('page');
-      clearSelectedMemberParams(next);
-      return next;
-    });
+    setUrlSearchParams((current) => transitionMemberReviewUrlState(current, {
+      type: 'page',
+      page: nextPage,
+    }));
   };
   
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     const query = searchInput.trim();
     if (query.length >= 2) {
-      setUrlSearchParams((current) => {
-        const next = new URLSearchParams(current);
-        next.set('query', query);
-        next.delete('page');
-        clearSelectedMemberParams(next);
-        if (isPlatformAdmin && selectedOrganization) {
-          next.set('organizationId', selectedOrganization.id);
-          next.set('organizationName', selectedOrganization.name);
-          next.set('organizationSlug', selectedOrganization.slug);
-        } else {
-          next.delete('organizationId');
-          next.delete('organizationName');
-          next.delete('organizationSlug');
-        }
-        return next;
-      });
+      setUrlSearchParams((current) => transitionMemberReviewUrlState(current, {
+        type: 'search',
+        query,
+        organization: isPlatformAdmin ? selectedOrganization : null,
+      }));
     }
   };
 
@@ -227,11 +195,7 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
     setOrganizationQuery('');
     setOrganizationPickerOpen(false);
     setSelectedMember(null);
-    setUrlSearchParams((current) => {
-      const next = new URLSearchParams(current);
-      memberSearchParamNames.forEach((name) => next.delete(name));
-      return next;
-    });
+    setUrlSearchParams((current) => transitionMemberReviewUrlState(current, { type: 'clear' }));
     trackEvent('member_search_reset', {
       had_pagination: hadPagination,
       had_organization_filter: hadOrganizationFilter,
@@ -399,12 +363,11 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
                       key={`${member.userId}-${member.organizationId}`}
                       type="button"
                       onClick={() => {
-                        setUrlSearchParams((current) => {
-                          const next = new URLSearchParams(current);
-                          next.set('memberId', member.userId);
-                          next.set('memberOrganizationId', member.organizationId);
-                          return next;
-                        });
+                        setUrlSearchParams((current) => transitionMemberReviewUrlState(current, {
+                          type: 'select-member',
+                          memberId: member.userId,
+                          organizationId: member.organizationId,
+                        }));
                       }}
                       className={`w-full p-4 text-left flex flex-col md:flex-row md:items-center justify-between gap-3 transition-colors ${
                         isSelected ? 'bg-primary/10' : 'hover:bg-muted/40'
