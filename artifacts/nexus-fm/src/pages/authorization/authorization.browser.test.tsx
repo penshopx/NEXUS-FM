@@ -469,7 +469,8 @@ describe('authorization administration browser regressions', () => {
     );
   });
 
-  it('does not expose bindings for an invalid or unauthorized bookmarked member', async () => {
+  it('shows a generic notice for an unavailable bookmarked member and lets it be cleared', async () => {
+    const user = userEvent.setup();
     window.history.replaceState(
       null,
       '',
@@ -478,8 +479,19 @@ describe('authorization administration browser regressions', () => {
     renderPage();
 
     expect(await screen.findByTestId('member-search-results')).toBeVisible();
+    expect(screen.getByTestId('saved-member-unavailable')).toHaveTextContent(
+      'This saved member selection is no longer available.',
+    );
+    expect(screen.getByTestId('saved-member-unavailable')).not.toHaveTextContent('unauthorized-user');
+    expect(screen.getByTestId('saved-member-unavailable')).not.toHaveTextContent('org-secret');
     expect(screen.queryByText(/Role Bindings for/)).not.toBeInTheDocument();
     expect(api.bindings).not.toHaveBeenCalled();
+
+    await user.click(screen.getByTestId('button-clear-unavailable-member'));
+
+    expect(screen.queryByTestId('saved-member-unavailable')).not.toBeInTheDocument();
+    expect(window.location.search).toBe('?query=Target');
+    expect(screen.getByTestId('member-search-results')).toBeVisible();
   });
 
   it('restores selected members through browser back and forward navigation', async () => {

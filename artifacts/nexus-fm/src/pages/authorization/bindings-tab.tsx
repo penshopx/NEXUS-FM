@@ -137,6 +137,15 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
       },
     },
   );
+  const hasSavedMemberSelection = Boolean(selectedMemberId && selectedMemberOrganizationId);
+  const isSavedMemberUnavailable = hasSavedMemberSelection &&
+    Boolean(search.data) &&
+    !search.isFetching &&
+    !search.isError &&
+    !search.data?.items.some(
+      (member) => member.userId === selectedMemberId &&
+        member.organizationId === selectedMemberOrganizationId,
+    );
 
   useEffect(() => {
     setSearchInput(submittedQuery);
@@ -165,6 +174,15 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
   const clearSelectedMemberParams = (params: URLSearchParams) => {
     params.delete('memberId');
     params.delete('memberOrganizationId');
+  };
+
+  const handleClearUnavailableMember = () => {
+    setSelectedMember(null);
+    setUrlSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      clearSelectedMemberParams(next);
+      return next;
+    });
   };
 
   const updatePage = (nextPage: number) => {
@@ -345,6 +363,27 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
         {search.isError && (
           <div className="mt-4 p-3 rounded border border-destructive/30 bg-destructive/10 text-sm text-destructive">
             Member search failed. Check your organization access and try again.
+          </div>
+        )}
+
+        {isSavedMemberUnavailable && (
+          <div
+            className="mt-4 flex flex-col gap-3 rounded border border-border bg-muted/40 p-4 text-sm sm:flex-row sm:items-center sm:justify-between"
+            data-testid="saved-member-unavailable"
+            role="status"
+          >
+            <p>
+              This saved member selection is no longer available. Clear it to continue searching.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleClearUnavailableMember}
+              data-testid="button-clear-unavailable-member"
+            >
+              Clear selection
+            </Button>
           </div>
         )}
 
