@@ -64,6 +64,10 @@ import {
   parseMemberReviewUrlState,
   transitionMemberReviewUrlState,
 } from './member-review-url-state';
+import {
+  describeBindingScope,
+  doesBindingScopeBroaden,
+} from './binding-scope-change';
 
 const canonicalRoleOptions = [
   'PLATFORM_ADMIN',
@@ -1238,6 +1242,7 @@ function EditBindingDialog({ userId, binding, organizationName, open, onOpenChan
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const updateMutation = useUpdateUserRoleBinding();
+  const [pendingBroaderScope, setPendingBroaderScope] = useState<EditValues | null>(null);
 
   const form = useForm<EditValues>({
     resolver: zodResolver(editSchema),
@@ -1249,7 +1254,7 @@ function EditBindingDialog({ userId, binding, organizationName, open, onOpenChan
   });
   const scopeType = form.watch('scopeType');
 
-  const onSubmit = (values: EditValues) => {
+  const saveBinding = (values: EditValues) => {
     updateMutation.mutate({
       userId,
       bindingId: binding.id,
@@ -1276,9 +1281,29 @@ function EditBindingDialog({ userId, binding, organizationName, open, onOpenChan
     });
   };
 
+  const onSubmit = (values: EditValues) => {
+    if (doesBindingScopeBroaden(binding.scopeType, values.scopeType)) {
+      setPendingBroaderScope(values);
+      return;
+    }
+
+    saveBinding(values);
+  };
+
+  const currentScopeDescription = describeBindingScope(binding.scopeType, binding.scopeId, {
+    organizationName,
+    targetName: binding.scopeTargetName,
+  });
+  const broaderScopeDescription = pendingBroaderScope
+    ? describeBindingScope(pendingBroaderScope.scopeType, pendingBroaderScope.scopeId, {
+        organizationName,
+      })
+    : '';
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent>
         <DialogHeader>
           <DialogTitle>Edit Role Binding</DialogTitle>
         </DialogHeader>
@@ -1362,7 +1387,48 @@ function EditBindingDialog({ userId, binding, organizationName, open, onOpenChan
             </DialogFooter>
           </form>
         </Form>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+      <AlertDialog
+        open={pendingBroaderScope !== null}
+        onOpenChange={(isOpen) => {
+          if (!isOpen && !updateMutation.isPending) setPendingBroaderScope(null);
+        }}
+      >
+        <AlertDialogContent data-testid="broader-scope-confirmation">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Broaden this binding's access?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>This scope change can grant access to more resources.</p>
+                <dl className="grid gap-2 rounded-md border bg-muted/30 p-3 text-sm">
+                  <div>
+                    <dt className="font-medium text-foreground">Current scope</dt>
+                    <dd data-testid="broader-scope-current">{currentScopeDescription}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-medium text-foreground">New scope</dt>
+                    <dd data-testid="broader-scope-new">{broaderScopeDescription}</dd>
+                  </div>
+                </dl>
+                <p>Confirm that this wider access is intended before saving.</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={updateMutation.isPending}>Keep editing</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingBroaderScope) saveBinding(pendingBroaderScope);
+              }}
+              disabled={updateMutation.isPending}
+              data-testid="button-confirm-broader-scope"
+            >
+              {updateMutation.isPending ? 'Saving...' : 'Confirm wider access'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

@@ -446,6 +446,105 @@ describe('authorization administration browser regressions', () => {
     expect(screen.getByText('FAC-NORTH')).toBeVisible();
   });
 
+  it('requires confirmation before saving a broader binding scope', async () => {
+    const user = userEvent.setup();
+    const update = mutation();
+    api.updateBinding.mockReturnValue(update);
+    api.bindings.mockReturnValue({
+      data: { items: [{
+        id: 'space-binding',
+        userId: member.userId,
+        roleId: role.id,
+        roleCode: role.code,
+        version: 'space-version',
+        organizationId: member.organizationId,
+        scopeType: 'SPACE',
+        scopeId: 'space-1',
+        scopeTargetName: 'Boiler Room',
+        scopeTargetStatus: 'RESOLVED',
+        status: 'ACTIVE',
+        startsAt: null,
+        endsAt: null,
+      }], page: 1, limit: 20, total: 1 },
+      isLoading: false,
+    });
+    renderPage();
+    await openBindingsForMember(user);
+    await user.click(screen.getByTestId('button-edit-binding-space-binding'));
+    await user.click(screen.getByTestId('select-edit-scopetype'));
+    await user.click(screen.getByRole('option', { name: 'TEAM' }));
+    await user.click(screen.getByTestId('input-edit-scopeid'));
+    await user.click(await screen.findByTestId('input-edit-scopeid-option-team-1'));
+    await user.click(screen.getByTestId('button-save-binding'));
+
+    expect(update.mutate).not.toHaveBeenCalled();
+    expect(screen.getByTestId('broader-scope-current')).toHaveTextContent('SPACE: Boiler Room');
+    expect(screen.getByTestId('broader-scope-new')).toHaveTextContent('TEAM: team-1');
+
+    await user.click(screen.getByRole('button', { name: 'Keep editing' }));
+    expect(screen.getByRole('dialog', { name: 'Edit Role Binding' })).toBeVisible();
+    expect(screen.getByTestId('select-edit-scopetype')).toHaveTextContent('TEAM');
+    expect(update.mutate).not.toHaveBeenCalled();
+
+    await user.click(screen.getByTestId('button-save-binding'));
+    await user.click(screen.getByTestId('button-confirm-broader-scope'));
+    expect(update.mutate).toHaveBeenCalledTimes(1);
+    expect(update.mutate).toHaveBeenCalledWith(
+      {
+        userId: member.userId,
+        bindingId: 'space-binding',
+        data: expect.objectContaining({
+          scopeType: 'TEAM',
+          scopeId: 'team-1',
+        }),
+      },
+      expect.anything(),
+    );
+  });
+
+  it('saves expiry-only binding edits without a broader-scope warning', async () => {
+    const user = userEvent.setup();
+    const update = mutation();
+    api.updateBinding.mockReturnValue(update);
+    api.bindings.mockReturnValue({
+      data: { items: [{
+        id: 'expiry-binding',
+        userId: member.userId,
+        roleId: role.id,
+        roleCode: role.code,
+        version: 'expiry-version',
+        organizationId: member.organizationId,
+        scopeType: 'SPACE',
+        scopeId: 'space-1',
+        scopeTargetName: 'Boiler Room',
+        scopeTargetStatus: 'RESOLVED',
+        status: 'ACTIVE',
+        startsAt: null,
+        endsAt: null,
+      }], page: 1, limit: 20, total: 1 },
+      isLoading: false,
+    });
+    renderPage();
+    await openBindingsForMember(user);
+    await user.click(screen.getByTestId('button-edit-binding-expiry-binding'));
+    await user.type(screen.getByTestId('input-edit-endsat'), '2027-01-15');
+    await user.click(screen.getByTestId('button-save-binding'));
+
+    expect(screen.queryByTestId('broader-scope-confirmation')).not.toBeInTheDocument();
+    expect(update.mutate).toHaveBeenCalledTimes(1);
+    expect(update.mutate).toHaveBeenCalledWith(
+      {
+        userId: member.userId,
+        bindingId: 'expiry-binding',
+        data: expect.objectContaining({
+          scopeType: 'SPACE',
+          scopeId: 'space-1',
+        }),
+      },
+      expect.anything(),
+    );
+  });
+
   it('restores member search filters and pagination from the URL', async () => {
     window.history.replaceState(
       null,
