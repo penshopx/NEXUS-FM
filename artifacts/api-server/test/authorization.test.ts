@@ -37,6 +37,8 @@ import {
   canCrossOrganizationFoundation,
   recordAuthorizationConfigurationAudit,
   requirePermission,
+  resolveTeamWorkScope,
+  resolveVendorAssignmentWorkScope,
   validateRoleBindingState,
 } from "../src/services/authorization.ts";
 import {
@@ -610,6 +612,84 @@ test("technician and vendor assignment isolation is enforced", async () => {
   assert.equal(ownVendor.allowed, true);
   assert.equal(otherVendor.reasonCode, "SCOPE_MISMATCH");
   assert.equal(clientClaim.reasonCode, "SCOPE_MISMATCH");
+});
+
+test("work scope resolvers reject spoofed, inactive, deleted, and cross-organization IDs", async () => {
+  const organizationA = (await db.insert(organizationsTable).values({
+    name: "Work Scope A",
+    slug: `work-scope-a-${randomUUID()}`,
+  }).returning())[0]!;
+  const organizationB = (await db.insert(organizationsTable).values({
+    name: "Work Scope B",
+    slug: `work-scope-b-${randomUUID()}`,
+  }).returning())[0]!;
+  const [activeTeam, inactiveTeam, deletedTeam] = await db.insert(teamsTable).values([
+    { organizationId: organizationA.id, name: "Shared Team", code: "SHARED", status: "ACTIVE" },
+    { organizationId: organizationA.id, name: "Retired Team", code: "RETIRED", status: "INACTIVE" },
+    { organizationId: organizationA.id, name: "Deleted Team", code: "DELETED", status: "ACTIVE" },
+  ]).returning();
+  const [activeVendor, inactiveVendor, deletedVendor] = await db.insert(vendorAssignmentsTable).values([
+    { organizationId: organizationA.id, name: "Shared Vendor", code: "SHARED", status: "ACTIVE" },
+    { organizationId: organizationA.id, name: "Retired Vendor", code: "RETIRED", status: "INACTIVE" },
+    { organizationId: organizationA.id, name: "Deleted Vendor", code: "DELETED", status: "ACTIVE" },
+  ]).returning();
+  await db.insert(teamsTable).values({
+    organizationId: organizationB.id,
+    name: activeTeam!.name,
+    code: activeTeam!.code,
+    status: "ACTIVE",
+  });
+  await db.insert(vendorAssignmentsTable).values({
+    organizationId: organizationB.id,
+    name: activeVendor!.name,
+    code: activeVendor!.code,
+    status: "ACTIVE",
+  });
+  await db.delete(teamsTable).where(eq(teamsTable.id, deletedTeam!.id));
+  await db.delete(vendorAssignmentsTable).where(eq(vendorAssignmentsTable.id, deletedVendor!.id));
+
+  const vendorUserId = randomUUID();
+  const activeTeamResolution = await resolveTeamWorkScope(db, organizationA.id, activeTeam!.id);
+  const activeVendorResolution = await resolveVendorAssignmentWorkScope(
+    db,
+    organizationA.id,
+    activeVendor!.id,
+    vendorUserId,
+  );
+  assert.deepEqual(activeTeamResolution, {
+    found: true,
+    verifiedContext: {
+      organizationId: organizationA.id,
+      teamId: activeTeam!.id,
+      scopeVerified: true,
+    },
+  });
+  assert.deepEqual(activeVendorResolution, {
+    found: true,
+    verifiedContext: {
+      organizationId: organizationA.id,
+      vendorAssignmentId: activeVendor!.id,
+      vendorUserId,
+      scopeVerified: true,
+    },
+  });
+
+  const rejected = await Promise.all([
+    resolveTeamWorkScope(db, organizationB.id, activeTeam!.id),
+    resolveTeamWorkScope(db, organizationA.id, inactiveTeam!.id),
+    resolveTeamWorkScope(db, organizationA.id, deletedTeam!.id),
+    resolveTeamWorkScope(db, organizationA.id, randomUUID()),
+    resolveVendorAssignmentWorkScope(db, organizationB.id, activeVendor!.id, vendorUserId),
+    resolveVendorAssignmentWorkScope(db, organizationA.id, inactiveVendor!.id, vendorUserId),
+    resolveVendorAssignmentWorkScope(db, organizationA.id, deletedVendor!.id, vendorUserId),
+    resolveVendorAssignmentWorkScope(db, organizationA.id, randomUUID(), vendorUserId),
+  ]);
+  assert.ok(rejected.every((result) => result.found === false), JSON.stringify(rejected));
+
+  await db.delete(organizationsTable).where(inArray(
+    organizationsTable.id,
+    [organizationA.id, organizationB.id],
+  ));
 });
 
 test("platform administration is separated from operational access", async () => {

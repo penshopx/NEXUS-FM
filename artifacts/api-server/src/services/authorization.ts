@@ -8,8 +8,10 @@ import {
   permissionsTable,
   rolePermissionsTable,
   rolesTable,
+  teamsTable,
   userRoleBindingsTable,
   usersTable,
+  vendorAssignmentsTable,
   scopeTypeValues,
 } from "@workspace/db";
 import { canonicalPermissions } from "./authorization-catalog";
@@ -49,6 +51,67 @@ export type AuthorizationDecision = {
   permission: string;
   scopeType?: string;
 };
+
+type WorkScopeResolution =
+  | { found: false }
+  | { found: true; verifiedContext: Record<string, unknown> };
+
+async function resolveActiveWorkScope(
+  database: typeof db,
+  table: typeof teamsTable | typeof vendorAssignmentsTable,
+  organizationId: string,
+  targetId: string,
+) {
+  const [target] = await database.select({ id: table.id })
+    .from(table)
+    .where(and(
+      eq(table.id, targetId),
+      eq(table.organizationId, organizationId),
+      eq(table.status, "ACTIVE"),
+    ));
+  return target;
+}
+
+export async function resolveTeamWorkScope(
+  database: typeof db,
+  organizationId: string,
+  teamId: string,
+): Promise<WorkScopeResolution> {
+  const team = await resolveActiveWorkScope(database, teamsTable, organizationId, teamId);
+  if (!team) return { found: false };
+  return {
+    found: true,
+    verifiedContext: {
+      organizationId,
+      teamId: team.id,
+      scopeVerified: true,
+    },
+  };
+}
+
+export async function resolveVendorAssignmentWorkScope(
+  database: typeof db,
+  organizationId: string,
+  vendorAssignmentId: string,
+  vendorUserId: string,
+): Promise<WorkScopeResolution> {
+  const assignment = await resolveActiveWorkScope(
+    database,
+    vendorAssignmentsTable,
+    organizationId,
+    vendorAssignmentId,
+  );
+  if (!assignment) return { found: false };
+  return {
+    found: true,
+    verifiedContext: {
+      organizationId,
+      vendorAssignmentId: assignment.id,
+      vendorUserId,
+      scopeVerified: true,
+    },
+  };
+}
 
 export class AuthorizationError extends Error {
   constructor(public readonly reasonCode: AuthorizationReasonCode) {
