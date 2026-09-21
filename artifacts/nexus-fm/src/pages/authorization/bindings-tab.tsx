@@ -511,6 +511,11 @@ function BindingsManager({ userId, member, canManage }: {
   };
 
   const handleExport = async () => {
+    const analyticsDimensions = {
+      role_filter_active: roleFilter !== 'ALL',
+      status_filter_active: statusFilter !== 'ALL',
+    };
+
     setIsExporting(true);
     try {
       const contents = await exportUserRoleBindings(userId, {
@@ -526,7 +531,15 @@ function BindingsManager({ userId, member, canManage }: {
       link.remove();
       URL.revokeObjectURL(url);
       toast({ title: 'Access review exported' });
+      trackEvent('access_review_export', {
+        outcome: 'success',
+        ...analyticsDimensions,
+      });
     } catch (error) {
+      trackEvent('access_review_export', {
+        outcome: 'failure',
+        ...analyticsDimensions,
+      });
       const description = error && typeof error === 'object' && 'data' in error
         ? (error.data as { error?: string })?.error
         : undefined;
