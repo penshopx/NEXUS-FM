@@ -975,8 +975,16 @@ test("authorization routes run through a real HTTP app with injected currentUser
         }),
       });
       assert.equal(createdTarget.response.status, 201, JSON.stringify(createdTarget.body));
-      const targetRecord = createdTarget.body as { id: string; name: string; organizationId: string };
+      const targetRecord = createdTarget.body as {
+        id: string;
+        name: string;
+        code: string | null;
+        parentPath: string[];
+        organizationId: string;
+      };
       assert.equal(targetRecord.name, directoryTarget.name);
+      assert.equal(targetRecord.code, directoryTarget.code);
+      assert.deepEqual(targetRecord.parentPath, []);
       assert.equal(targetRecord.organizationId, target.organizationId);
       const binding = await request(`/users/${target.userId}/role-bindings`, {
         method: "POST",
@@ -1091,6 +1099,24 @@ test("authorization routes run through a real HTTP app with injected currentUser
         organizationId: row.organizationId,
       })),
       [{ id: namedFacility.id, name: "North Campus", organizationId: target.organizationId }],
+    );
+    const [duplicateBuilding] = await db.insert(buildingsTable).values({
+      organizationId: target.organizationId,
+      facilityId: namedFacility.id,
+      name: "Shared Plant",
+      code: `PLANT-${randomUUID()}`,
+    }).returning();
+    const buildingScopeSearch = await request(
+      `/role-binding-scope-targets?scopeType=BUILDING&organizationId=${target.organizationId}&query=Shared`,
+    );
+    assert.equal(buildingScopeSearch.response.status, 200, JSON.stringify(buildingScopeSearch.body));
+    assert.deepEqual(
+      (buildingScopeSearch.body as Array<{
+        id: string;
+        code: string | null;
+        parentPath: string[];
+      }>).map(({ id, code, parentPath }) => ({ id, code, parentPath })),
+      [{ id: duplicateBuilding.id, code: duplicateBuilding.code, parentPath: ["North Campus"] }],
     );
     const missingScopeId = randomUUID();
     const missingScopeBinding = await request(`/users/${target.userId}/role-bindings`, {

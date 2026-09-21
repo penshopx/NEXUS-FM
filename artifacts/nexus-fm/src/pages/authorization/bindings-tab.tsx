@@ -921,7 +921,7 @@ export function ScopeTargetPicker({
   const [query, setQuery] = useState('');
   const [selectedTarget, setSelectedTarget] = useState<RoleBindingScopeTarget | null>(
     currentTarget?.status === 'RESOLVED' && currentTarget.name
-      ? { id: currentTarget.id, name: currentTarget.name, scopeType, organizationId }
+      ? { id: currentTarget.id, name: currentTarget.name, code: null, parentPath: [], scopeType, organizationId }
       : null,
   );
   const params = { scopeType, organizationId, query: query || undefined, limit: 20 };
@@ -937,7 +937,7 @@ export function ScopeTargetPicker({
     setOpen(false);
     setSelectedTarget(
       currentTarget?.id === value && currentTarget.status === 'RESOLVED' && currentTarget.name
-        ? { id: currentTarget.id, name: currentTarget.name, scopeType, organizationId }
+        ? { id: currentTarget.id, name: currentTarget.name, code: null, parentPath: [], scopeType, organizationId }
         : null,
     );
   }, [scopeType, organizationId, currentTarget?.id, currentTarget?.name, currentTarget?.status]);
@@ -988,8 +988,15 @@ export function ScopeTargetPicker({
             className="w-full justify-between font-normal"
             data-testid={testId}
           >
-            <span className="truncate">
-              {selectedTarget?.name ?? (historicalTarget ? 'Choose a current target' : `Select ${scopeType.toLowerCase()}`)}
+            <span className="min-w-0 text-left">
+              <span className="block truncate">
+                {selectedTarget?.name ?? (historicalTarget ? 'Choose a current target' : `Select ${scopeType.toLowerCase()}`)}
+              </span>
+              {selectedTarget && (selectedTarget.code || selectedTarget.parentPath.length > 0) && (
+                <span className="block truncate text-xs text-muted-foreground">
+                  {[selectedTarget.code, selectedTarget.parentPath.join(' / ')].filter(Boolean).join(' · ')}
+                </span>
+              )}
             </span>
             <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
           </Button>
@@ -1021,8 +1028,13 @@ export function ScopeTargetPicker({
                       >
                         <Check className={value === target.id ? 'opacity-100' : 'opacity-0'} />
                         <span className="min-w-0">
-                          <span className="block truncate">{target.name}</span>
-                          <span className="block truncate font-mono text-xs text-muted-foreground">{target.id}</span>
+                          <span className="block truncate font-medium">{target.name}</span>
+                          {(target.code || target.parentPath.length > 0) && (
+                            <span className="block truncate text-xs text-muted-foreground">
+                              {[target.code, target.parentPath.join(' / ')].filter(Boolean).join(' · ')}
+                            </span>
+                          )}
+                          <span className="block truncate font-mono text-[11px] text-muted-foreground/80">{target.id}</span>
                         </span>
                       </CommandItem>
                     ))}

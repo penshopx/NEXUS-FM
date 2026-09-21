@@ -483,7 +483,8 @@ router.get("/role-binding-scope-targets", async (req, res): Promise<void> => {
     return;
   }
 
-  const table = selectableScopeTables[parsed.data.scopeType as keyof typeof selectableScopeTables];
+  const scopeType = parsed.data.scopeType as keyof typeof selectableScopeTables;
+  const table = selectableScopeTables[scopeType];
   if (!table) {
     res.json(SearchRoleBindingScopeTargetsResponse.parse([]));
     return;
@@ -496,17 +497,91 @@ router.get("/role-binding-scope-targets", async (req, res): Promise<void> => {
   if (query) {
     filters.push(or(ilike(table.name, `%${query}%`), ilike(table.code, `%${query}%`))!);
   }
-  const rows = await database.select({
+  const baseSelection = {
     id: table.id,
     name: table.name,
+    code: table.code,
     organizationId: table.organizationId,
-  }).from(table)
-    .where(and(...filters))
-    .orderBy(asc(table.name), asc(table.id))
-    .limit(parsed.data.limit);
+  };
+  let rows: Array<{
+    id: string;
+    name: string;
+    code: string | null;
+    organizationId: string;
+    parentPath: string[];
+  }>;
+
+  if (scopeType === "BUILDING") {
+    const results = await database.select({
+      ...baseSelection,
+      facilityName: facilitiesTable.name,
+    }).from(buildingsTable)
+      .innerJoin(facilitiesTable, and(
+        eq(buildingsTable.facilityId, facilitiesTable.id),
+        eq(buildingsTable.organizationId, facilitiesTable.organizationId),
+      ))
+      .where(and(...filters))
+      .orderBy(asc(table.name), asc(table.id))
+      .limit(parsed.data.limit);
+    rows = results.map(({ facilityName, ...row }) => ({ ...row, parentPath: [facilityName] }));
+  } else if (scopeType === "SPACE") {
+    const results = await database.select({
+      ...baseSelection,
+      facilityName: facilitiesTable.name,
+      buildingName: buildingsTable.name,
+    }).from(spacesTable)
+      .innerJoin(buildingsTable, and(
+        eq(spacesTable.buildingId, buildingsTable.id),
+        eq(spacesTable.organizationId, buildingsTable.organizationId),
+      ))
+      .innerJoin(facilitiesTable, and(
+        eq(spacesTable.facilityId, facilitiesTable.id),
+        eq(spacesTable.organizationId, facilitiesTable.organizationId),
+      ))
+      .where(and(...filters))
+      .orderBy(asc(table.name), asc(table.id))
+      .limit(parsed.data.limit);
+    rows = results.map(({ facilityName, buildingName, ...row }) => ({
+      ...row,
+      parentPath: [facilityName, buildingName],
+    }));
+  } else if (scopeType === "ASSET") {
+    const results = await database.select({
+      ...baseSelection,
+      facilityName: facilitiesTable.name,
+      buildingName: buildingsTable.name,
+      spaceName: spacesTable.name,
+    }).from(assetsTable)
+      .innerJoin(spacesTable, and(
+        eq(assetsTable.spaceId, spacesTable.id),
+        eq(assetsTable.organizationId, spacesTable.organizationId),
+      ))
+      .innerJoin(buildingsTable, and(
+        eq(assetsTable.buildingId, buildingsTable.id),
+        eq(assetsTable.organizationId, buildingsTable.organizationId),
+      ))
+      .innerJoin(facilitiesTable, and(
+        eq(assetsTable.facilityId, facilitiesTable.id),
+        eq(assetsTable.organizationId, facilitiesTable.organizationId),
+      ))
+      .where(and(...filters))
+      .orderBy(asc(table.name), asc(table.id))
+      .limit(parsed.data.limit);
+    rows = results.map(({ facilityName, buildingName, spaceName, ...row }) => ({
+      ...row,
+      parentPath: [facilityName, buildingName, spaceName],
+    }));
+  } else {
+    const results = await database.select(baseSelection).from(table)
+      .where(and(...filters))
+      .orderBy(asc(table.name), asc(table.id))
+      .limit(parsed.data.limit);
+    rows = results.map((row) => ({ ...row, parentPath: [] }));
+  }
+
   res.json(SearchRoleBindingScopeTargetsResponse.parse(rows.map((row) => ({
     ...row,
-    scopeType: parsed.data.scopeType,
+    scopeType,
   }))));
 });
 
@@ -529,7 +604,7 @@ router.post("/role-binding-scope-targets", async (req, res): Promise<void> => {
     return;
   }
 
-  let created: { id: string; organizationId: string; name: string } | undefined;
+  let created: { id: string; organizationId: string; name: string; code: string | null } | undefined;
   await database.transaction(async (tx) => {
     const values = {
       organizationId: parsed.data.organizationId,
@@ -541,12 +616,14 @@ router.post("/role-binding-scope-targets", async (req, res): Promise<void> => {
         id: teamsTable.id,
         organizationId: teamsTable.organizationId,
         name: teamsTable.name,
+        code: teamsTable.code,
       });
     } else {
       [created] = await tx.insert(vendorAssignmentsTable).values(values).returning({
         id: vendorAssignmentsTable.id,
         organizationId: vendorAssignmentsTable.organizationId,
         name: vendorAssignmentsTable.name,
+        code: vendorAssignmentsTable.code,
       });
     }
     if (!created) return;
@@ -569,6 +646,7 @@ router.post("/role-binding-scope-targets", async (req, res): Promise<void> => {
   }
   res.status(201).json(CreateRoleBindingScopeTargetResponse.parse({
     ...created,
+    parentPath: [],
     scopeType: parsed.data.scopeType,
   }));
 });

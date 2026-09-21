@@ -311,6 +311,8 @@ export const SearchRoleBindingScopeTargetsQueryParams = zod.object({
 export const SearchRoleBindingScopeTargetsResponseItem = zod.object({
   "id": zod.string().uuid(),
   "name": zod.string(),
+  "code": zod.string().nullable(),
+  "parentPath": zod.array(zod.string()),
   "scopeType": zod.enum(['PLATFORM', 'ORGANIZATION', 'PORTFOLIO', 'FACILITY', 'BUILDING', 'SPACE', 'ASSET', 'ASSIGNED', 'TEAM', 'VENDOR_ASSIGNMENT', 'OWNED_REQUEST']),
   "organizationId": zod.string().uuid()
 })
@@ -337,6 +339,8 @@ export const CreateRoleBindingScopeTargetBody = zod.object({
 export const CreateRoleBindingScopeTargetResponse = zod.object({
   "id": zod.string().uuid(),
   "name": zod.string(),
+  "code": zod.string().nullable(),
+  "parentPath": zod.array(zod.string()),
   "scopeType": zod.enum(['PLATFORM', 'ORGANIZATION', 'PORTFOLIO', 'FACILITY', 'BUILDING', 'SPACE', 'ASSET', 'ASSIGNED', 'TEAM', 'VENDOR_ASSIGNMENT', 'OWNED_REQUEST']),
   "organizationId": zod.string().uuid()
 })

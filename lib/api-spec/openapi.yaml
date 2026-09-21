@@ -1579,10 +1579,14 @@ components:
         slug: {type: string}
     RoleBindingScopeTarget:
       type: object
-      required: [id, name, scopeType, organizationId]
+      required: [id, name, code, parentPath, scopeType, organizationId]
       properties:
         id: {type: string, format: uuid}
         name: {type: string}
+        code: {type: ["string", "null"]}
+        parentPath:
+          type: array
+          items: {type: string}
         scopeType: {$ref: "#/components/schemas/ScopeType"}
         organizationId: {type: string, format: uuid}
     RoleBindingScopeTargetInput:

@@ -155,18 +155,40 @@ describe('authorization administration browser regressions', () => {
         {
           id: 'facility-1',
           name: 'North Campus',
+          code: 'FAC-NORTH',
+          parentPath: [],
           scopeType: 'FACILITY',
+          organizationId: 'org-1',
+        },
+        {
+          id: 'building-1',
+          name: 'Central Plant',
+          code: 'BLDG-NORTH',
+          parentPath: ['North Campus'],
+          scopeType: 'BUILDING',
+          organizationId: 'org-1',
+        },
+        {
+          id: 'building-2',
+          name: 'Central Plant',
+          code: 'BLDG-SOUTH',
+          parentPath: ['South Campus'],
+          scopeType: 'BUILDING',
           organizationId: 'org-1',
         },
         {
           id: 'team-1',
           name: 'Night Operations',
+          code: 'TEAM-NIGHT',
+          parentPath: [],
           scopeType: 'TEAM',
           organizationId: 'org-1',
         },
         {
           id: 'vendor-assignment-1',
           name: 'Elevator Maintenance',
+          code: 'VENDOR-ELEVATOR',
+          parentPath: [],
           scopeType: 'VENDOR_ASSIGNMENT',
           organizationId: 'org-1',
         },
@@ -306,9 +328,12 @@ describe('authorization administration browser regressions', () => {
     await user.click(screen.getByTestId('select-role'));
     await user.click(screen.getByRole('option', { name: 'PLATFORM_ADMIN' }));
     await user.click(screen.getByTestId('select-scopetype'));
-    await user.click(screen.getByRole('option', { name: 'FACILITY' }));
+    await user.click(screen.getByRole('option', { name: 'BUILDING' }));
     await user.click(screen.getByTestId('input-scopeid'));
-    await user.click(await screen.findByTestId('input-scopeid-option-facility-1'));
+    expect(await screen.findByText('BLDG-NORTH · North Campus')).toBeVisible();
+    expect(screen.getByText('BLDG-SOUTH · South Campus')).toBeVisible();
+    await user.click(await screen.findByTestId('input-scopeid-option-building-1'));
+    expect(screen.getByText('BLDG-NORTH · North Campus')).toBeVisible();
     await user.click(screen.getByTestId('button-create-binding'));
 
     expect(create).toHaveBeenCalledWith(
@@ -316,8 +341,8 @@ describe('authorization administration browser regressions', () => {
         userId: member.userId,
         data: expect.objectContaining({
           organizationId: member.organizationId,
-          scopeType: 'FACILITY',
-          scopeId: 'facility-1',
+          scopeType: 'BUILDING',
+          scopeId: 'building-1',
         }),
       }),
       expect.any(Object),
@@ -418,6 +443,7 @@ describe('authorization administration browser regressions', () => {
     await user.click(screen.getByTestId('input-edit-scopeid'));
     expect(screen.queryByTestId('input-edit-scopeid-option-missing-facility')).not.toBeInTheDocument();
     expect(await screen.findByTestId('input-edit-scopeid-option-facility-1')).toBeVisible();
+    expect(screen.getByText('FAC-NORTH')).toBeVisible();
   });
 
   it('restores member search filters and pagination from the URL', async () => {

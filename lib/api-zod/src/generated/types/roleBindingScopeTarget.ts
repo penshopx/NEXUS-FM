@@ -10,6 +10,9 @@ import type { ScopeType } from './scopeType';
 export interface RoleBindingScopeTarget {
   id: string;
   name: string;
+  /** @nullable */
+  code: string | null;
+  parentPath: string[];
   scopeType: ScopeType;
   organizationId: string;
 }
