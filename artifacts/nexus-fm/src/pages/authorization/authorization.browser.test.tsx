@@ -802,6 +802,14 @@ describe('authorization administration browser regressions', () => {
       { page: 2, limit: 20 },
       expect.anything(),
     );
+    expect(analytics.track).toHaveBeenLastCalledWith('binding_page_navigated', {
+      direction: 'next',
+      page: 2,
+      role_filter: 'ALL',
+      status_filter: 'ALL',
+    });
+    expect(JSON.stringify(analytics.track.mock.calls)).not.toContain(member.userId);
+    expect(JSON.stringify(analytics.track.mock.calls)).not.toContain(member.organizationId);
     expect(api.listRoles).toHaveBeenCalledWith(expect.objectContaining({
       query: expect.objectContaining({ enabled: false }),
     }));
@@ -814,6 +822,20 @@ describe('authorization administration browser regressions', () => {
       { roleCode: 'PLATFORM_ADMIN', page: 1, limit: 20 },
       expect.anything(),
     );
+    await user.click(screen.getByTestId('button-binding-next-page'));
+    expect(analytics.track).toHaveBeenLastCalledWith('binding_page_navigated', {
+      direction: 'next',
+      page: 2,
+      role_filter: 'PLATFORM_ADMIN',
+      status_filter: 'ALL',
+    });
+    await user.click(screen.getByTestId('button-binding-previous-page'));
+    expect(analytics.track).toHaveBeenLastCalledWith('binding_page_navigated', {
+      direction: 'previous',
+      page: 1,
+      role_filter: 'PLATFORM_ADMIN',
+      status_filter: 'ALL',
+    });
 
     await user.click(screen.getByTestId('select-binding-status-filter'));
     await user.click(await screen.findByRole('option', { name: 'SUSPENDED' }));

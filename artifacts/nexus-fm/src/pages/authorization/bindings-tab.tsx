@@ -490,6 +490,20 @@ function BindingsManager({ userId, member, canManage }: {
   const hasActiveFilters = roleFilter !== 'ALL' || statusFilter !== 'ALL';
   const bindingTotalPages = bindings ? Math.max(1, Math.ceil(bindings.total / bindings.limit)) : 1;
 
+  const navigateBindingPage = (direction: 'previous' | 'next') => {
+    const nextPage = direction === 'previous'
+      ? Math.max(1, bindingPage - 1)
+      : bindingPage + 1;
+
+    setBindingPage(nextPage);
+    trackEvent('binding_page_navigated', {
+      direction,
+      page: nextPage,
+      role_filter: roleFilter,
+      status_filter: statusFilter,
+    });
+  };
+
   const handleExport = async () => {
     setIsExporting(true);
     try {
@@ -660,7 +674,7 @@ function BindingsManager({ userId, member, canManage }: {
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => setBindingPage((current) => Math.max(1, current - 1))}
+              onClick={() => navigateBindingPage('previous')}
               disabled={bindingPage <= 1}
               data-testid="button-binding-previous-page"
             >
@@ -670,7 +684,7 @@ function BindingsManager({ userId, member, canManage }: {
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => setBindingPage((current) => current + 1)}
+              onClick={() => navigateBindingPage('next')}
               disabled={bindingPage >= bindingTotalPages}
               data-testid="button-binding-next-page"
             >
