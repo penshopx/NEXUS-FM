@@ -490,6 +490,12 @@ function BindingsManager({ userId, member, canManage }: {
   const hasActiveFilters = roleFilter !== 'ALL' || statusFilter !== 'ALL';
   const bindingTotalPages = bindings ? Math.max(1, Math.ceil(bindings.total / bindings.limit)) : 1;
 
+  useEffect(() => {
+    if (bindings && bindingPage > bindingTotalPages) {
+      setBindingPage(bindingTotalPages);
+    }
+  }, [bindings, bindingPage, bindingTotalPages]);
+
   const navigateBindingPage = (direction: 'previous' | 'next') => {
     const nextPage = direction === 'previous'
       ? Math.max(1, bindingPage - 1)

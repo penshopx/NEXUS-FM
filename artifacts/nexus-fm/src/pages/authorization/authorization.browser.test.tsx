@@ -849,6 +849,75 @@ describe('authorization administration browser regressions', () => {
     expect(screen.queryByTestId('button-new-binding')).not.toBeInTheDocument();
   });
 
+  it('returns to the last valid binding page when the final item disappears', async () => {
+    const user = userEvent.setup();
+    const filteredBinding = {
+      id: 'filtered-binding',
+      userId: member.userId,
+      roleId: role.id,
+      roleCode: role.code,
+      version: 'filtered-binding-version',
+      organizationId: member.organizationId,
+      scopeType: 'ORGANIZATION',
+      scopeId: null,
+      scopeTargetName: member.organizationName,
+      scopeTargetStatus: 'RESOLVED',
+      status: 'ACTIVE',
+      startsAt: null,
+      endsAt: null,
+    };
+
+    api.bindings.mockImplementation((_userId, params) => {
+      const page = params?.page ?? 1;
+      const filtersApplied = params?.roleCode === 'PLATFORM_ADMIN' && params?.status === 'ACTIVE';
+
+      if (!filtersApplied) {
+        return {
+          data: { items: [filteredBinding], page, limit: 20, total: 21 },
+          isLoading: false,
+        };
+      }
+
+      return {
+        data: {
+          items: page === 1 ? [filteredBinding] : [],
+          page,
+          limit: 20,
+          total: page === 1 ? 21 : 20,
+        },
+        isLoading: false,
+      };
+    });
+
+    renderPage();
+    await openBindingsForMember(user);
+
+    await user.click(screen.getByTestId('select-binding-role-filter'));
+    await user.click(await screen.findByRole('option', { name: 'PLATFORM ADMIN' }));
+    await user.click(screen.getByTestId('select-binding-status-filter'));
+    await user.click(await screen.findByRole('option', { name: 'ACTIVE' }));
+
+    expect(screen.getByTestId('binding-page-summary')).toHaveTextContent('Page 1 of 2 · 21 results');
+
+    await user.click(screen.getByTestId('button-binding-next-page'));
+
+    await waitFor(() => {
+      expect(api.bindings).toHaveBeenLastCalledWith(
+        member.userId,
+        {
+          roleCode: 'PLATFORM_ADMIN',
+          status: 'ACTIVE',
+          page: 1,
+          limit: 20,
+        },
+        expect.anything(),
+      );
+    });
+    expect(screen.getByTestId('binding-page-summary')).toHaveTextContent('Page 1 of 2 · 21 results');
+    expect(screen.getByTestId('button-binding-previous-page')).toBeDisabled();
+    expect(screen.getByTestId('button-binding-next-page')).toBeEnabled();
+  });
+
   it('recovers from stale role-policy saves and exposes self-escalation server errors', async () => {
     const user = userEvent.setup();
     const refetch = vi.fn();
