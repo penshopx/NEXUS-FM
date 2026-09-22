@@ -1,6 +1,8 @@
 type AnalyticsData = Record<string, string | number | boolean>;
 type AnalyticsProperties = Record<string, unknown>;
 
+export type ResultCountBucket = 'no_matches' | '1_20' | '21_100' | '101_plus';
+
 interface TrackEventOptions {
   url?: string;
 }
@@ -16,6 +18,13 @@ declare global {
       ): void;
     };
   }
+}
+
+export function getResultCountBucket(count: number): ResultCountBucket {
+  if (count <= 0) return 'no_matches';
+  if (count <= 20) return '1_20';
+  if (count <= 100) return '21_100';
+  return '101_plus';
 }
 
 export function trackEvent(

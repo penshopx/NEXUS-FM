@@ -957,6 +957,7 @@ describe('authorization administration browser regressions', () => {
           scopeType: 'ORGANIZATION',
           scopeId: null,
           scopeTargetName: 'Organization One',
+          scopeTargetParentPath: [],
           scopeTargetStatus: 'RESOLVED',
           status: 'ACTIVE',
           startsAt: null,
@@ -972,6 +973,7 @@ describe('authorization administration browser regressions', () => {
           scopeType: 'FACILITY',
           scopeId: 'facility-deleted',
           scopeTargetName: null,
+          scopeTargetParentPath: [],
           scopeTargetStatus: 'MISSING',
           status: 'EXPIRED',
           startsAt: null,
@@ -1001,11 +1003,11 @@ describe('authorization administration browser regressions', () => {
 
     expect(screen.getByTestId('display-rolename-view-only-binding')).toHaveTextContent('PLATFORM_ADMIN');
     expect(screen.getByTestId('display-roleid-view-only-binding')).toHaveTextContent(role.id);
-    expect(screen.getByTestId('display-scopename-view-only-binding')).toHaveTextContent('ORGANIZATION: Organization One');
-    expect(screen.getByTestId('display-scope-view-only-binding')).toHaveTextContent('Scope ID: None');
-    expect(screen.getByTestId('display-scopename-historical-binding')).toHaveTextContent('FACILITY: Missing or historical target');
-    expect(screen.getByTestId('display-scope-historical-binding')).toHaveTextContent('Scope ID: facility-deleted');
-    expect(screen.getByTestId('binding-page-summary')).toHaveTextContent('Page 1 of 3 · 42 results');
+    expect(screen.getByTestId('display-scopename-view-only-binding')).toHaveTextContent('Organisasi: Organization One');
+    expect(screen.getByTestId('display-scope-view-only-binding')).toHaveTextContent('ID Cakupan: Tidak ada');
+    expect(screen.getByTestId('display-scopename-historical-binding')).toHaveTextContent('Fasilitas: Target hilang atau historis');
+    expect(screen.getByTestId('display-scope-historical-binding')).toHaveTextContent('ID Cakupan: facility-deleted');
+    expect(screen.getByTestId('binding-page-summary')).toHaveTextContent('Halaman 1 dari 3 · 42 hasil');
     await user.click(screen.getByTestId('button-binding-next-page'));
     expect(api.bindings).toHaveBeenLastCalledWith(
       member.userId,
@@ -1026,12 +1028,17 @@ describe('authorization administration browser regressions', () => {
     expect(screen.queryByTestId('button-toggle-suspend-view-only-binding')).not.toBeInTheDocument();
 
     await user.click(screen.getByTestId('select-binding-role-filter'));
-    await user.click(await screen.findByRole('option', { name: 'PLATFORM ADMIN' }));
+    await user.click(await screen.findByRole('option', { name: 'Platform Administrator' }));
     expect(api.bindings).toHaveBeenLastCalledWith(
       member.userId,
       { roleCode: 'PLATFORM_ADMIN', page: 1, limit: 20 },
       expect.anything(),
     );
+    expect(analytics.track).toHaveBeenLastCalledWith('binding_filters_applied', {
+      role_filter: 'PLATFORM_ADMIN',
+      status_filter: 'ALL',
+      result_count_bucket: '21_100',
+    });
     await user.click(screen.getByTestId('button-binding-next-page'));
     expect(analytics.track).toHaveBeenLastCalledWith('binding_page_navigated', {
       direction: 'next',
@@ -1048,13 +1055,26 @@ describe('authorization administration browser regressions', () => {
     });
 
     await user.click(screen.getByTestId('select-binding-status-filter'));
-    await user.click(await screen.findByRole('option', { name: 'SUSPENDED' }));
+    await user.click(await screen.findByRole('option', { name: 'Ditangguhkan' }));
     expect(api.bindings).toHaveBeenLastCalledWith(
       member.userId,
       { roleCode: 'PLATFORM_ADMIN', status: 'SUSPENDED', page: 1, limit: 20 },
       expect.anything(),
     );
-    expect(screen.getByText('No bindings match these filters.')).toBeVisible();
+    expect(analytics.track).toHaveBeenLastCalledWith('binding_filters_applied', {
+      role_filter: 'PLATFORM_ADMIN',
+      status_filter: 'SUSPENDED',
+      result_count_bucket: 'no_matches',
+    });
+    expect(screen.getByText('Tidak ada penetapan yang cocok dengan filter ini.')).toBeVisible();
+    await user.click(screen.getByTestId('button-clear-binding-filters'));
+    expect(analytics.track).toHaveBeenLastCalledWith('binding_filters_cleared', {
+      role_filter: 'ALL',
+      status_filter: 'ALL',
+      result_count_bucket: '21_100',
+    });
+    expect(JSON.stringify(analytics.track.mock.calls)).not.toContain(member.userId);
+    expect(JSON.stringify(analytics.track.mock.calls)).not.toContain(member.organizationId);
     expect(screen.queryByText('No role bindings found for this user.')).not.toBeInTheDocument();
     expect(screen.queryByTestId('button-new-binding')).not.toBeInTheDocument();
   });

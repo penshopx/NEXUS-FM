@@ -42,7 +42,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { trackEvent } from '@/lib/analytics';
+import { getResultCountBucket, trackEvent } from '@/lib/analytics';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Search, UserPlus, Trash2, Calendar, Edit2, Play, Pause, AlertTriangle, Mail, Building2, UserRound, ChevronLeft, ChevronRight, Check, ChevronsUpDown, X, Download } from 'lucide-react';
@@ -591,13 +591,18 @@ function BindingsManager({ userId, member, canManage }: {
   const [roleFilter, setRoleFilter] = useState<CanonicalRole | 'ALL'>('ALL');
   const [statusFilter, setStatusFilter] = useState<UserRoleBindingStatus | 'ALL'>('ALL');
   const [bindingPage, setBindingPage] = useState(1);
+  const pendingFilterAnalytics = useRef<{
+    event: 'binding_filters_applied' | 'binding_filters_cleared';
+    roleFilter: CanonicalRole | 'ALL';
+    statusFilter: UserRoleBindingStatus | 'ALL';
+  } | null>(null);
   const bindingFilters = {
     ...(roleFilter === 'ALL' ? {} : { roleCode: roleFilter }),
     ...(statusFilter === 'ALL' ? {} : { status: statusFilter }),
     page: bindingPage,
     limit: 20,
   };
-  const { data: bindings, isLoading } = useGetUserRoleBindings(userId, bindingFilters, {
+  const { data: bindings, isLoading, isFetching, isError } = useGetUserRoleBindings(userId, bindingFilters, {
     query: {
       enabled: !!userId,
       queryKey: getGetUserRoleBindingsQueryKey(userId, bindingFilters)
@@ -625,6 +630,42 @@ function BindingsManager({ userId, member, canManage }: {
       setBindingPage(bindingTotalPages);
     }
   }, [bindings, bindingPage, bindingTotalPages]);
+
+  useEffect(() => {
+    const pending = pendingFilterAnalytics.current;
+    if (
+      !pending ||
+      isFetching ||
+      isError ||
+      !bindings ||
+      pending.roleFilter !== roleFilter ||
+      pending.statusFilter !== statusFilter
+    ) {
+      return;
+    }
+
+    pendingFilterAnalytics.current = null;
+    trackEvent(pending.event, {
+      role_filter: roleFilter,
+      status_filter: statusFilter,
+      result_count_bucket: getResultCountBucket(bindings.total),
+    });
+  }, [bindings, isError, isFetching, roleFilter, statusFilter]);
+
+  const updateBindingFilters = (
+    nextRoleFilter: CanonicalRole | 'ALL',
+    nextStatusFilter: UserRoleBindingStatus | 'ALL',
+    event: 'binding_filters_applied' | 'binding_filters_cleared',
+  ) => {
+    pendingFilterAnalytics.current = {
+      event,
+      roleFilter: nextRoleFilter,
+      statusFilter: nextStatusFilter,
+    };
+    setRoleFilter(nextRoleFilter);
+    setStatusFilter(nextStatusFilter);
+    setBindingPage(1);
+  };
 
   const navigateBindingPage = (direction: 'previous' | 'next') => {
     const nextPage = direction === 'previous'
@@ -684,6 +725,7 @@ function BindingsManager({ userId, member, canManage }: {
   };
 
   useEffect(() => {
+    pendingFilterAnalytics.current = null;
     setRoleFilter('ALL');
     setStatusFilter('ALL');
     setBindingPage(1);
@@ -737,8 +779,12 @@ function BindingsManager({ userId, member, canManage }: {
           <div className="flex-1 space-y-1.5">
             <label className="text-sm font-medium" htmlFor="binding-role-filter">Role</label>
             <Select value={roleFilter} onValueChange={(value) => {
-              setRoleFilter(value as CanonicalRole | 'ALL');
-              setBindingPage(1);
+              const nextRoleFilter = value as CanonicalRole | 'ALL';
+              updateBindingFilters(
+                nextRoleFilter,
+                statusFilter,
+                nextRoleFilter === 'ALL' ? 'binding_filters_cleared' : 'binding_filters_applied',
+              );
             }}>
               <SelectTrigger id="binding-role-filter" data-testid="select-binding-role-filter">
                  <SelectValue placeholder="Semua peran" />
@@ -754,8 +800,12 @@ function BindingsManager({ userId, member, canManage }: {
           <div className="flex-1 space-y-1.5">
             <label className="text-sm font-medium" htmlFor="binding-status-filter">Status</label>
             <Select value={statusFilter} onValueChange={(value) => {
-              setStatusFilter(value as UserRoleBindingStatus | 'ALL');
-              setBindingPage(1);
+              const nextStatusFilter = value as UserRoleBindingStatus | 'ALL';
+              updateBindingFilters(
+                roleFilter,
+                nextStatusFilter,
+                nextStatusFilter === 'ALL' ? 'binding_filters_cleared' : 'binding_filters_applied',
+              );
             }}>
               <SelectTrigger id="binding-status-filter" data-testid="select-binding-status-filter">
                  <SelectValue placeholder="Semua status" />
@@ -773,9 +823,7 @@ function BindingsManager({ userId, member, canManage }: {
               type="button"
               variant="outline"
               onClick={() => {
-                setRoleFilter('ALL');
-                setStatusFilter('ALL');
-                setBindingPage(1);
+                updateBindingFilters('ALL', 'ALL', 'binding_filters_cleared');
               }}
               data-testid="button-clear-binding-filters"
             >
