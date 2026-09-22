@@ -29,6 +29,26 @@ export async function expectNoHighImpactAccessibilityViolations(
   ).toEqual([]);
 }
 
+export async function expectNoHighImpactColorContrastViolations(
+  context: Element | Document = document.body,
+) {
+  const { violations } = await axe.run(context, {
+    resultTypes: ['violations'],
+    runOnly: {
+      type: 'rule',
+      values: ['color-contrast'],
+    },
+  });
+  const highImpactViolations = violations.filter(
+    (violation) => violation.impact && HIGH_IMPACT_LEVELS.has(violation.impact),
+  );
+
+  expect(
+    highImpactViolations,
+    highImpactViolations.map(formatAccessibilityViolation).join('\n\n'),
+  ).toEqual([]);
+}
+
 function formatAccessibilityViolation(violation: Result) {
   const affectedNodes = violation.nodes
     .map((node) => `  ${node.target.join(' ')}: ${node.failureSummary}`)

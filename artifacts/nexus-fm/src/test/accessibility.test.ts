@@ -15,9 +15,14 @@ describe('expectNoHighImpactAccessibilityViolations', () => {
   ])('still fails for the %s semantic rule', async (rule, markup) => {
     document.body.innerHTML = markup;
 
-    await expect(
-      expectNoHighImpactAccessibilityViolations(document.body),
-    ).rejects.toThrow(rule);
+    let failure: unknown;
+    try {
+      await expectNoHighImpactAccessibilityViolations(document.body);
+    } catch (error) {
+      failure = error;
+    }
+
+    expect(String(failure)).toContain(rule);
   });
 
   it('keeps color analysis disabled even when caller rules are merged', async () => {

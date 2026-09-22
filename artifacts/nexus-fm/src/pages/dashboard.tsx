@@ -217,7 +217,10 @@ function SubsystemCard({ title, status }: { title: string, status: string }) {
       <span className="text-[10px] font-bold font-mono uppercase tracking-wide text-muted-foreground">{title}</span>
       <div className="flex items-center gap-2">
         <span className={`flex size-1.5 ${isReady ? 'bg-primary' : 'bg-muted-foreground'}`} />
-        <span className={`text-xs font-bold font-mono tracking-widest uppercase ${isReady ? 'text-foreground' : 'text-muted-foreground'}`}>
+        <span
+          className={`text-xs font-bold font-mono tracking-widest uppercase ${isReady ? 'text-foreground' : 'text-muted-foreground'}`}
+          data-testid={`status-${title.toLowerCase().replaceAll(' ', '-')}`}
+        >
           {status}
         </span>
       </div>

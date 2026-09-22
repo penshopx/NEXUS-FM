@@ -1,11 +1,12 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import '@/index.css';
 import { Dashboard } from './dashboard';
 import Landing from './landing';
 import NotFound from './not-found';
 import { Profile } from './profile';
-import { expectNoHighImpactAccessibilityViolations } from '@/test/accessibility';
+import { expectNoHighImpactColorContrastViolations } from '@/test/accessibility';
 
 const api = vi.hoisted(() => ({
   session: vi.fn(),
@@ -54,24 +55,61 @@ function renderWithQueryClient(component: React.ReactNode) {
   });
   return render(
     <QueryClientProvider client={client}>
-      {component}
+      <ProductionPage>{component}</ProductionPage>
     </QueryClientProvider>,
   );
 }
 
+function ProductionPage({ children }: { children: React.ReactNode }) {
+  return (
+    <main
+      className="min-h-screen"
+      data-testid="production-page-root"
+      style={{
+        backgroundColor: 'hsl(var(--background))',
+        color: 'hsl(var(--foreground))',
+      }}
+    >
+      {children}
+    </main>
+  );
+}
+
+beforeEach(() => {
+  document.documentElement.className = '';
+  document.body.className = '';
+});
+
 afterEach(() => cleanup());
 
-describe('core page accessibility regressions', () => {
+describe('core page color contrast regressions', () => {
+  it('fails a known unreadable color combination', async () => {
+    render(
+      <p style={{ backgroundColor: '#ffffff', color: '#aaaaaa' }}>
+        Deliberately unreadable control
+      </p>,
+    );
+
+    let failure: unknown;
+    try {
+      await expectNoHighImpactColorContrastViolations();
+    } catch (error) {
+      failure = error;
+    }
+
+    expect(String(failure)).toContain('color-contrast');
+  });
+
   it.each([
     ['landing page', <Landing />, 'TATABANGUN'],
     ['not-found page', <NotFound />, '404'],
-  ])('has no serious or critical violations on the %s', async (_name, page, visibleText) => {
-    render(page);
+  ])('has no serious or critical contrast violations on the %s', async (_name, page, visibleText) => {
+    render(<ProductionPage>{page}</ProductionPage>);
     expect(screen.getAllByText(new RegExp(visibleText))[0]).toBeVisible();
-    await expectNoHighImpactAccessibilityViolations();
+    await expectNoHighImpactColorContrastViolations();
   });
 
-  it('has no serious or critical violations on the populated dashboard', async () => {
+  it('has no serious or critical contrast violations on the populated dashboard', async () => {
     api.session.mockReturnValue({ data: session, isLoading: false, error: null });
     api.foundationSummary.mockReturnValue({
       data: {
@@ -101,14 +139,27 @@ describe('core page accessibility regressions', () => {
     renderWithQueryClient(<Dashboard />);
 
     expect(screen.getByRole('heading', { name: 'Terminal Operasional' })).toBeVisible();
-    await expectNoHighImpactAccessibilityViolations();
+    const pageRoot = screen.getByTestId('production-page-root');
+    const readyStatus = screen.getByTestId('status-autentikasi');
+    const tokenProbe = document.createElement('span');
+    tokenProbe.style.backgroundColor = 'hsl(var(--background))';
+    tokenProbe.style.color = 'hsl(var(--foreground))';
+    pageRoot.append(tokenProbe);
+
+    expect(document.documentElement.className).toBe('');
+    expect(document.body.className).toBe('');
+    expect(getComputedStyle(pageRoot).backgroundColor).toBe(
+      getComputedStyle(tokenProbe).backgroundColor,
+    );
+    expect(getComputedStyle(readyStatus).color).toBe(getComputedStyle(tokenProbe).color);
+    await expectNoHighImpactColorContrastViolations();
   });
 
-  it('has no serious or critical violations on the populated profile', async () => {
+  it('has no serious or critical contrast violations on the populated profile', async () => {
     api.session.mockReturnValue({ data: session, isLoading: false, error: null });
     renderWithQueryClient(<Profile />);
 
     expect(screen.getByRole('heading', { name: 'Identitas & Akses' })).toBeVisible();
-    await expectNoHighImpactAccessibilityViolations();
+    await expectNoHighImpactColorContrastViolations();
   });
 });
