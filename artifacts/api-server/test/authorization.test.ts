@@ -197,6 +197,73 @@ test("access revision events fan out between API instances through PostgreSQL", 
   }
 });
 
+test("access revision listeners reconnect after connection errors without duplicate delivery or leaks", async () => {
+  type Notification = { channel: string; payload?: string };
+  class NotificationClient extends EventEmitter {
+    released = false;
+
+    async query() {
+      return {};
+    }
+
+    release() {
+      this.released = true;
+    }
+  }
+
+  const clients: NotificationClient[] = [];
+  const notificationPool = {
+    async connect() {
+      const client = new NotificationClient();
+      clients.push(client);
+      return client;
+    },
+    async query(_query: string, values?: unknown[]) {
+      const [channel, payload] = values as [string, string];
+      for (const client of clients) {
+        if (!client.released) {
+          client.emit("notification", { channel, payload } satisfies Notification);
+        }
+      }
+      return {};
+    },
+  };
+  const errors: Error[] = [];
+  const publisher = createAccessRevisionBus(notificationPool);
+  const subscriber = createAccessRevisionBus(notificationPool, {
+    onError: (error) => errors.push(error),
+    reconnectDelayMs: 0,
+  });
+  const event = {
+    userId: randomUUID(),
+    organizationId: randomUUID(),
+    reason: "ROLE_BINDING_CHANGED" as const,
+  };
+  const delivered: typeof event[] = [];
+  const unsubscribe = await subscriber.subscribe(
+    event.userId,
+    event.organizationId,
+    (revision) => delivered.push(revision),
+  );
+
+  clients[0]!.emit("error", new Error("listener connection interrupted"));
+  for (let attempt = 0; clients.length < 2 && attempt < 20; attempt += 1) {
+    await delay(5);
+  }
+  assert.equal(clients.length, 2, "listener should establish one replacement connection");
+  assert.equal(clients[0]!.released, true, "interrupted listener connection should be released");
+
+  await publisher.publish(event);
+  assert.deepEqual(delivered, [event]);
+  assert.equal(clients.length, 2, "publishing should not create another listener connection");
+
+  unsubscribe();
+  await Promise.all([publisher.close(), subscriber.close()]);
+
+  assert.deepEqual(errors.map((error) => error.message), ["listener connection interrupted"]);
+  assert.equal(clients.filter((client) => !client.released).length, 0);
+});
+
 test("access revision publication retries transient failures", async () => {
   const event = {
     userId: randomUUID(),
