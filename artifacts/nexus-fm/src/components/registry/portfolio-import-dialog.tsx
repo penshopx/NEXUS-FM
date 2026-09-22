@@ -440,10 +440,14 @@ export function PortfolioImportDialog({
   const handleOpenChange = (nextOpen: boolean, trackCancellation = true) => {
     if (!nextOpen && !importPortfolio.isPending && !validatePortfolio.isPending) {
       if (open && trackCancellation) {
+        const workflowStage = preview ? 'review' : file ? 'validation' : 'selection';
         trackEvent('portfolio_import', {
           stage: 'cancelled',
-          workflow_stage: preview ? 'review' : file ? 'validation' : 'selection',
+          workflow_stage: workflowStage,
           record_count: boundedCount(preview?.total ?? 0),
+          ...(workflowStage === 'validation' && latestValidationFailureReasonRef.current
+            ? { validation_failure_reason: latestValidationFailureReasonRef.current }
+            : {}),
         });
       }
       reset();

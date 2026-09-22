@@ -724,6 +724,73 @@ describe('facility portfolio import browser regressions', () => {
     expect(JSON.stringify(analytics.track.mock.calls)).not.toContain('Private Campus');
   });
 
+  it('records the latest bounded validation guidance on abandonment and clears it when reopened', async () => {
+    const user = userEvent.setup();
+    const privateReport = 'row,error\n2,Private validation detail';
+    api.validateImport.mockReturnValue(idleMutation(
+      vi.fn((_variables: unknown, options: MutationOptions<never>) => {
+        options.onError?.({
+          status: 400,
+          data: privateReport,
+          response: { body: 'Private nested response body' },
+        });
+      }),
+    ));
+    renderPage();
+
+    await openImportDialog(user);
+    await selectCsv(user, 'facility_name\nPrivate Campus');
+    await user.click(screen.getByTestId('button-submit-portfolio-import'));
+    await screen.findByTestId('text-import-failure');
+    await user.click(screen.getByTestId('button-cancel-portfolio-import'));
+
+    expect(analytics.track).toHaveBeenCalledWith('portfolio_import', {
+      stage: 'cancelled',
+      workflow_stage: 'validation',
+      record_count: 0,
+      validation_failure_reason: 'invalid_csv',
+    });
+    const analyticsPayloads = JSON.stringify(analytics.track.mock.calls);
+    expect(analyticsPayloads).not.toContain('portfolio.csv');
+    expect(analyticsPayloads).not.toContain('Private Campus');
+    expect(analyticsPayloads).not.toContain(privateReport);
+    expect(analyticsPayloads).not.toContain('Private nested response body');
+
+    analytics.track.mockClear();
+    await openImportDialog(user);
+    await selectCsv(user);
+    await user.click(screen.getByTestId('button-cancel-portfolio-import'));
+
+    expect(analytics.track).toHaveBeenCalledWith('portfolio_import', {
+      stage: 'cancelled',
+      workflow_stage: 'validation',
+      record_count: 0,
+    });
+  });
+
+  it('still closes and reopens after validation abandonment when analytics throws', async () => {
+    const user = userEvent.setup();
+    analytics.track.mockImplementation(() => {
+      throw new Error('analytics unavailable');
+    });
+    api.validateImport.mockReturnValue(idleMutation(
+      vi.fn((_variables: unknown, options: MutationOptions<never>) => {
+        options.onError?.({ status: 413 });
+      }),
+    ));
+    renderPage();
+
+    await openImportDialog(user);
+    await selectCsv(user);
+    await user.click(screen.getByTestId('button-submit-portfolio-import'));
+    await screen.findByTestId('text-import-failure');
+    await user.click(screen.getByTestId('button-cancel-portfolio-import'));
+
+    expect(screen.queryByTestId('dialog-portfolio-import')).not.toBeInTheDocument();
+    await openImportDialog(user);
+    expect(screen.getByTestId('dialog-portfolio-import')).toBeVisible();
+  });
+
   it.each([
     [400, 'validation_error', 'CSV berisi kesalahan validasi.'],
     [403, 'authorization_error', 'Anda tidak memiliki izin untuk mengimpor portofolio ini.'],
