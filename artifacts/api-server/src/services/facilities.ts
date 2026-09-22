@@ -226,9 +226,6 @@ type RegistryQuery = {
 export function normalizedRegistrySearch(query?: string) {
   const search = query?.trim();
   if (!search) return undefined;
-  if (search.length < REGISTRY_SEARCH_MIN_LENGTH) {
-    throw new RangeError(`Registry search must contain at least ${REGISTRY_SEARCH_MIN_LENGTH} characters`);
-  }
   return search;
 }
 
@@ -310,11 +307,16 @@ async function registryAuthorizationPredicate(input: RegistryQuery, table: any) 
 
 function registryBasePredicate(input: RegistryQuery, table: any, authorizationPredicate: any) {
   const search = normalizedRegistrySearch(input.query);
+  const searchPredicate = search
+    ? search.length < REGISTRY_SEARCH_MIN_LENGTH
+      ? eq(table.code, search)
+      : or(ilike(table.name, `%${search}%`), ilike(table.code, `%${search}%`))
+    : undefined;
   return and(
     eq(table.organizationId, input.organizationId),
     authorizationPredicate,
     parentPredicate(table, input.kind, input.parent),
-    search ? or(ilike(table.name, `%${search}%`), ilike(table.code, `%${search}%`)) : undefined,
+    searchPredicate,
   );
 }
 

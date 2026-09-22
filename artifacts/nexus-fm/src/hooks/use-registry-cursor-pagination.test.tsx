@@ -47,7 +47,7 @@ describe('useRegistryCursorPagination', () => {
     expect(result.current.canGoPrevious).toBe(true);
   });
 
-  it('resets a later cursor atomically without clearing a short raw search', async () => {
+  it('resets a later cursor atomically when searching for a short exact code', async () => {
     window.history.replaceState(
       null,
       '',
@@ -66,7 +66,7 @@ describe('useRegistryCursorPagination', () => {
     expect(result.current.page).toBe(1);
 
     act(() => result.current.setSearch('ab'));
-    await waitFor(() => expect(result.current.registrySearch).toBeUndefined());
+    await waitFor(() => expect(result.current.registrySearch).toBe('ab'));
     expect(result.current.search).toBe('ab');
     expect(result.current.cursor).toBeUndefined();
   });

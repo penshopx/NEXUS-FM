@@ -1804,15 +1804,9 @@ test("facility registry resolves trusted ancestors and enforces every route surf
     return { response, text: await response.text() };
   };
   try {
-    for (const path of [
-      "/facilities?q=a",
-      "/facilities/search?q=ab",
-      "/facilities/export?q=ab",
-      `/facilities/${facility.id}/buildings?q=ab`,
-    ]) {
+    for (const path of ["/facilities?q=a", "/facilities/search?q=ab"]) {
       const shortSearch = await request(path);
-      assert.equal(shortSearch.response.status, 400, `${path} must reject a short search`);
-      assert.match(shortSearch.text, /at least 3 characters/);
+      assert.equal(shortSearch.response.status, 200, `${path} must allow exact short-code lookup`);
     }
     const listed = await request("/facilities?limit=1&page=1");
     assert.equal(listed.response.status, 200);
@@ -2035,15 +2029,15 @@ test("registry HTTP adversarial matrix excludes unauthorized rows across every b
     asset: typeof assetsTable.$inferSelect;
   };
   const makeChain = async (organizationId: string, label: string): Promise<Chain> => {
-    const [facility] = await db.insert(facilitiesTable).values({ organizationId, name: `${label} Facility` }).returning();
+    const [facility] = await db.insert(facilitiesTable).values({ organizationId, name: `${label} Facility`, code: "Q7" }).returning();
     assert.ok(facility);
-    const [building] = await db.insert(buildingsTable).values({ organizationId, facilityId: facility.id, name: `${label} Building` }).returning();
+    const [building] = await db.insert(buildingsTable).values({ organizationId, facilityId: facility.id, name: `${label} Building`, code: "Q7" }).returning();
     assert.ok(building);
-    const [space] = await db.insert(spacesTable).values({ organizationId, facilityId: facility.id, buildingId: building.id, name: `${label} Space` }).returning();
+    const [space] = await db.insert(spacesTable).values({ organizationId, facilityId: facility.id, buildingId: building.id, name: `${label} Space`, code: "Q7" }).returning();
     assert.ok(space);
-    const [system] = await db.insert(systemsTable).values({ organizationId, facilityId: facility.id, buildingId: building.id, spaceId: space.id, name: `${label} System` }).returning();
+    const [system] = await db.insert(systemsTable).values({ organizationId, facilityId: facility.id, buildingId: building.id, spaceId: space.id, name: `${label} System`, code: "Q7" }).returning();
     assert.ok(system);
-    const [asset] = await db.insert(assetsTable).values({ organizationId, facilityId: facility.id, buildingId: building.id, spaceId: space.id, systemId: system.id, name: `${label} Asset` }).returning();
+    const [asset] = await db.insert(assetsTable).values({ organizationId, facilityId: facility.id, buildingId: building.id, spaceId: space.id, systemId: system.id, name: `${label} Asset`, code: "Q7" }).returning();
     assert.ok(asset);
     return { facility, building, space, system, asset };
   };
@@ -2129,6 +2123,14 @@ test("registry HTTP adversarial matrix excludes unauthorized rows across every b
       const searchBody = JSON.parse(search.text) as { items: unknown[]; total: number };
       assert.deepEqual(searchBody.items, []);
       assert.equal(searchBody.total, 0);
+      const shortCodeSearch = await request(`/${testCase.plural}/search?q=Q7`);
+      assert.equal(shortCodeSearch.response.status, 200);
+      const shortCodeSearchBody = JSON.parse(shortCodeSearch.text) as {
+        items: Array<{ id: string }>;
+        total: number;
+      };
+      assert.equal(shortCodeSearchBody.total, 1);
+      assert.deepEqual(shortCodeSearchBody.items.map((item) => item.id), [targetRow.id]);
       const exported = await request(`/${testCase.plural}/export`);
       assert.equal(exported.response.status, 200);
       assert.ok(exported.text.includes(targetRow.name));
@@ -2325,29 +2327,12 @@ test("empty facility collection exposes server-derived bootstrap create capabili
   }
 });
 
-test("registry search rejects one- and two-character terms before querying", async () => {
+test("registry search normalizes one- and two-character exact-code terms", async () => {
   assert.equal(normalizedRegistrySearch(undefined), undefined);
   assert.equal(normalizedRegistrySearch("   "), undefined);
   assert.equal(normalizedRegistrySearch(" abc "), "abc");
-  assert.throws(() => normalizedRegistrySearch("a"), /at least 3 characters/);
-  assert.throws(() => normalizedRegistrySearch(" ab "), /at least 3 characters/);
-
-  const database = new Proxy({}, {
-    get() {
-      throw new Error("short registry search reached the database");
-    },
-  });
-  await assert.rejects(
-    queryAuthorizedRegistryRows({
-      database,
-      kind: "ASSET",
-      organizationId: randomUUID(),
-      actorUserId: randomUUID(),
-      query: "ab",
-      limit: 25,
-    }),
-    /at least 3 characters/,
-  );
+  assert.equal(normalizedRegistrySearch("a"), "a");
+  assert.equal(normalizedRegistrySearch(" ab "), "ab");
 });
 
 test("large registry portfolio keeps list, search, nested totals, and export queries bounded", async () => {
@@ -2391,6 +2376,13 @@ test("large registry portfolio keeps list, search, nested totals, and export que
     await db.insert(assetsTable).values(assetRows.slice(offset, offset + 1_500));
   }
   await pool.query("ANALYZE assets");
+
+  await db.update(assetsTable)
+    .set({ code: "X7" })
+    .where(and(
+      eq(assetsTable.organizationId, actor.organizationId),
+      eq(assetsTable.name, "Performance Needle"),
+    ));
 
   const earlyStartedAt = performance.now();
   const early = await queryAuthorizedRegistryRows({
@@ -2441,6 +2433,19 @@ test("large registry portfolio keeps list, search, nested totals, and export que
   });
   assert.equal(search.rows.length, 1);
   assert.equal(search.total, 1);
+
+  const shortCodeSearch = await queryAuthorizedRegistryRows({
+    database: db,
+    kind: "ASSET",
+    organizationId: actor.organizationId,
+    actorUserId: actor.userId,
+    query: "X7",
+    limit: 25,
+    offset: 0,
+  });
+  assert.equal(shortCodeSearch.rows.length, 1);
+  assert.equal(shortCodeSearch.rows[0]?.name, "Performance Needle");
+  assert.equal(shortCodeSearch.total, 1);
 
   const selectedSpace = spaces[31]!;
   const nested = await queryAuthorizedRegistryRows({
@@ -2563,6 +2568,23 @@ test("large registry portfolio keeps list, search, nested totals, and export que
   };
   await assertTrigramSearchPlan("Needle", "assets_name_trgm_idx");
   await assertTrigramSearchPlan("PERF-31-073", "assets_code_trgm_idx");
+
+  const exactCodePlan = await explain(
+    `SELECT count(*) FROM assets
+       WHERE organization_id = $1 AND code = $2`,
+    [actor.organizationId, "X7"],
+  );
+  assert.ok(
+    exactCodePlan.nodes.some((node) => node["Index Name"] === "assets_organization_code_idx"),
+    "short exact-code search must use its organization/code index",
+  );
+  assert.ok(
+    !exactCodePlan.nodes.some((node) =>
+      node["Relation Name"] === "assets" &&
+      node["Node Type"] === "Seq Scan"),
+    "short exact-code search must not scan every asset",
+  );
+  assert.ok(exactCodePlan.executionTime < 250, "short exact-code query exceeded the 250ms plan budget");
 
 });
 

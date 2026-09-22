@@ -8,14 +8,14 @@ import { RegistryList } from './registry-list';
 afterEach(cleanup);
 
 describe('RegistryList search', () => {
-  it('only produces API queries for trimmed terms of at least three characters', () => {
+  it('produces API queries for trimmed exact short codes and longer substrings', () => {
     expect(registrySearchQuery('')).toBeUndefined();
-    expect(registrySearchQuery(' a ')).toBeUndefined();
-    expect(registrySearchQuery(' ab ')).toBeUndefined();
+    expect(registrySearchQuery(' a ')).toBe('a');
+    expect(registrySearchQuery(' ab ')).toBe('ab');
     expect(registrySearchQuery(' abc ')).toBe('abc');
   });
 
-  it('communicates the three-character minimum and keeps the input controlled', async () => {
+  it('explains exact short-code lookup and keeps the input controlled', async () => {
     const onSearchChange = vi.fn();
     render(
       <RegistryList<RegistryRecord>
@@ -37,11 +37,11 @@ describe('RegistryList search', () => {
       />,
     );
 
-    const input = screen.getByRole('textbox', { name: 'Search Facilities' });
+    const input = screen.getByRole('textbox', { name: 'Cari Facilities' });
     const help = screen.getByTestId('text-search-help-facilities');
-    expect(input).toHaveAttribute('placeholder', 'Search (3+ characters)');
+    expect(input).toHaveAttribute('placeholder', 'Cari berdasarkan nama atau kode');
     expect(input).toHaveAttribute('aria-describedby', help.id);
-    expect(help).toHaveTextContent('Enter at least 3 characters to search.');
+    expect(help).toHaveTextContent('1–2 karakter mencocokkan kode secara tepat. Gunakan 3+ karakter untuk mencari dalam nama atau kode.');
 
     await userEvent.type(input, 'ab');
     expect(onSearchChange).toHaveBeenCalledWith('a');
@@ -72,7 +72,7 @@ describe('RegistryList cursor pagination', () => {
       />,
     );
 
-    await userEvent.click(screen.getByRole('button', { name: 'Next' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Berikutnya' }));
     expect(onNextPage).toHaveBeenCalledOnce();
 
     rerender(
@@ -94,9 +94,9 @@ describe('RegistryList cursor pagination', () => {
       />,
     );
 
-    expect(screen.getByText('Page 3')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
-    await userEvent.click(screen.getByRole('button', { name: 'Prev' }));
+    expect(screen.getByText('Halaman 3')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Berikutnya' })).toBeDisabled();
+    await userEvent.click(screen.getByRole('button', { name: 'Sebelumnya' }));
     expect(onPreviousPage).toHaveBeenCalledOnce();
   });
 });

@@ -61,7 +61,7 @@ export function RegistryList<T extends RegistryRecord>({
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
             <Input
-              placeholder="Cari (minimal 3 karakter)"
+              placeholder="Cari berdasarkan nama atau kode"
               aria-label={`Cari ${title}`}
               aria-describedby={searchHelpId}
               className="pl-9 bg-card border-border focus-visible:ring-primary"
@@ -74,7 +74,7 @@ export function RegistryList<T extends RegistryRecord>({
               className="mt-1.5 text-xs text-muted-foreground"
               data-testid={`text-search-help-${testIdPrefix}`}
             >
-              Masukkan minimal 3 karakter untuk mencari.
+              1–2 karakter mencocokkan kode secara tepat. Gunakan 3+ karakter untuk mencari dalam nama atau kode.
             </p>
           </div>
           <div className="flex items-center gap-2">
