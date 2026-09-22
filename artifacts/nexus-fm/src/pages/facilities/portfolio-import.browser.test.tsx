@@ -188,6 +188,8 @@ describe('facility portfolio import browser regressions', () => {
       workflow_stage: 'review',
       record_count: 8,
       facility_count: 2,
+      new_facility_count: 1,
+      existing_facility_count: 1,
       attempt_number: 1,
       is_retry: false,
       report_downloaded: false,
@@ -536,6 +538,8 @@ describe('facility portfolio import browser regressions', () => {
       workflow_stage: 'review',
       record_count: 1,
       facility_count: 1,
+      new_facility_count: 0,
+      existing_facility_count: 0,
       attempt_number: 2,
       is_retry: true,
       report_downloaded: true,
@@ -584,6 +588,8 @@ describe('facility portfolio import browser regressions', () => {
       workflow_stage: 'review',
       record_count: 1,
       facility_count: 1,
+      new_facility_count: 0,
+      existing_facility_count: 0,
       attempt_number: 1,
       is_retry: false,
       report_downloaded: false,
@@ -679,7 +685,9 @@ describe('facility portfolio import browser regressions', () => {
       vi.fn((_variables: unknown, options: MutationOptions<unknown>) => {
         options.onSuccess?.({
           total: 250_000,
-          facilities: 1,
+          facilities: 250_000,
+          newFacilities: 250_000,
+          existingFacilities: -12,
           buildings: 0,
           spaces: 0,
           systems: 0,
@@ -694,6 +702,17 @@ describe('facility portfolio import browser regressions', () => {
     await selectCsv(user, 'facility_name\nPrivate Campus');
     await user.click(screen.getByTestId('button-submit-portfolio-import'));
     await screen.findByTestId('alert-import-preview');
+    expect(analytics.track).toHaveBeenCalledWith('portfolio_import', {
+      stage: 'validation_success',
+      workflow_stage: 'review',
+      record_count: 100_000,
+      facility_count: 100_000,
+      new_facility_count: 100_000,
+      existing_facility_count: 0,
+      attempt_number: 1,
+      is_retry: false,
+      report_downloaded: false,
+    });
     await user.click(screen.getByTestId('button-cancel-portfolio-import'));
 
     expect(analytics.track).toHaveBeenCalledWith('portfolio_import', {

@@ -344,6 +344,7 @@ function getErrorReport(error: unknown) {
 }
 
 function boundedCount(count: number) {
+  if (!Number.isFinite(count)) return 0;
   return Math.min(Math.max(Math.trunc(count), 0), MAX_ANALYTICS_COUNT);
 }
 
@@ -498,6 +499,8 @@ export function PortfolioImportDialog({
             workflow_stage: 'review',
             record_count: boundedCount(result.total),
             facility_count: boundedCount(result.facilities),
+            new_facility_count: boundedCount(result.newFacilities),
+            existing_facility_count: boundedCount(result.existingFacilities),
             attempt_number: attemptNumber,
             is_retry: isRetry,
             report_downloaded: reportDownloadedRef.current,
