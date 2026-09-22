@@ -14,6 +14,7 @@ describe('member review URL state', () => {
       page: 1,
       selection: null,
       hasActiveState: true,
+      wasRepaired: true,
     });
   });
 
@@ -26,6 +27,20 @@ describe('member review URL state', () => {
       page: 2,
       selection: { memberId: 'user-1', organizationId: 'org-1' },
       hasActiveState: true,
+      wasRepaired: true,
+    });
+  });
+
+  it('leaves complete bookmarked state unchanged', () => {
+    expect(parseMemberReviewUrlState(new URLSearchParams(
+      'query=Target&organizationId=org-2&organizationName=Acme&organizationSlug=acme&page=2&memberId=user-1&memberOrganizationId=org-1',
+    ))).toEqual({
+      query: 'Target',
+      organization: { id: 'org-2', name: 'Acme', slug: 'acme' },
+      page: 2,
+      selection: { memberId: 'user-1', organizationId: 'org-1' },
+      hasActiveState: true,
+      wasRepaired: false,
     });
   });
 

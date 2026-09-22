@@ -119,6 +119,7 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
   const selectedMemberOrganizationId = urlState.selection?.organizationId ?? '';
   const page = urlState.page;
   const hasActiveMemberSearch = urlState.hasActiveState;
+  const wasMemberReviewUrlRepaired = urlState.wasRepaired;
   const urlOrganization = urlState.organization;
   const [searchInput, setSearchInput] = useState(submittedQuery);
   const [organizationPickerOpen, setOrganizationPickerOpen] = useState(false);
@@ -331,6 +332,15 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
   return (
     <div className="space-y-6">
       <div className="p-6 border border-border rounded-lg bg-card shadow-sm">
+        {wasMemberReviewUrlRepaired && (
+          <div
+            className="mb-4 rounded border border-border bg-muted/40 p-3 text-sm"
+            data-testid="member-review-url-repaired"
+            role="status"
+          >
+            Beberapa detail tautan tersimpan tidak valid atau tidak lengkap, sehingga tinjauan akses dibuka dengan pengaturan aman.
+          </div>
+        )}
         <div className="space-y-2">
            <label className="text-sm font-medium" htmlFor="member-search">Cari anggota</label>
           <form onSubmit={handleSearch} className="space-y-3">

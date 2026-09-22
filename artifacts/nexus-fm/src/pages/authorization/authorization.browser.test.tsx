@@ -566,6 +566,37 @@ describe('authorization administration browser regressions', () => {
       expect.objectContaining({ query: 'Target', organizationId: 'org-2', page: 2 }),
       expect.anything(),
     );
+    expect(screen.queryByTestId('member-review-url-repaired')).not.toBeInTheDocument();
+  });
+
+  it.each([
+    {
+      name: 'a malformed page',
+      search: 'query=Target&page=not-a-page',
+      sensitiveValues: ['not-a-page'],
+    },
+    {
+      name: 'incomplete organization metadata',
+      search: 'query=Target&organizationId=private-org',
+      sensitiveValues: ['private-org'],
+    },
+    {
+      name: 'an incomplete member selection',
+      search: 'query=Target&memberId=private-member',
+      sensitiveValues: ['private-member'],
+    },
+  ])('explains when an old access-review link contains $name', async ({ search, sensitiveValues }) => {
+    window.history.replaceState(null, '', `/authorization?${search}`);
+
+    renderPage();
+
+    const notice = await screen.findByTestId('member-review-url-repaired');
+    expect(notice).toHaveTextContent(
+      'Beberapa detail tautan tersimpan tidak valid atau tidak lengkap',
+    );
+    for (const sensitiveValue of sensitiveValues) {
+      expect(notice).not.toHaveTextContent(sensitiveValue);
+    }
   });
 
   it('bookmarks and restores an authorized selected member from the URL', async () => {
