@@ -30,6 +30,7 @@ import {
   type RegistryRow,
 } from "../services/facilities";
 import { getActiveOrganizationId } from "./authorization";
+import { streamCsvResponse } from "../lib/csv-stream";
 
 type Database = typeof db;
 type CurrentUser = typeof defaultCurrentUser;
@@ -42,38 +43,6 @@ type RegistryCapabilities = {
 };
 type RegistryCollectionCapabilities = { create: boolean };
 type AuthorizedRegistryRow = RegistryRow & { capabilities: RegistryCapabilities };
-
-type DrainableResponse = {
-  destroyed: boolean;
-  once(event: "drain" | "close" | "error", listener: (...args: any[]) => void): unknown;
-  removeListener(event: "drain" | "close" | "error", listener: (...args: any[]) => void): unknown;
-};
-
-export function waitForCsvDrain(response: DrainableResponse) {
-  return new Promise<void>((resolve, reject) => {
-    const cleanup = () => {
-      response.removeListener("drain", onDrain);
-      response.removeListener("close", onClose);
-      response.removeListener("error", onError);
-    };
-    const onDrain = () => {
-      cleanup();
-      resolve();
-    };
-    const onClose = () => {
-      cleanup();
-      reject(new Error("CSV export client disconnected"));
-    };
-    const onError = (error: unknown) => {
-      cleanup();
-      reject(error);
-    };
-    response.once("drain", onDrain);
-    response.once("close", onClose);
-    response.once("error", onError);
-    if (response.destroyed) onClose();
-  });
-}
 
 export type FacilitiesRouteDependencies = {
   currentUser?: CurrentUser;
@@ -460,11 +429,7 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
     const query = search.query;
     const actor = await actorContext(req, res, resolveCurrentUser, database);
     if (!actor) return;
-    const write = async (chunk: string) => {
-      if (res.destroyed) throw new Error("CSV export client disconnected");
-      if (!res.write(chunk)) await waitForCsvDrain(res);
-    };
-    try {
+    await streamCsvResponse(res, async (write) => {
       await database.transaction(async (snapshot: any) => {
         const batchSize = 500;
         let after: { name: string; id: string } | undefined;
@@ -494,18 +459,7 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
           after = { name: last.name, id: last.id };
         }
       }, { isolationLevel: "repeatable read", accessMode: "read only" });
-      res.end();
-    } catch (error) {
-      if (error instanceof RegistryExportAuthorizationError) {
-        if (!res.headersSent) {
-          res.status(403).json({ error: "Authorization denied", reasonCode: "NO_APPLICABLE_GRANT" });
-        } else {
-          res.destroy(error);
-        }
-        return;
-      }
-      throw error;
-    }
+    }, (error) => error instanceof RegistryExportAuthorizationError);
   }
 
   async function create(req: import("express").Request, res: import("express").Response, kind: RegistryKind) {

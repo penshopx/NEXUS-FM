@@ -69,7 +69,8 @@ import {
 } from "../src/services/foundation.ts";
 import { createAccessRevisionBus } from "../src/services/access-revisions.ts";
 import { createAuthorizationRouter } from "../src/routes/authorization.ts";
-import { createFacilitiesRouter, waitForCsvDrain } from "../src/routes/facilities.ts";
+import { createFacilitiesRouter } from "../src/routes/facilities.ts";
+import { waitForCsvDrain } from "../src/lib/csv-stream.ts";
 import { createWorkOrderScopeGuard } from "../src/routes/work-order-scope.ts";
 import {
   authorizeRegistryObject,
@@ -2713,6 +2714,28 @@ test("CSV backpressure listeners remain bounded across slow-consumer drain cycle
   assert.equal(response.listenerCount("drain"), 0);
   assert.equal(response.listenerCount("close"), 0);
   assert.equal(response.listenerCount("error"), 0);
+});
+
+test("CSV backpressure listeners are cleaned up after close and error events", async () => {
+  for (const event of ["close", "error"] as const) {
+    const response = Object.assign(new EventEmitter(), { destroyed: false });
+    const pending = waitForCsvDrain(response);
+    assert.equal(response.listenerCount("drain"), 1);
+    assert.equal(response.listenerCount("close"), 1);
+    assert.equal(response.listenerCount("error"), 1);
+
+    const streamError = new Error("socket failed");
+    response.emit(event, ...(event === "error" ? [streamError] : []));
+    await assert.rejects(
+      pending,
+      event === "close"
+        ? /client disconnected/
+        : (error) => error === streamError,
+    );
+    assert.equal(response.listenerCount("drain"), 0);
+    assert.equal(response.listenerCount("close"), 0);
+    assert.equal(response.listenerCount("error"), 0);
+  }
 });
 
 test("empty facility collection exposes server-derived bootstrap create capability", async () => {

@@ -52,6 +52,7 @@ import {
   publishAccessRevision,
   subscribeToAccessRevisions,
 } from "../services/access-revisions";
+import { streamCsvResponse } from "../lib/csv-stream";
 
 type PermissionUpdate = { permissionId: string; defaultScopeType?: string; effect?: string };
 
@@ -71,38 +72,6 @@ type ScopeTarget = {
 const MEMBER_ACCESS_EXPORT_BATCH_SIZE = 500;
 
 class MemberAccessExportAuthorizationError extends Error {}
-
-type DrainableResponse = {
-  destroyed: boolean;
-  once(event: "drain" | "close" | "error", listener: (...args: any[]) => void): unknown;
-  removeListener(event: "drain" | "close" | "error", listener: (...args: any[]) => void): unknown;
-};
-
-function waitForCsvDrain(response: DrainableResponse) {
-  return new Promise<void>((resolve, reject) => {
-    const cleanup = () => {
-      response.removeListener("drain", onDrain);
-      response.removeListener("close", onClose);
-      response.removeListener("error", onError);
-    };
-    const onDrain = () => {
-      cleanup();
-      resolve();
-    };
-    const onClose = () => {
-      cleanup();
-      reject(new Error("CSV export client disconnected"));
-    };
-    const onError = (error: unknown) => {
-      cleanup();
-      reject(error);
-    };
-    response.once("drain", onDrain);
-    response.once("close", onClose);
-    response.once("error", onError);
-    if (response.destroyed) onClose();
-  });
-}
 
 function escapeLikePattern(value: string): string {
   return value.replace(/[\\%_]/g, "\\$&");
@@ -989,10 +958,6 @@ router.get("/users/:userId/role-bindings/export", async (req, res): Promise<void
     "starts_at",
     "ends_at",
   ];
-  const write = async (chunk: string) => {
-    if (res.destroyed) throw new Error("CSV export client disconnected");
-    if (!res.write(chunk)) await waitForCsvDrain(res);
-  };
   const recheckAccess = async () => {
     const organizationId = await getActiveOrganizationId(admin.user.id, database);
     if (admin.scopeType !== "PLATFORM" && organizationId !== admin.organizationId) {
@@ -1010,7 +975,7 @@ router.get("/users/:userId/role-bindings/export", async (req, res): Promise<void
     }
   };
 
-  try {
+  await streamCsvResponse(res, async (write) => {
     await database.transaction(async (snapshot: any) => {
       let after: { createdAt: string; id: string } | undefined;
       let headerWritten = false;
@@ -1079,18 +1044,7 @@ router.get("/users/:userId/role-bindings/export", async (req, res): Promise<void
         after = { createdAt: last.createdAt, id: last.id };
       }
     }, { isolationLevel: "repeatable read", accessMode: "read only" });
-    res.end();
-  } catch (error) {
-    if (error instanceof MemberAccessExportAuthorizationError) {
-      if (!res.headersSent) {
-        res.status(403).json({ error: "Authorization denied", reasonCode: "NO_APPLICABLE_GRANT" });
-      } else {
-        res.destroy(error);
-      }
-      return;
-    }
-    throw error;
-  }
+  }, (error) => error instanceof MemberAccessExportAuthorizationError);
 });
 
 router.delete("/users/:userId/memberships/:organizationId", async (req, res): Promise<void> => {
