@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'wouter';
 import { 
   useGetUserRoleBindings,
@@ -125,6 +125,17 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
   const [organizationQuery, setOrganizationQuery] = useState('');
   const [selectedOrganization, setSelectedOrganization] = useState<PlatformOrganizationSearchResult | null>(urlOrganization);
   const [selectedMember, setSelectedMember] = useState<OrganizationMemberSearchResult | null>(null);
+  const memberSearchResetContext = useRef<{
+    hadPagination: boolean;
+    hadOrganizationFilter: boolean;
+  } | null>(null);
+  const recoverySearchSubmission = useRef<{
+    resetHadPagination: boolean;
+    resetHadOrganizationFilter: boolean;
+    hasOrganizationFilter: boolean;
+    query: string;
+    organizationId: string;
+  } | null>(null);
   const { data: myPermissions } = useGetMyPermissions();
   const isPlatformAdmin = myPermissions?.permissions.some(
     (permission) => permission.code === 'USER.VIEW' &&
@@ -155,6 +166,47 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
       },
     },
   );
+
+  useEffect(() => {
+    const recovery = recoverySearchSubmission.current;
+    if (!recovery) {
+      return;
+    }
+
+    if (
+      submittedQuery !== recovery.query ||
+      submittedOrganizationId !== recovery.organizationId ||
+      page !== 1
+    ) {
+      recoverySearchSubmission.current = null;
+      return;
+    }
+
+    if (
+      submittedQuery.length < 2 ||
+      search.isFetching ||
+      search.isError ||
+      !search.data
+    ) {
+      return;
+    }
+
+    recoverySearchSubmission.current = null;
+    memberSearchResetContext.current = null;
+    trackEvent('member_search_after_reset', {
+      reset_had_pagination: recovery.resetHadPagination,
+      reset_had_organization_filter: recovery.resetHadOrganizationFilter,
+      has_organization_filter: recovery.hasOrganizationFilter,
+      result: search.data.items.length > 0 ? 'matches' : 'no_matches',
+    });
+  }, [
+    page,
+    search.data,
+    search.isError,
+    search.isFetching,
+    submittedOrganizationId,
+    submittedQuery,
+  ]);
   const hasSavedMemberSelection = Boolean(selectedMemberId && selectedMemberOrganizationId);
   const isSavedMemberUnavailable = hasSavedMemberSelection &&
     Boolean(search.data) &&
@@ -207,6 +259,16 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
     e.preventDefault();
     const query = searchInput.trim();
     if (query.length >= 2) {
+      const resetContext = memberSearchResetContext.current;
+      if (resetContext) {
+        recoverySearchSubmission.current = {
+          resetHadPagination: resetContext.hadPagination,
+          resetHadOrganizationFilter: resetContext.hadOrganizationFilter,
+          hasOrganizationFilter: isPlatformAdmin && Boolean(selectedOrganization),
+          query,
+          organizationId: isPlatformAdmin ? selectedOrganization?.id ?? '' : '',
+        };
+      }
       setUrlSearchParams((current) => transitionMemberReviewUrlState(current, {
         type: 'search',
         query,
@@ -224,6 +286,11 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
     setOrganizationQuery('');
     setOrganizationPickerOpen(false);
     setSelectedMember(null);
+    memberSearchResetContext.current = {
+      hadPagination,
+      hadOrganizationFilter,
+    };
+    recoverySearchSubmission.current = null;
     setUrlSearchParams((current) => transitionMemberReviewUrlState(current, { type: 'clear' }));
     trackEvent('member_search_reset', {
       had_pagination: hadPagination,

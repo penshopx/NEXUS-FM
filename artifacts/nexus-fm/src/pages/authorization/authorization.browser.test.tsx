@@ -714,6 +714,109 @@ describe('authorization administration browser regressions', () => {
       expect.objectContaining({ query: 'Target', organizationId: 'org-2', page: 2 }),
       expect.anything(),
     );
+    expect(analytics.track).toHaveBeenCalledOnce();
+  });
+
+  it('tracks a successful member search submitted after a reset without private search data', async () => {
+    const user = userEvent.setup();
+    window.history.replaceState(
+      null,
+      '',
+      '/authorization?query=Target&organizationId=org-2&organizationName=Acme+Facilities&organizationSlug=acme-facilities&page=2',
+    );
+    api.searchMembers.mockReturnValue({
+      data: { items: [member], page: 1, limit: 20, total: 1 },
+      isFetching: false,
+      isError: false,
+    });
+    renderPage();
+
+    await user.click(screen.getByTestId('button-clear-member-search'));
+    await user.type(screen.getByTestId('input-target-user'), 'Recovered Admin');
+    await user.click(screen.getByTestId('button-search-user'));
+
+    await waitFor(() => expect(analytics.track).toHaveBeenCalledTimes(2));
+    expect(analytics.track).toHaveBeenLastCalledWith('member_search_after_reset', {
+      reset_had_pagination: true,
+      reset_had_organization_filter: true,
+      has_organization_filter: false,
+      result: 'matches',
+    });
+
+    const analyticsPayload = JSON.stringify(analytics.track.mock.calls);
+    expect(analyticsPayload).not.toContain('Recovered Admin');
+    expect(analyticsPayload).not.toContain('Target');
+    expect(analyticsPayload).not.toContain('org-2');
+    expect(analyticsPayload).not.toContain('Acme Facilities');
+  });
+
+  it('waits for the submitted recovery search to succeed and categorizes an empty result', async () => {
+    const user = userEvent.setup();
+    let recoveryState: 'loading' | 'success' = 'loading';
+    api.searchMembers.mockImplementation((params) => {
+      if (params.query === 'Recovered Admin') {
+        return recoveryState === 'loading'
+          ? { data: undefined, isFetching: true, isError: false }
+          : {
+              data: { items: [], page: 1, limit: 20, total: 0 },
+              isFetching: false,
+              isError: false,
+            };
+      }
+      return {
+        data: { items: [member], page: 1, limit: 20, total: 1 },
+        isFetching: false,
+        isError: false,
+      };
+    });
+    window.history.replaceState(null, '', '/authorization?query=Target');
+    const rendered = renderPage();
+
+    await user.click(screen.getByTestId('button-clear-member-search'));
+    await user.type(screen.getByTestId('input-target-user'), 'Recovered Admin');
+    await user.click(screen.getByTestId('button-search-user'));
+    expect(analytics.track).toHaveBeenCalledOnce();
+
+    recoveryState = 'success';
+    rendered.rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <AuthorizationPage />
+        <Toaster />
+      </QueryClientProvider>,
+    );
+
+    await waitFor(() => expect(analytics.track).toHaveBeenCalledTimes(2));
+    expect(analytics.track).toHaveBeenLastCalledWith('member_search_after_reset', {
+      reset_had_pagination: false,
+      reset_had_organization_filter: false,
+      has_organization_filter: false,
+      result: 'no_matches',
+    });
+  });
+
+  it('does not let navigation or refetch consume a failed recovery submission', async () => {
+    const user = userEvent.setup();
+    api.searchMembers.mockImplementation((params) => ({
+      data: params.query === 'Recovered Admin'
+        ? undefined
+        : { items: [member], page: 1, limit: 20, total: 1 },
+      isFetching: false,
+      isError: params.query === 'Recovered Admin',
+    }));
+    window.history.replaceState(null, '', '/authorization?query=Target');
+    renderPage();
+
+    await user.click(screen.getByTestId('button-clear-member-search'));
+    await user.type(screen.getByTestId('input-target-user'), 'Recovered Admin');
+    await user.click(screen.getByTestId('button-search-user'));
+    expect(analytics.track).toHaveBeenCalledOnce();
+
+    window.history.back();
+    await waitFor(() => expect(window.location.search).toBe(''));
+    window.history.back();
+    await waitFor(() => expect(window.location.search).toContain('query=Target'));
+    await waitFor(() => expect(screen.getByTestId('member-search-results')).toBeVisible());
+    expect(analytics.track).toHaveBeenCalledOnce();
   });
 
   it.each([
