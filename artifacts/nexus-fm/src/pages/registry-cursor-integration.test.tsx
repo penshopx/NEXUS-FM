@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ComponentType } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -269,4 +269,131 @@ describe('registry screen cursor contract', () => {
       }
     },
   );
+
+  it('keeps space systems and standalone asset URL state independent across tabs and browser history', async () => {
+    const path = '/app/spaces/space-1';
+    sessionStorage.setItem(
+      `registry-cursors:${path}:systems-:systems-old`,
+      JSON.stringify({
+        'systems-cursor': { previousCursor: null, previousPage: 1 },
+      }),
+    );
+    sessionStorage.setItem(
+      `registry-cursors:${path}:assets-:assets-old`,
+      JSON.stringify({
+        'assets-cursor': { previousCursor: null, previousPage: 1 },
+      }),
+    );
+    window.history.replaceState(
+      null,
+      '',
+      `${path}?systems-q=systems-old&systems-cursor=systems-cursor&systems-page=2&assets-q=assets-old&assets-cursor=assets-cursor&assets-page=2`,
+    );
+    renderPage(SpaceDetailPage);
+
+    await waitFor(() => {
+      expect(api.spaceSystems).toHaveBeenCalledWith({
+        q: 'systems-old',
+        cursor: 'systems-cursor',
+        limit: 10,
+      });
+    });
+
+    await userEvent.click(screen.getByTestId('button-next-page-systems'));
+    await waitFor(() => {
+      expect(api.spaceSystems).toHaveBeenCalledWith({
+        q: 'systems-old',
+        cursor: 'next-cursor',
+        limit: 10,
+      });
+    });
+    let params = new URLSearchParams(window.location.search);
+    expect(params.get('assets-q')).toBe('assets-old');
+    expect(params.get('assets-cursor')).toBe('assets-cursor');
+    expect(params.get('assets-page')).toBe('2');
+
+    const systemsSearch = screen.getByTestId('input-search-systems');
+    await userEvent.clear(systemsSearch);
+    await userEvent.type(systemsSearch, 'systems-new');
+    await waitFor(() => {
+      expect(api.spaceSystems).toHaveBeenCalledWith({
+        q: 'systems-new',
+        cursor: undefined,
+        limit: 10,
+      });
+    });
+    params = new URLSearchParams(window.location.search);
+    expect(params.get('assets-q')).toBe('assets-old');
+    expect(params.get('assets-cursor')).toBe('assets-cursor');
+    expect(params.get('assets-page')).toBe('2');
+
+    await userEvent.click(screen.getByTestId('tab-assets'));
+    await waitFor(() => {
+      expect(api.spaceAssets).toHaveBeenCalledWith({
+        q: 'assets-old',
+        cursor: 'assets-cursor',
+        limit: 10,
+      });
+    });
+    expect(screen.getByTestId('input-search-assets')).toHaveValue('assets-old');
+
+    await userEvent.click(screen.getByTestId('button-next-page-assets'));
+    await waitFor(() => {
+      expect(api.spaceAssets).toHaveBeenCalledWith({
+        q: 'assets-old',
+        cursor: 'next-cursor',
+        limit: 10,
+      });
+    });
+    params = new URLSearchParams(window.location.search);
+    expect(params.get('systems-q')).toBe('systems-new');
+    expect(params.has('systems-cursor')).toBe(false);
+    expect(params.has('systems-page')).toBe(false);
+
+    const assetsSearch = screen.getByTestId('input-search-assets');
+    await userEvent.clear(assetsSearch);
+    await userEvent.type(assetsSearch, 'assets-new');
+    await waitFor(() => {
+      expect(api.spaceAssets).toHaveBeenCalledWith({
+        q: 'assets-new',
+        cursor: undefined,
+        limit: 10,
+      });
+    });
+    params = new URLSearchParams(window.location.search);
+    expect(params.get('systems-q')).toBe('systems-new');
+    expect(params.has('systems-cursor')).toBe(false);
+    expect(params.has('systems-page')).toBe(false);
+
+    await userEvent.click(screen.getByTestId('tab-systems'));
+    expect(screen.getByTestId('input-search-systems')).toHaveValue('systems-new');
+    await userEvent.click(screen.getByTestId('tab-assets'));
+    expect(screen.getByTestId('input-search-assets')).toHaveValue('assets-new');
+
+    act(() => window.history.back());
+    await waitFor(() => {
+      const restored = new URLSearchParams(window.location.search);
+      expect(restored.get('systems-q')).toBe('systems-new');
+      expect(restored.has('systems-cursor')).toBe(false);
+      expect(restored.get('assets-q')).toBe('assets-old');
+      expect(restored.get('assets-cursor')).toBe('next-cursor');
+      expect(restored.get('assets-page')).toBe('3');
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId('input-search-assets')).toHaveValue('assets-old');
+    });
+
+    act(() => window.history.forward());
+    await waitFor(() => {
+      const restored = new URLSearchParams(window.location.search);
+      expect(restored.get('systems-q')).toBe('systems-new');
+      expect(restored.has('systems-cursor')).toBe(false);
+      expect(restored.get('assets-q')).toBe('assets-new');
+      expect(restored.has('assets-cursor')).toBe(false);
+      expect(restored.has('assets-page')).toBe(false);
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId('input-search-assets')).toHaveValue('assets-new');
+    });
+  });
 });
