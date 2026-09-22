@@ -1,11 +1,25 @@
-import { useGetFoundationSummary, useGetSession, getGetFoundationSummaryQueryKey } from '@workspace/api-client-react';
+import { useGetFoundationSummary, useGetSession, getGetFoundationSummaryQueryKey, useListFacilities, getListFacilitiesQueryKey } from '@workspace/api-client-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ShieldAlert, Users, Fingerprint, Activity, AlertCircle } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ShieldAlert, AlertTriangle, Terminal, Server, MapPin, ArrowRight, Building, Activity } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Link } from 'wouter';
+import { Button } from '@/components/ui/button';
+import type { Facility } from '@workspace/api-client-react';
 
 export function Dashboard() {
   const { data: session, isLoading: sessionLoading } = useGetSession();
-  const { data: summary, isLoading: summaryLoading, error } = useGetFoundationSummary({
+
+  const { data: facilitiesPage, isLoading: facilitiesLoading, error: facilitiesError } = useListFacilities(
+    { limit: 6 },
+    {
+      query: {
+        enabled: !!session?.activeOrganization,
+        queryKey: getListFacilitiesQueryKey({ limit: 6 })
+      }
+    }
+  );
+
+  const { data: summary, isLoading: summaryLoading, error: summaryError } = useGetFoundationSummary({
     query: {
       enabled: !!session?.activeOrganization,
       queryKey: getGetFoundationSummaryQueryKey()
@@ -18,142 +32,210 @@ export function Dashboard() {
 
   if (!session?.activeOrganization) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
-        <div className="size-16 rounded-full bg-muted flex items-center justify-center mb-4">
-          <ShieldAlert className="size-8 text-muted-foreground" />
+      <div className="flex flex-col items-center justify-center py-20 text-center space-y-6">
+        <div className="size-20 border-2 border-dashed border-muted-foreground/50 bg-muted/20 flex items-center justify-center mb-2">
+          <ShieldAlert className="size-10 text-muted-foreground" />
         </div>
-         <h2 className="text-2xl font-mono font-bold tracking-tight">BELUM ADA ORGANISASI DIPILIH</h2>
-        <p className="text-muted-foreground max-w-md">
-           Anda harus memilih konteks organisasi aktif dari navigasi atas untuk melihat dasbor fondasi.
-        </p>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-mono font-bold tracking-tight uppercase">Menunggu Inisialisasi</h2>
+          <p className="text-muted-foreground max-w-md font-mono text-sm leading-relaxed">
+            Anda harus memilih konteks organisasi aktif dari navigasi atas untuk memuat antarmuka terminal.
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-2">
-         <h1 className="text-3xl font-mono font-bold tracking-tight">Status Fondasi</h1>
-        <p className="text-muted-foreground text-sm">
-           Ikhtisar operasional untuk <strong className="text-foreground">{session.activeOrganization.organization.name}</strong>.
-        </p>
+    <div className="space-y-8" data-testid="dashboard-operational">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b-2 border-border pb-6">
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2 text-primary">
+            <Terminal className="size-5" />
+            <span className="font-mono text-xs font-bold uppercase tracking-widest">Koneksi Berhasil</span>
+          </div>
+          <h1 className="text-3xl font-black uppercase tracking-tight">Terminal Operasional</h1>
+          <p className="text-muted-foreground text-sm font-mono">
+            Konteks saat ini: <strong className="text-foreground border-b border-primary/50 pb-0.5">{session.activeOrganization.organization.name}</strong>.
+          </p>
+        </div>
       </div>
 
-      {summaryLoading ? (
-        <DashboardSkeleton />
-      ) : error ? (
-        <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-6 flex items-start gap-4">
-          <AlertCircle className="size-6 text-destructive shrink-0 mt-1" />
-          <div>
-             <h3 className="text-lg font-mono font-semibold text-destructive">Kueri Sistem Gagal</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-               Ringkasan fondasi tidak dapat diambil. Server mungkin tidak dapat dijangkau atau sesi Anda telah berakhir.
-            </p>
+      {/* Facilities Section (Operations First) */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <MapPin className="size-5 text-primary" />
+            <h2 className="text-xl font-black uppercase tracking-tight">Akses Fasilitas</h2>
           </div>
+          {facilitiesPage && (facilitiesPage.items.length > 0 || facilitiesPage.collectionCapabilities.create) && (
+            <Link href="/app/facilities" data-testid="link-all-facilities">
+              <Button variant="outline" size="sm" className="font-mono text-xs uppercase h-8 rounded-none border-2">
+                Buka seluruh fasilitas <ArrowRight className="ml-2 size-3" />
+              </Button>
+            </Link>
+          )}
         </div>
-      ) : summary ? (
-        <div className="grid gap-6">
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <SummaryCard 
-               title="Anggota Aktif"
-              value={summary.memberCount.toString()} 
-              icon={<Users className="size-4 text-primary" />} 
-            />
-            <SummaryCard 
-               title="Peran Kanonis"
-              value={summary.canonicalRoleCount.toString()} 
-              icon={<Fingerprint className="size-4 text-primary" />} 
-            />
-            <SummaryCard 
-               title="Peran Anda"
-              value={summary.currentRole.replace('_', ' ')} 
-              icon={<ShieldAlert className="size-4 text-primary" />} 
-              valueClass="text-base sm:text-lg whitespace-nowrap overflow-hidden text-ellipsis"
-            />
-            <SummaryCard 
-               title="Status Audit"
-              value={summary.auditStatus} 
-              icon={<Activity className="size-4 text-primary" />} 
-              valueClass={summary.auditStatus === 'ACTIVE' ? 'text-primary' : 'text-muted-foreground'}
-            />
+
+        {facilitiesLoading ? (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[...Array(3)].map((_, i) => (
+              <Skeleton key={i} className="h-32 w-full rounded-none border-2 border-border" />
+            ))}
+          </div>
+        ) : facilitiesError ? (
+          <div className="rounded-none border-2 border-destructive bg-destructive/10 p-6 flex items-start gap-4">
+            <AlertTriangle className="size-6 text-destructive shrink-0 mt-0.5" />
+            <div>
+              <h3 className="text-sm font-mono font-bold text-destructive uppercase">Kueri Registri Gagal</h3>
+              <p className="text-xs text-muted-foreground mt-1 font-mono">
+                Data fasilitas tidak dapat diambil. Silakan periksa koneksi atau izin Anda.
+              </p>
+            </div>
+          </div>
+        ) : facilitiesPage?.items.length === 0 ? (
+          <div className="border-2 border-dashed border-border p-8 flex flex-col items-center justify-center text-center">
+            <Building className="size-8 text-muted-foreground mb-3" />
+            <h3 className="text-sm font-bold font-mono uppercase tracking-wide">Belum Ada Fasilitas</h3>
+            <p className="text-xs text-muted-foreground font-mono mt-1 mb-4">
+              Tidak ada data fasilitas yang ditemukan dalam konteks organisasi ini.
+            </p>
+            <Link href="/app/facilities">
+              <Button variant="outline" className="rounded-none border-2 font-mono uppercase text-xs">
+                Kelola Registri
+              </Button>
+            </Link>
+          </div>
+        ) : (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {facilitiesPage?.items.map((facility) => (
+              <FacilityCard key={facility.id} facility={facility} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* System Readiness Section (Secondary) */}
+      <div className="mt-12 pt-8 border-t-2 border-border border-dashed">
+        <div className="space-y-6 opacity-80 hover:opacity-100 transition-opacity">
+          <div className="flex items-center gap-2">
+            <Server className="size-4 text-muted-foreground" />
+            <h2 className="text-lg font-black uppercase tracking-tight text-muted-foreground">Kesiapan Sistem</h2>
           </div>
 
-          <h2 className="text-xl font-mono font-semibold tracking-tight mt-4 border-b border-border pb-2">
-             Kesiapan Subsistem
-          </h2>
-          <div className="grid md:grid-cols-3 gap-4">
-            <StatusCard 
-               title="Autentikasi"
-              status={summary.authenticationStatus} 
-               description="Verifikasi identitas dan penerbitan sesi."
-            />
-            <StatusCard 
-               title="Konteks Organisasi"
-              status={summary.organizationContextStatus} 
-               description="Cakupan tenant dan batas isolasi."
-            />
-            <StatusCard 
-               title="Otorisasi"
-              status={summary.authorizationStatus} 
-               description="Kontrol akses berbasis peran dan penerapannya."
-            />
-          </div>
+          {summaryLoading ? (
+            <div className="space-y-4">
+              <Skeleton className="h-16 w-full rounded-none border-border" />
+            </div>
+          ) : summaryError ? (
+            <div className="rounded-none border border-destructive/50 bg-destructive/5 p-4 flex items-start gap-4">
+              <AlertTriangle className="size-5 text-destructive shrink-0 mt-0.5" />
+              <div>
+                <h3 className="text-xs font-mono font-bold text-destructive uppercase">Telemetri Gagal</h3>
+                <p className="text-[10px] text-muted-foreground mt-1 font-mono">
+                  Gagal memuat status sistem latar belakang.
+                </p>
+              </div>
+            </div>
+          ) : summary ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <TelemetryCard title="Anggota" value={summary.memberCount.toString()} />
+                <TelemetryCard title="Peran Kanonis" value={summary.canonicalRoleCount.toString()} />
+                <TelemetryCard title="Peran Anda" value={summary.currentRole.replace('_', ' ')} valueClass="text-xs sm:text-sm" />
+                <TelemetryCard title="Audit" value={summary.auditStatus} valueClass={summary.auditStatus === 'ACTIVE' ? 'text-primary' : 'text-muted-foreground'} />
+              </div>
+              <div className="grid md:grid-cols-3 gap-2">
+                <SubsystemCard title="Autentikasi" status={summary.authenticationStatus} />
+                <SubsystemCard title="Konteks Organisasi" status={summary.organizationContextStatus} />
+                <SubsystemCard title="Otorisasi" status={summary.authorizationStatus} />
+              </div>
+            </div>
+          ) : null}
         </div>
-      ) : null}
+      </div>
     </div>
   );
 }
 
-function SummaryCard({ title, value, icon, valueClass = "" }: { title: string, value: string | number, icon: React.ReactNode, valueClass?: string }) {
+function FacilityCard({ facility }: { facility: Facility }) {
+  const updatedStr = facility.updatedAt
+    ? new Date(facility.updatedAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+    : '-';
+
   return (
-    <Card className="bg-card/50">
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-xs font-medium font-mono uppercase tracking-wider text-muted-foreground">
-          {title}
-        </CardTitle>
-        {icon}
-      </CardHeader>
-      <CardContent>
-        <div className={`text-2xl font-bold font-mono tracking-tight ${valueClass}`}>{value}</div>
-      </CardContent>
-    </Card>
+    <Link href={`/app/facilities/${facility.id}`} data-testid={`link-facility-${facility.id}`}>
+      <Card className="bg-card rounded-none border-2 border-border hover:border-primary/50 transition-colors cursor-pointer h-full flex flex-col group">
+        <CardHeader className="pb-3">
+          <div className="flex justify-between items-start gap-2">
+            <CardTitle className="text-lg font-bold font-mono tracking-tight uppercase line-clamp-1 group-hover:text-primary transition-colors">
+              {facility.name}
+            </CardTitle>
+          </div>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="px-2 py-0.5 bg-primary/10 border border-primary/20 text-[10px] text-primary font-mono font-bold uppercase whitespace-nowrap">
+              {facility.status}
+            </span>
+            {facility.code && (
+              <span className="text-[10px] font-mono uppercase text-muted-foreground border border-border px-1.5 py-0.5">
+                {facility.code}
+              </span>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="mt-auto pt-2">
+          {facility.description && (
+            <p className="text-xs text-muted-foreground line-clamp-2 mb-3 font-mono leading-relaxed">
+              {facility.description}
+            </p>
+          )}
+          <div className="flex items-center text-[10px] text-muted-foreground font-mono uppercase font-bold tracking-wider pt-3 border-t border-border/50">
+            <Activity className="size-3 mr-1.5" />
+            Diperbarui {updatedStr}
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
   );
 }
 
-function StatusCard({ title, status, description }: { title: string, status: string, description: string }) {
-  const isReady = status === 'READY' || status === 'MINIMUM_RBAC';
-  
+function TelemetryCard({ title, value, valueClass = "" }: { title: string, value: string | number, valueClass?: string }) {
   return (
-    <Card className="bg-card/50 border-l-4" style={{ borderLeftColor: isReady ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }}>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium font-mono">{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="flex items-center gap-2 mb-2">
-          <span className="flex size-2 rounded-full" style={{ backgroundColor: isReady ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }} />
-          <span className="text-xs font-mono tracking-wider" style={{ color: isReady ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }}>
-            {status}
-          </span>
-        </div>
-        <CardDescription className="text-xs">{description}</CardDescription>
-      </CardContent>
-    </Card>
+    <div className="border border-border p-3 flex flex-col gap-1 bg-background/50">
+      <span className="text-[10px] text-muted-foreground font-mono uppercase tracking-wider font-bold">{title}</span>
+      <span className={`font-mono font-bold uppercase truncate ${valueClass}`}>{value}</span>
+    </div>
+  );
+}
+
+function SubsystemCard({ title, status }: { title: string, status: string }) {
+  const isReady = status === 'READY' || status === 'MINIMUM_RBAC';
+
+  return (
+    <div className={`border p-3 flex flex-col gap-2 bg-background/50 ${isReady ? 'border-border' : 'border-muted-foreground/30'}`}>
+      <span className="text-[10px] font-bold font-mono uppercase tracking-wide text-muted-foreground">{title}</span>
+      <div className="flex items-center gap-2">
+        <span className={`flex size-1.5 ${isReady ? 'bg-primary' : 'bg-muted-foreground'}`} />
+        <span className={`text-xs font-bold font-mono tracking-widest uppercase ${isReady ? 'text-foreground' : 'text-muted-foreground'}`}>
+          {status}
+        </span>
+      </div>
+    </div>
   );
 }
 
 function DashboardSkeleton() {
   return (
-    <div className="space-y-6">
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[...Array(4)].map((_, i) => (
-          <Skeleton key={i} className="h-28 w-full rounded-xl" />
-        ))}
-      </div>
-      <Skeleton className="h-8 w-64 mt-4" />
-      <div className="grid md:grid-cols-3 gap-4">
-        {[...Array(3)].map((_, i) => (
-          <Skeleton key={i} className="h-32 w-full rounded-xl" />
-        ))}
+    <div className="space-y-8">
+      <Skeleton className="h-20 w-full md:w-1/2 rounded-none border-2 border-border" />
+      <div className="space-y-4">
+        <Skeleton className="h-6 w-48 rounded-none" />
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[...Array(3)].map((_, i) => (
+            <Skeleton key={i} className="h-32 w-full rounded-none border-2 border-border" />
+          ))}
+        </div>
       </div>
     </div>
   );

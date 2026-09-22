@@ -117,7 +117,7 @@ describe('authenticated AppShell accessibility regressions', () => {
       'Pilih organisasi, organisasi saat ini: Nexus Operations',
     );
     expect(screen.getByRole('navigation', { name: 'Navigasi utama' })).toBeVisible();
-    expect(screen.getByRole('link', { name: 'Identitas & Akses' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Identitas' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Keluar' })).toBeVisible();
 
     await expectNoHighImpactAccessibilityViolations();
@@ -128,7 +128,7 @@ describe('authenticated AppShell accessibility regressions', () => {
 
     // jsdom does not load Tailwind's media queries. Apply the accessibility-tree
     // result of the compact `hidden md:inline-block` / `hidden sm:inline` rules.
-    screen.getByText('TATABANGUN').hidden = true;
+    screen.getByText(/tatabangun/i).hidden = true;
     screen.getByText('Keluar').hidden = true;
 
     const dashboardLink = screen.getByRole('link', { name: 'Dasbor TATABANGUN' });
@@ -168,7 +168,7 @@ describe('authenticated AppShell accessibility regressions', () => {
     const user = userEvent.setup();
     renderShell();
 
-    const dashboardLink = screen.getByRole('link', { name: 'Dasbor' });
+    const dashboardLink = screen.getByRole('link', { name: 'Terminal' });
     const facilitiesLink = screen.getByRole('link', { name: 'Fasilitas' });
 
     expect(dashboardLink).toHaveAttribute('aria-current', 'page');

@@ -1,6 +1,6 @@
 import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, ShieldCheck, Activity, Database, Network } from 'lucide-react';
+import { ArrowRight, ShieldCheck, Activity, Database, PenTool, HardHat, Camera, CheckSquare } from 'lucide-react';
 import { useAuth } from '@clerk/react';
 
 export default function Landing() {
@@ -9,36 +9,37 @@ export default function Landing() {
   return (
     <div className="min-h-[100dvh] flex flex-col bg-background selection:bg-primary selection:text-primary-foreground">
       {/* Navbar */}
-      <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="sticky top-0 z-50 w-full border-b-2 border-border/80 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <div className="absolute bottom-0 left-0 w-full h-[2px] bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,hsl(var(--primary)/0.2)_10px,hsl(var(--primary)/0.2)_20px)]" />
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="size-8 bg-primary rounded flex items-center justify-center shadow-[0_0_15px_rgba(0,229,255,0.3)]">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="size-5 text-primary-foreground">
+            <div className="size-8 bg-primary rounded-sm flex items-center justify-center">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="size-5 text-primary-foreground">
                 <path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v4" strokeLinecap="round" strokeLinejoin="round"/>
                 <path d="M14 2v6h6" strokeLinecap="round" strokeLinejoin="round"/>
                 <path d="M2 15h10" strokeLinecap="round" strokeLinejoin="round"/>
                 <path d="m9 18 3-3-3-3" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </div>
-            <span className="font-mono font-bold tracking-tight text-lg">TATABANGUN</span>
+            <span className="font-mono font-bold tracking-tight text-xl uppercase">TATABANGUN</span>
           </div>
           <nav className="flex items-center gap-4">
             {isSignedIn ? (
               <Link href="/app">
-                <Button className="font-mono text-xs shadow-[0_0_15px_rgba(0,229,255,0.2)]">
-                  ENTER SYSTEM <ArrowRight className="ml-2 size-3" />
+                <Button className="font-mono text-xs uppercase" data-testid="enter-system-btn">
+                  Akses Terminal <ArrowRight className="ml-2 size-3" />
                 </Button>
               </Link>
             ) : (
               <>
                 <Link href="/sign-in">
-                  <Button variant="ghost" className="font-mono text-xs hidden sm:inline-flex">
-                    SIGN IN
+                  <Button variant="ghost" className="font-mono text-xs hidden sm:inline-flex uppercase" data-testid="sign-in-btn">
+                    Masuk
                   </Button>
                 </Link>
                 <Link href="/sign-up">
-                  <Button className="font-mono text-xs shadow-[0_0_15px_rgba(0,229,255,0.2)]">
-                    INITIALIZE <ArrowRight className="ml-2 size-3" />
+                  <Button className="font-mono text-xs uppercase" data-testid="initialize-btn">
+                    Inisialisasi <ArrowRight className="ml-2 size-3" />
                   </Button>
                 </Link>
               </>
@@ -49,38 +50,36 @@ export default function Landing() {
 
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="relative overflow-hidden pt-24 pb-32 md:pt-32 md:pb-40">
-          <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_top_right,var(--color-primary)_0%,transparent_20%)] opacity-20" />
-          <div className="absolute inset-0 z-0 bg-[linear-gradient(to_right,#11141a_1px,transparent_1px),linear-gradient(to_bottom,#11141a_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-20" />
+        <section className="relative overflow-hidden pt-20 pb-24 md:pt-32 md:pb-40 border-b border-border">
+          {/* Blueprint/Grid Pattern Background */}
+          <div className="absolute inset-0 z-0 bg-[linear-gradient(to_right,hsl(var(--border))_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border))_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_80%_60%_at_50%_40%,#000_30%,transparent_100%)] opacity-30" />
           
           <div className="container relative z-10 flex flex-col items-center text-center">
-            <div className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-sm text-primary mb-8 backdrop-blur-sm">
-              <span className="flex size-1.5 rounded-full bg-primary mr-2 animate-pulse" />
-               <span className="font-mono text-xs uppercase tracking-wider">Facility Governance Platform</span>
+            <div className="inline-flex items-center border border-primary/40 bg-primary/10 px-3 py-1.5 text-sm text-primary mb-8 font-mono">
+              <span className="flex size-2 bg-primary mr-3 animate-pulse" />
+              <span className="text-xs uppercase tracking-widest font-semibold">Sistem Tata Kelola & Eksekusi Teknis</span>
             </div>
             
-            <h1 className="max-w-4xl text-5xl font-bold tracking-tight sm:text-6xl md:text-7xl lg:text-8xl">
-               Tata kelola terpadu untuk <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-400">
-                  fasilitas tepercaya.
-              </span>
+            <h1 className="max-w-4xl text-5xl font-black tracking-tight sm:text-6xl md:text-7xl lg:text-8xl uppercase leading-[1.1]">
+              Eksekusi Teknis <span className="text-primary">Presisi.</span> <br />
+              Kepatuhan <span className="text-primary">Terjamin.</span>
             </h1>
             
             <p className="mt-8 max-w-2xl text-lg text-muted-foreground sm:text-xl leading-relaxed">
-               TATABANGUN adalah sistem tata kelola gedung, gudang, dan infrastruktur yang menghubungkan fasilitas, pekerjaan, kompetensi, risiko, dan bukti kepatuhan.
+              Sistem tata kelola untuk gedung, gudang, dan infrastruktur. Dirancang untuk tim teknis di lapangan, memastikan setiap aset terpantau dan setiap pekerjaan terdokumentasi dengan kepastian matematis.
             </p>
             
             <div className="mt-10 flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
               {isSignedIn ? (
                 <Link href="/app">
-                  <Button size="lg" className="font-mono w-full sm:w-auto px-8 h-12 shadow-[0_0_25px_rgba(0,229,255,0.25)] hover:shadow-[0_0_35px_rgba(0,229,255,0.4)] transition-all">
-                     AKSES TERMINAL <ArrowRight className="ml-2 size-4" />
+                  <Button size="lg" className="font-mono w-full sm:w-auto px-8 h-14 text-base uppercase rounded-none border-b-4 border-r-4 border-black hover:translate-y-[2px] hover:translate-x-[2px] hover:border-b-2 hover:border-r-2 transition-all active:translate-y-[4px] active:translate-x-[4px] active:border-0" data-testid="hero-enter-system-btn">
+                     Akses Terminal <ArrowRight className="ml-2 size-5" />
                   </Button>
                 </Link>
               ) : (
                 <Link href="/sign-up">
-                  <Button size="lg" className="font-mono w-full sm:w-auto px-8 h-12 shadow-[0_0_25px_rgba(0,229,255,0.25)] hover:shadow-[0_0_35px_rgba(0,229,255,0.4)] transition-all">
-                     INISIALISASI SISTEM <ArrowRight className="ml-2 size-4" />
+                  <Button size="lg" className="font-mono w-full sm:w-auto px-8 h-14 text-base uppercase rounded-none border-b-4 border-r-4 border-black hover:translate-y-[2px] hover:translate-x-[2px] hover:border-b-2 hover:border-r-2 transition-all active:translate-y-[4px] active:translate-x-[4px] active:border-0" data-testid="hero-initialize-btn">
+                     Inisialisasi Sistem <ArrowRight className="ml-2 size-5" />
                   </Button>
                 </Link>
               )}
@@ -88,100 +87,137 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* Features Grid */}
-        <section className="border-t border-border bg-card/50">
-          <div className="container py-24 sm:py-32">
-            <div className="grid gap-12 md:grid-cols-3">
-              <div className="flex flex-col gap-4 p-6 rounded-lg border border-border/50 bg-background/50 hover:border-primary/50 transition-colors group">
-                <div className="size-12 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                  <Database className="size-6" />
+        {/* Tactical Features Grid */}
+        <section className="border-b border-border bg-card/40">
+          <div className="container py-20 sm:py-28">
+            <div className="flex flex-col items-center mb-16 text-center">
+              <h2 className="text-3xl sm:text-4xl font-black uppercase tracking-tight">Dirancang untuk Lapangan</h2>
+              <div className="w-16 h-1 bg-primary mt-6"></div>
+            </div>
+
+            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+              <div className="flex flex-col gap-4 p-6 rounded-none border-2 border-border bg-background hover:border-primary transition-colors group relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-8 h-8 bg-[repeating-linear-gradient(45deg,transparent,transparent_4px,hsl(var(--primary))_4px,hsl(var(--primary))_8px)] opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="size-12 bg-primary/10 border border-primary/20 flex items-center justify-center text-primary mb-2">
+                  <HardHat className="size-6" />
                 </div>
-                 <h3 className="text-xl font-semibold font-mono">Siklus Hidup Aset</h3>
-                <p className="text-muted-foreground leading-relaxed">
-                   Lacak setiap aset sejak diperoleh hingga dinonaktifkan. Kelola status secara presisi, peristiwa siklus hidup, dan jejak audit.
+                <h3 className="text-xl font-bold font-mono uppercase tracking-tight">Eksekusi Lapangan</h3>
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  Terminal data instan untuk teknisi. Panduan perutean kerja, batas akses yang jelas, dan penyelesaian tugas di titik aset.
                 </p>
               </div>
 
-              <div className="flex flex-col gap-4 p-6 rounded-lg border border-border/50 bg-background/50 hover:border-primary/50 transition-colors group">
-                <div className="size-12 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                  <Network className="size-6" />
+              <div className="flex flex-col gap-4 p-6 rounded-none border-2 border-border bg-background hover:border-primary transition-colors group relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-8 h-8 bg-[repeating-linear-gradient(45deg,transparent,transparent_4px,hsl(var(--primary))_4px,hsl(var(--primary))_8px)] opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="size-12 bg-primary/10 border border-primary/20 flex items-center justify-center text-primary mb-2">
+                  <Activity className="size-6" />
                 </div>
-                 <h3 className="text-xl font-semibold font-mono">Orkestrasi Pekerjaan</h3>
-                <p className="text-muted-foreground leading-relaxed">
-                   Perutean dinamis untuk perintah kerja. Peran kanonis menentukan batas akses dan tindakan. Alur operasional yang murni.
+                <h3 className="text-xl font-bold font-mono uppercase tracking-tight">Kesehatan Aset</h3>
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  Telemetri siklus hidup aset dari pengadaan hingga penonaktifan. Sinkronisasi status waktu nyata dari lapangan ke pusat.
                 </p>
               </div>
 
-              <div className="flex flex-col gap-4 p-6 rounded-lg border border-border/50 bg-background/50 hover:border-primary/50 transition-colors group">
-                <div className="size-12 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                  <ShieldCheck className="size-6" />
+              <div className="flex flex-col gap-4 p-6 rounded-none border-2 border-border bg-background hover:border-primary transition-colors group relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-8 h-8 bg-[repeating-linear-gradient(45deg,transparent,transparent_4px,hsl(var(--primary))_4px,hsl(var(--primary))_8px)] opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="size-12 bg-primary/10 border border-primary/20 flex items-center justify-center text-primary mb-2">
+                  <Camera className="size-6" />
                 </div>
-                 <h3 className="text-xl font-semibold font-mono">Kepatuhan & Risiko</h3>
-                <p className="text-muted-foreground leading-relaxed">
-                   Status audit berkelanjutan. Log historis yang tidak dapat diubah. Kepastian matematis untuk kepatuhan fasilitas.
+                <h3 className="text-xl font-bold font-mono uppercase tracking-tight">Bukti Inspeksi</h3>
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  Log historis yang tidak dapat diubah. Tangkapan bukti kondisi aset secara langsung untuk audit dan kepatuhan absolut.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-4 p-6 rounded-none border-2 border-border bg-background hover:border-primary transition-colors group relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-8 h-8 bg-[repeating-linear-gradient(45deg,transparent,transparent_4px,hsl(var(--primary))_4px,hsl(var(--primary))_8px)] opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="size-12 bg-primary/10 border border-primary/20 flex items-center justify-center text-primary mb-2">
+                  <CheckSquare className="size-6" />
+                </div>
+                <h3 className="text-xl font-bold font-mono uppercase tracking-tight">Serah Terima</h3>
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  Penyelesaian proyek dan transisi infrastruktur yang terstruktur, dikawal oleh sistem otorisasi berbasis peran (RBAC).
                 </p>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Data Density Preview Section */}
-        <section className="border-t border-border overflow-hidden">
-          <div className="container py-24 sm:py-32 relative">
-            <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/3 size-[500px] bg-primary/5 rounded-full blur-[100px]" />
+        {/* Data Density Detail Section */}
+        <section className="border-b border-border overflow-hidden">
+          <div className="container py-20 sm:py-28">
             <div className="grid lg:grid-cols-2 gap-16 items-center">
-              <div>
-                <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-6">
-                   Kepadatan informasi tanpa beban kognitif.
+              <div className="order-2 lg:order-1 relative border-2 border-border bg-card p-6 sm:p-8">
+                <div className="absolute top-0 left-0 w-full h-[2px] bg-primary" />
+                <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-16 bg-background border-2 border-border flex flex-col justify-evenly py-2 items-center">
+                  <div className="w-1 h-1 bg-border rounded-full" />
+                  <div className="w-1 h-1 bg-border rounded-full" />
+                  <div className="w-1 h-1 bg-border rounded-full" />
+                </div>
+                <div className="flex flex-col space-y-6">
+                  <div className="flex items-center justify-between border-b-2 border-border pb-4">
+                     <h3 className="text-lg font-mono font-bold uppercase tracking-widest text-muted-foreground">Prinsip Sistem</h3>
+                  </div>
+                  <div className="space-y-4 font-mono text-sm">
+                    <div className="flex flex-col border-b border-border/50 pb-3">
+                      <span className="text-foreground uppercase font-bold text-xs mb-1">Otoritas Berbasis Peran</span>
+                      <span className="text-muted-foreground text-xs leading-relaxed">Tindakan operasional dan visibilitas diatur ketat oleh lapisan RBAC yang diverifikasi server.</span>
+                    </div>
+                    <div className="flex flex-col border-b border-border/50 pb-3">
+                      <span className="text-foreground uppercase font-bold text-xs mb-1">Integritas Log Audit</span>
+                      <span className="text-muted-foreground text-xs leading-relaxed">Registri aset kanonis mencatat setiap peristiwa. Seluruh aksi perubahan direkam dan tidak dapat dihapus.</span>
+                    </div>
+                    <div className="flex flex-col border-b border-border/50 pb-3">
+                      <span className="text-foreground uppercase font-bold text-xs mb-1">Fokus Eksekusi Lapangan</span>
+                      <span className="text-muted-foreground text-xs leading-relaxed">Antarmuka dirancang untuk pemindaian instan, menghilangkan grafik kosong demi kepadatan informasi.</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="order-1 lg:order-2">
+                <h2 className="text-3xl sm:text-4xl font-black uppercase tracking-tight mb-6 leading-tight">
+                  Kepastian Matematis,<br/> Bukan Sekadar Janji.
                 </h2>
                 <p className="text-lg text-muted-foreground mb-8">
-                   Dirancang untuk operator yang membaca tabel, bukan grafik. Kami mengutamakan efisiensi pemindaian, tipografi tegas, dan status yang jelas daripada bualan pemasaran.
+                  Dirancang untuk tim lapangan yang membutuhkan data nyata. Kami menolak beban kognitif yang tidak perlu demi mengutamakan kepadatan informasi dan status yang presisi.
                 </p>
                 <ul className="space-y-4 font-mono text-sm">
-                  <li className="flex items-center gap-3">
-                    <Activity className="size-4 text-primary" />
-                     <span>Sinkronisasi status waktu nyata</span>
+                  <li className="flex items-start gap-4">
+                    <div className="mt-0.5 bg-primary/20 p-1 text-primary">
+                      <Database className="size-4" />
+                    </div>
+                    <div>
+                      <span className="font-bold text-foreground block uppercase mb-1">Arsitektur Kanonis</span>
+                      <span className="text-muted-foreground text-xs leading-relaxed block">Akses terpadu ke catatan aset tanpa hambatan rendering.</span>
+                    </div>
                   </li>
-                  <li className="flex items-center gap-3">
-                    <ShieldCheck className="size-4 text-primary" />
-                     <span>Penerapan Kontrol Akses Berbasis Peran (RBAC)</span>
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <Database className="size-4 text-primary" />
-                     <span>Tabel entitas berthroughput tinggi</span>
+                  <li className="flex items-start gap-4">
+                    <div className="mt-0.5 bg-primary/20 p-1 text-primary">
+                      <ShieldCheck className="size-4" />
+                    </div>
+                    <div>
+                      <span className="font-bold text-foreground block uppercase mb-1">Batas Kewenangan Tegas</span>
+                      <span className="text-muted-foreground text-xs leading-relaxed block">Peran menentukan secara absolut visibilitas dan hak perubahan.</span>
+                    </div>
                   </li>
                 </ul>
-              </div>
-              
-              <div className="relative border border-border rounded-xl bg-card shadow-2xl p-8">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary to-transparent opacity-50" />
-                <div className="flex flex-col items-center justify-center text-center space-y-4 py-8">
-                  <div className="size-16 rounded-full border border-primary/20 bg-primary/10 flex items-center justify-center mb-2 shadow-[0_0_15px_rgba(0,229,255,0.15)] relative">
-                    <div className="absolute inset-0 rounded-full border border-primary/50 animate-ping opacity-20" />
-                    <Activity className="size-8 text-primary" />
-                  </div>
-                   <h3 className="text-xl font-mono font-bold">SISTEM SIAP</h3>
-                  <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-                     Menunggu otorisasi untuk menginisialisasi konteks organisasi dan menyinkronkan vektor infrastruktur.
-                  </p>
-                </div>
               </div>
             </div>
           </div>
         </section>
       </main>
 
-      <footer className="border-t border-border bg-card py-12">
-        <div className="container flex flex-col sm:flex-row justify-between items-center gap-6">
-          <div className="flex items-center gap-2 text-muted-foreground font-mono text-sm">
-            <div className="size-6 bg-primary/20 border border-primary/50 rounded flex items-center justify-center">
-              <span className="text-[10px] text-primary">N</span>
+      <footer className="border-t-4 border-border bg-card py-8">
+        <div className="container flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="flex items-center gap-3 font-mono text-sm text-muted-foreground">
+            <div className="size-8 border-2 border-primary flex items-center justify-center font-bold text-primary bg-primary/10">
+              TB
             </div>
-             <span>TATABANGUN V1.0.0</span>
+            <span className="uppercase tracking-widest font-semibold">Tatabangun Platform &copy; {new Date().getFullYear()}</span>
           </div>
-          <div className="text-xs text-muted-foreground font-mono text-center sm:text-right">
-             OPERASI FASILITAS AMAN<br/>
-             &copy; {new Date().getFullYear()} TATABANGUN
+          <div className="text-xs text-muted-foreground font-mono tracking-widest uppercase">
+            Sistem Eksekusi Teknis
           </div>
         </div>
       </footer>

@@ -1032,7 +1032,7 @@ function BindingRow({ binding, userId, canManage, onEdit }: {
                 Kode: <span className="font-mono text-foreground">{binding.scopeTargetCode}</span>
               </span>
             )}
-            {binding.scopeTargetParentPath.length > 0 && (
+            {binding.scopeTargetParentPath && binding.scopeTargetParentPath.length > 0 && (
               <span data-testid={`display-scopehierarchy-${binding.id}`}>
                 Hierarki: {binding.scopeTargetParentPath.join(' › ')}
               </span>

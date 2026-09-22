@@ -10,6 +10,7 @@ import { expectNoHighImpactAccessibilityViolations } from '@/test/accessibility'
 const api = vi.hoisted(() => ({
   session: vi.fn(),
   foundationSummary: vi.fn(),
+  listFacilities: vi.fn(),
 }));
 
 vi.mock('@clerk/react', () => ({
@@ -25,6 +26,8 @@ vi.mock('@workspace/api-client-react', async () => {
     useGetSession: api.session,
     useGetFoundationSummary: api.foundationSummary,
     getGetFoundationSummaryQueryKey: () => ['foundation-summary'],
+    useListFacilities: api.listFacilities,
+    getListFacilitiesQueryKey: () => ['facilities'],
   };
 });
 
@@ -83,9 +86,21 @@ describe('core page accessibility regressions', () => {
       isLoading: false,
       error: null,
     });
+    api.listFacilities.mockReturnValue({
+      data: {
+        items: [],
+        total: 0,
+        page: 1,
+        limit: 6,
+        nextCursor: null,
+        collectionCapabilities: { create: false },
+      },
+      isLoading: false,
+      error: null,
+    });
     renderWithQueryClient(<Dashboard />);
 
-    expect(screen.getByRole('heading', { name: 'Status Fondasi' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Terminal Operasional' })).toBeVisible();
     await expectNoHighImpactAccessibilityViolations();
   });
 
