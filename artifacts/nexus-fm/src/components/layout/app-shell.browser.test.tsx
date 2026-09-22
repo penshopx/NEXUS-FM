@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -71,19 +72,28 @@ vi.mock('@workspace/api-client-react', async () => {
 });
 
 
+
 function renderShell() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
 
-  return render(
-    <Router hook={() => ['/app', vi.fn()]}>
-      <QueryClientProvider client={client}>
+  function RoutedShell() {
+    const [location, setLocation] = useState('/app');
+
+    return (
+      <Router hook={() => [location, setLocation]}>
         <AppShell>
           <h1>Authenticated workspace</h1>
         </AppShell>
-      </QueryClientProvider>
-    </Router>,
+      </Router>
+    );
+  }
+
+  return render(
+    <QueryClientProvider client={client}>
+      <RoutedShell />
+    </QueryClientProvider>,
   );
 }
 
@@ -152,5 +162,21 @@ describe('authenticated AppShell accessibility regressions', () => {
     expect(screen.getByRole('menuitemradio', { name: 'Nexus Facilities' })).not.toBeChecked();
 
     await expectNoHighImpactAccessibilityViolations();
+  });
+
+  it('moves the current-page state when navigation changes route', async () => {
+    const user = userEvent.setup();
+    renderShell();
+
+    const dashboardLink = screen.getByRole('link', { name: 'Dasbor' });
+    const facilitiesLink = screen.getByRole('link', { name: 'Fasilitas' });
+
+    expect(dashboardLink).toHaveAttribute('aria-current', 'page');
+    expect(facilitiesLink).not.toHaveAttribute('aria-current');
+
+    await user.click(facilitiesLink);
+
+    expect(dashboardLink).not.toHaveAttribute('aria-current');
+    expect(facilitiesLink).toHaveAttribute('aria-current', 'page');
   });
 });

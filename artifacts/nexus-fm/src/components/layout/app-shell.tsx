@@ -146,7 +146,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             const isActive = location === item.href || (location.startsWith(item.href) && item.href !== '/app');
             const Icon = item.icon;
             return (
-              <Link key={item.href} href={item.href}>
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-current={isActive ? 'page' : undefined}
+              >
                 <div
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-mono transition-colors cursor-pointer whitespace-nowrap
                     ${isActive 
