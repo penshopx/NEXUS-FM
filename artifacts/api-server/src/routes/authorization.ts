@@ -282,7 +282,7 @@ router.get("/roles", async (req, res): Promise<void> => {
 
 router.get("/roles/:roleId/permissions", async (req, res): Promise<void> => {
   if (!await requireAdmin(req, res, "ROLE.MANAGE", resolveCurrentUser, database)) return;
-  const [role] = await database.select({ policyVersion: rolesTable.policyVersion }).from(rolesTable)
+  const [role] = await database.select({ policyVersion: rolesTable.policyVersion, code: rolesTable.code }).from(rolesTable)
     .where(eq(rolesTable.id, req.params.roleId));
   if (!role) {
     res.status(404).json({ error: "Role not found" });
@@ -296,7 +296,7 @@ router.get("/roles/:roleId/permissions", async (req, res): Promise<void> => {
     effect: rolePermissionsTable.effect,
   }).from(rolePermissionsTable)
     .innerJoin(permissionsTable, eq(rolePermissionsTable.permissionId, permissionsTable.id))
-    .where(eq(rolePermissionsTable.roleId, req.params.roleId));
+    .where(eq(rolePermissionsTable.roleId, role.code));
   res.set("ETag", role.policyVersion);
   res.json({ permissions: rows, policyVersion: role.policyVersion });
 });
@@ -374,13 +374,13 @@ router.put("/roles/:roleId/permissions", async (req, res): Promise<void> => {
       if (!permission) return null;
       const supplied = normalized.find((entry) => entry.permissionId === permission.id);
       return {
-        roleId: req.params.roleId,
+        roleId: roleCode,
         permissionId: permission.id,
         defaultScopeType: (supplied?.defaultScopeType ?? defaultScopeType) as "ORGANIZATION",
         effect: (supplied?.effect ?? "DENY") as "ALLOW" | "DENY",
       };
     })).filter((entry): entry is NonNullable<typeof entry> => entry !== null);
-  const before = await database.select().from(rolePermissionsTable).where(eq(rolePermissionsTable.roleId, req.params.roleId));
+  const before = await database.select().from(rolePermissionsTable).where(eq(rolePermissionsTable.roleId, roleCode));
   let updatedRole: typeof role[0] | undefined;
   try {
   await database.transaction(async (tx) => {
@@ -389,7 +389,7 @@ router.put("/roles/:roleId/permissions", async (req, res): Promise<void> => {
       .where(and(eq(rolesTable.id, req.params.roleId), eq(rolesTable.policyVersion, role[0]!.policyVersion)))
       .returning();
     if (!updatedRole) throw new Error("STALE_POLICY_VERSION");
-    await tx.delete(rolePermissionsTable).where(eq(rolePermissionsTable.roleId, req.params.roleId));
+    await tx.delete(rolePermissionsTable).where(eq(rolePermissionsTable.roleId, roleCode));
     if (effectiveEntries.length) await tx.insert(rolePermissionsTable).values(effectiveEntries);
     await tx.insert(authorizationAuditLogsTable).values({
       actorUserId: admin.user.id,
@@ -417,11 +417,11 @@ router.put("/roles/:roleId/permissions", async (req, res): Promise<void> => {
     }
     throw error;
   }
-  const rows = await database.select().from(rolePermissionsTable).where(eq(rolePermissionsTable.roleId, req.params.roleId));
+  const rows = await database.select().from(rolePermissionsTable).where(eq(rolePermissionsTable.roleId, roleCode));
   const affectedBindings = await database.select({
     userId: userRoleBindingsTable.userId,
     organizationId: userRoleBindingsTable.organizationId,
-  }).from(userRoleBindingsTable).where(eq(userRoleBindingsTable.roleId, req.params.roleId));
+  }).from(userRoleBindingsTable).where(eq(userRoleBindingsTable.roleId, roleCode));
   await Promise.all(affectedBindings.map((binding) =>
     publishAccessRevision({ ...binding, reason: "ROLE_PERMISSIONS_CHANGED" })));
   res.set("ETag", updatedRole!.policyVersion);
@@ -780,13 +780,13 @@ router.get("/users/:userId/role-bindings", async (req, res): Promise<void> => {
   const where = and(...filters);
   const [totalRow] = await database.select({ value: count() })
     .from(userRoleBindingsTable)
-    .innerJoin(rolesTable, eq(userRoleBindingsTable.roleId, rolesTable.id))
+    .innerJoin(rolesTable, sql`${userRoleBindingsTable.roleId} = ${rolesTable.code}::canonical_role`)
     .where(where);
   const rows = await database.select({
     id: userRoleBindingsTable.id,
     userId: userRoleBindingsTable.userId,
     organizationId: userRoleBindingsTable.organizationId,
-    roleId: userRoleBindingsTable.roleId,
+     roleId: rolesTable.id,
     roleCode: rolesTable.code,
     version: userRoleBindingsTable.version,
     scopeType: userRoleBindingsTable.scopeType,
@@ -795,14 +795,18 @@ router.get("/users/:userId/role-bindings", async (req, res): Promise<void> => {
     startsAt: userRoleBindingsTable.startsAt,
     endsAt: userRoleBindingsTable.endsAt,
   }).from(userRoleBindingsTable)
-    .innerJoin(rolesTable, eq(userRoleBindingsTable.roleId, rolesTable.id))
+    .innerJoin(rolesTable, sql`${userRoleBindingsTable.roleId} = ${rolesTable.code}::canonical_role`)
     .where(where)
     .orderBy(desc(userRoleBindingsTable.createdAt), desc(userRoleBindingsTable.id))
     .limit(parsed.data.limit)
     .offset((parsed.data.page - 1) * parsed.data.limit);
   const scopeTargets = await resolveBindingScopeTargets(rows, database);
   res.json(GetUserRoleBindingsResponse.parse({
-    items: rows.map((row, index) => ({ ...row, ...scopeTargets[index]! })),
+     items: rows.map((row, index) => ({
+       ...row,
+       roleId: row.roleId,
+       ...scopeTargets[index]!,
+     })),
     page: parsed.data.page,
     limit: parsed.data.limit,
     total: Number(totalRow?.value ?? 0),
@@ -897,7 +901,7 @@ router.get("/users/:userId/role-bindings/export", async (req, res): Promise<void
         }).from(userRoleBindingsTable)
           .innerJoin(usersTable, eq(userRoleBindingsTable.userId, usersTable.id))
           .innerJoin(organizationsTable, eq(userRoleBindingsTable.organizationId, organizationsTable.id))
-          .innerJoin(rolesTable, eq(userRoleBindingsTable.roleId, rolesTable.id))
+          .innerJoin(rolesTable, sql`${userRoleBindingsTable.roleId} = ${rolesTable.code}::canonical_role`)
           .where(and(...filters))
           .orderBy(desc(userRoleBindingsTable.createdAt), desc(userRoleBindingsTable.id))
           .limit(MEMBER_ACCESS_EXPORT_BATCH_SIZE);
@@ -1024,7 +1028,6 @@ router.post("/users/:userId/role-bindings", async (req, res): Promise<void> => {
     return;
   }
   const targetOrganizationId = body.organizationId;
-  const targetRoleId = body.roleId;
   if (!canCrossOrganizationFoundation(admin.scopeType, admin.organizationId, body.organizationId)) {
     res.status(403).json({ error: "Target organization is outside active organization scope" });
     return;
@@ -1055,7 +1058,7 @@ router.post("/users/:userId/role-bindings", async (req, res): Promise<void> => {
   const duplicateWhere = and(
     eq(userRoleBindingsTable.userId, req.params.userId),
     eq(userRoleBindingsTable.organizationId, body.organizationId),
-    eq(userRoleBindingsTable.roleId, body.roleId),
+    eq(userRoleBindingsTable.roleId, targetRole.code),
     eq(userRoleBindingsTable.scopeType, body.scopeType as "ORGANIZATION"),
     scopeId ? eq(userRoleBindingsTable.scopeId, scopeId) : isNull(userRoleBindingsTable.scopeId),
   );
@@ -1070,7 +1073,7 @@ router.post("/users/:userId/role-bindings", async (req, res): Promise<void> => {
       [binding] = await tx.insert(userRoleBindingsTable).values({
         userId: req.params.userId,
         organizationId: targetOrganizationId,
-        roleId: targetRoleId,
+        roleId: targetRole.code,
         scopeType: state.state.scopeType as "ORGANIZATION",
         scopeId,
         status: state.state.status as "ACTIVE",
@@ -1198,7 +1201,7 @@ router.patch("/users/:userId/role-bindings/:bindingId", async (req, res): Promis
   }
   const [role] = await database.select({ code: rolesTable.code })
     .from(rolesTable)
-    .where(eq(rolesTable.id, after.roleId));
+     .where(eq(rolesTable.code, after.roleId));
   const [scopeTarget] = await resolveBindingScopeTargets([after], database);
   await publishAccessRevision({
     userId: after.userId,
@@ -1256,7 +1259,7 @@ router.delete("/users/:userId/role-bindings/:bindingId", async (req, res): Promi
   }
   const [role] = await database.select({ code: rolesTable.code })
     .from(rolesTable)
-    .where(eq(rolesTable.id, after.roleId));
+     .where(eq(rolesTable.code, after.roleId));
   const [scopeTarget] = await resolveBindingScopeTargets([after], database);
   await publishAccessRevision({
     userId: after.userId,
@@ -1345,7 +1348,7 @@ router.get("/me/scope", async (req, res): Promise<void> => {
     id: userRoleBindingsTable.id,
     userId: userRoleBindingsTable.userId,
     organizationId: userRoleBindingsTable.organizationId,
-    roleId: userRoleBindingsTable.roleId,
+     roleId: rolesTable.id,
     roleCode: rolesTable.code,
     version: userRoleBindingsTable.version,
     scopeType: userRoleBindingsTable.scopeType,
@@ -1354,7 +1357,7 @@ router.get("/me/scope", async (req, res): Promise<void> => {
     startsAt: userRoleBindingsTable.startsAt,
     endsAt: userRoleBindingsTable.endsAt,
   }).from(userRoleBindingsTable)
-    .innerJoin(rolesTable, eq(userRoleBindingsTable.roleId, rolesTable.id))
+    .innerJoin(rolesTable, sql`${userRoleBindingsTable.roleId} = ${rolesTable.code}::canonical_role`)
     .where(and(
       eq(userRoleBindingsTable.userId, user.id),
       eq(userRoleBindingsTable.organizationId, organizationId),

@@ -81,14 +81,14 @@ export async function ensureFoundationUser(identity: Identity) {
         .where(and(
           eq(userRoleBindingsTable.userId, user.id),
           eq(userRoleBindingsTable.organizationId, membership.organizationId),
-          eq(userRoleBindingsTable.roleId, facilityManagerRole.id),
+           eq(userRoleBindingsTable.roleId, facilityManagerRole.code),
           eq(userRoleBindingsTable.scopeType, "ORGANIZATION"),
         ));
       if (!existingBinding.length) {
         await db.insert(userRoleBindingsTable).values({
           userId: user.id,
           organizationId: membership.organizationId,
-          roleId: facilityManagerRole.id,
+           roleId: facilityManagerRole.code,
           scopeType: "ORGANIZATION",
           grantedBy: user.id,
         }).onConflictDoNothing();

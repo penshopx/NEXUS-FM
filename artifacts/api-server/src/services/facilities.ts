@@ -1,4 +1,4 @@
-import { and, asc, count, eq, gt, ilike, isNull, lte, or } from "drizzle-orm";
+import { and, asc, count, eq, gt, ilike, isNull, lte, or, sql } from "drizzle-orm";
 import {
   assetsTable,
   buildingsTable,
@@ -266,7 +266,7 @@ async function registryAuthorizationPredicate(input: RegistryQuery, table: any) 
     scopeType: userRoleBindingsTable.scopeType,
     scopeId: userRoleBindingsTable.scopeId,
   }).from(userRoleBindingsTable)
-    .innerJoin(rolesTable, eq(userRoleBindingsTable.roleId, rolesTable.id))
+    .innerJoin(rolesTable, sql`${userRoleBindingsTable.roleId} = ${rolesTable.code}::canonical_role`)
     .innerJoin(rolePermissionsTable, eq(userRoleBindingsTable.roleId, rolePermissionsTable.roleId))
     .innerJoin(permissionsTable, eq(rolePermissionsTable.permissionId, permissionsTable.id))
     .innerJoin(usersTable, and(eq(userRoleBindingsTable.userId, usersTable.id), eq(usersTable.isActive, true)))

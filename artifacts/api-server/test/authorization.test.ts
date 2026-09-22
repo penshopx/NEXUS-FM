@@ -73,6 +73,8 @@ type Fixture = {
   userId: string;
   organizationId: string;
   roleId: string;
+  roleCode: string;
+  roleRegistryId: string;
   bindingId: string;
 };
 
@@ -104,13 +106,13 @@ async function makeFixture(
   const [binding] = await db.insert(userRoleBindingsTable).values({
     userId: user.id,
     organizationId: organization.id,
-    roleId,
+    roleId: roleCode,
     scopeType,
     scopeId: scopeId ?? null,
     grantedBy: user.id,
   }).returning();
   assert.ok(binding);
-  const fixture = { userId: user.id, organizationId: organization.id, roleId, bindingId: binding.id };
+  const fixture = { userId: user.id, organizationId: organization.id, roleId: roleCode, roleCode, roleRegistryId: roleId, bindingId: binding.id };
   fixtures.push(fixture);
   return fixture;
 }
@@ -275,7 +277,7 @@ test("portfolio import preview summarizes the hierarchy without registry or audi
   await db.insert(userRoleBindingsTable).values({
     userId: manager.userId,
     organizationId: manager.organizationId,
-    roleId: manager.roleId,
+    roleId: manager.roleCode,
     scopeType: "FACILITY",
     scopeId: existingFacility.id,
     grantedBy: manager.userId,
@@ -607,6 +609,90 @@ test("role binding state validation rejects missing scope IDs, invalid dates, an
     scopeType: "ORGANIZATION", scopeId: null, status: "EXPIRED",
     startsAt: null, endsAt: new Date(Date.now() + 1000),
   }).valid, false);
+  assert.equal(validateRoleBindingState({
+    scopeType: "ORGANIZATION", scopeId: null, status: "REVOKED",
+    startsAt: null, endsAt: null,
+  }).valid, false);
+});
+
+test("persisted REVOKED bindings deny and writable APIs reject REVOKED", async () => {
+  const fixture = await makeFixture("FACILITY_MANAGER", "ORGANIZATION");
+  await db.update(userRoleBindingsTable)
+    .set({ status: "REVOKED" })
+    .where(eq(userRoleBindingsTable.id, fixture.bindingId));
+  const denied = await authorize({
+    actorUserId: fixture.userId,
+    organizationId: fixture.organizationId,
+    permission: "ORGANIZATION.VIEW",
+    resourceType: "ORGANIZATION",
+  });
+  assert.equal(denied.allowed, false);
+  assert.equal(denied.reasonCode, "BINDING_INACTIVE");
+
+  await db.insert(userContextsTable).values({
+    userId: fixture.userId,
+    activeOrganizationId: fixture.organizationId,
+  }).onConflictDoUpdate({
+    target: userContextsTable.userId,
+    set: { activeOrganizationId: fixture.organizationId },
+  });
+  const app = express();
+  app.use(express.json());
+  app.use(createAuthorizationRouter({
+    currentUser: async () => {
+      const [user] = await db.select().from(usersTable).where(eq(usersTable.id, fixture.userId));
+      return user ?? null;
+    },
+  }));
+  const server = createServer(app);
+  await new Promise<void>((resolve) => server.listen(0, resolve));
+  try {
+    const address = server.address();
+    assert.ok(address && typeof address === "object");
+    const response = await fetch(`http://127.0.0.1:${address.port}/users/${fixture.userId}/role-bindings`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        organizationId: fixture.organizationId,
+        roleId: fixture.roleRegistryId,
+        scopeType: "ORGANIZATION",
+        status: "REVOKED",
+      }),
+    });
+    assert.equal(response.status, 400);
+    const patchResponse = await fetch(
+      `http://127.0.0.1:${address.port}/users/${fixture.userId}/role-bindings/${fixture.bindingId}`,
+      {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ status: "REVOKED" }),
+      },
+    );
+    assert.equal(patchResponse.status, 400);
+  } finally {
+    server.close();
+  }
+});
+
+test("deprecated registry roles are denied even with active persisted grants", async () => {
+  const fixture = await makeFixture("FACILITY_MANAGER", "ORGANIZATION");
+  await db.update(rolesTable)
+    .set({ status: "DEPRECATED" })
+    .where(eq(rolesTable.code, fixture.roleCode));
+  try {
+    const denied = await authorize({
+      actorUserId: fixture.userId,
+      organizationId: fixture.organizationId,
+      permission: "ORGANIZATION.VIEW",
+      resourceType: "ORGANIZATION",
+    });
+    assert.equal(denied.allowed, false);
+    assert.equal(denied.reasonCode, "PERMISSION_MISSING");
+  } finally {
+    await db.update(rolesTable)
+      .set({ status: "ACTIVE" })
+      .where(eq(rolesTable.code, fixture.roleCode));
+  }
 });
 
 test("duplicate null-scope bindings are rejected by the database constraint", async () => {
@@ -615,7 +701,7 @@ test("duplicate null-scope bindings are rejected by the database constraint", as
     db.insert(userRoleBindingsTable).values({
       userId: fixture.userId,
       organizationId: fixture.organizationId,
-      roleId: fixture.roleId,
+      roleId: fixture.roleCode,
       scopeType: "ORGANIZATION",
       scopeId: null,
       grantedBy: fixture.userId,
@@ -761,6 +847,9 @@ test("authorization routes run through a real HTTP app with injected currentUser
   const platform = await makeFixture("PLATFORM_ADMIN", "PLATFORM");
   const manager = await makeFixture("FACILITY_MANAGER", "ORGANIZATION");
   const target = await makeFixture("FACILITY_SUPERVISOR", "ORGANIZATION");
+  await db.update(organizationsTable)
+    .set({ name: `Route Target ${randomUUID()}` })
+    .where(eq(organizationsTable.id, target.organizationId));
   await db.insert(userContextsTable).values({
     userId: platform.userId,
     activeOrganizationId: platform.organizationId,
@@ -778,7 +867,7 @@ test("authorization routes run through a real HTTP app with injected currentUser
   await db.insert(userRoleBindingsTable).values({
     userId: manager.userId,
     organizationId: target.organizationId,
-    roleId: manager.roleId,
+    roleId: manager.roleCode,
     scopeType: "ORGANIZATION",
     grantedBy: platform.userId,
   });
@@ -865,7 +954,7 @@ test("authorization routes run through a real HTTP app with injected currentUser
       [wildcardOrganizations[1].id],
     );
     const organizationByName = await request(
-      `/organizations/search?query=${encodeURIComponent(targetOrganization.name.slice(0, 4))}`,
+      `/organizations/search?query=${encodeURIComponent(targetOrganization.name)}`,
     );
     assert.equal(organizationByName.response.status, 200);
     assert.ok((organizationByName.body as Array<{ id: string; name: string; slug: string }>)
@@ -905,19 +994,19 @@ test("authorization routes run through a real HTTP app with injected currentUser
     assert.equal(permissions.response.status, 200);
     const roles = await request("/roles");
     assert.equal(roles.response.status, 200);
-    const rolePermissions = await request(`/roles/${manager.roleId}/permissions`);
+    const rolePermissions = await request(`/roles/${manager.roleRegistryId}/permissions`);
     assert.equal(rolePermissions.response.status, 200);
     const version = rolePermissions.response.headers.get("etag");
     assert.ok(version);
     assert.equal((rolePermissions.body as { policyVersion: string }).policyVersion, version);
     assert.ok(Array.isArray((rolePermissions.body as { permissions: unknown[] }).permissions));
-    const missingPrecondition = await request(`/roles/${manager.roleId}/permissions`, {
+    const missingPrecondition = await request(`/roles/${manager.roleRegistryId}/permissions`, {
       method: "PUT",
       body: JSON.stringify({ permissions: [] }),
     });
     assert.equal(missingPrecondition.response.status, 428);
 
-    const revoked = await request(`/roles/${manager.roleId}/permissions`, {
+    const revoked = await request(`/roles/${manager.roleRegistryId}/permissions`, {
       method: "PUT",
       headers: { "if-match": version! },
       body: JSON.stringify({ permissions: [] }),
@@ -927,7 +1016,7 @@ test("authorization routes run through a real HTTP app with injected currentUser
     assert.ok((revoked.body as { permissions: Array<{ effect: string }> }).permissions.every((row) => row.effect === "DENY"));
     const revokedVersion = (revoked.body as { policyVersion: string }).policyVersion;
     assert.equal(revoked.response.headers.get("etag"), revokedVersion);
-    const bodyVersionUpdate = await request(`/roles/${manager.roleId}/permissions`, {
+    const bodyVersionUpdate = await request(`/roles/${manager.roleRegistryId}/permissions`, {
       method: "PUT",
       body: JSON.stringify({ permissions: [], policyVersion: revokedVersion }),
     });
@@ -942,7 +1031,7 @@ test("authorization routes run through a real HTTP app with injected currentUser
     });
     assert.equal(durable.reasonCode, "EXPLICIT_DENY");
 
-    const stale = await request(`/roles/${manager.roleId}/permissions`, {
+    const stale = await request(`/roles/${manager.roleRegistryId}/permissions`, {
       method: "PUT",
       headers: { "if-match": version! },
       body: JSON.stringify({ permissions: [] }),
@@ -950,22 +1039,22 @@ test("authorization routes run through a real HTTP app with injected currentUser
     assert.equal(stale.response.status, 409);
     assert.equal((stale.body as { error: string }).error, "Stale policy version");
     assert.equal(typeof (stale.body as { policyVersion: string }).policyVersion, "string");
-    const reflected = await request(`/roles/${manager.roleId}/permissions`);
+    const reflected = await request(`/roles/${manager.roleRegistryId}/permissions`);
     assert.equal(reflected.response.status, 200);
     assert.ok((reflected.body as { permissions: Array<{ effect: string }> }).permissions.some((row) => row.effect === "DENY"));
 
-    const platformAudit = await request(`/audit-logs?resource=ROLE&resourceId=${manager.roleId}`);
+    const platformAudit = await request(`/audit-logs?resource=ROLE&resourceId=${manager.roleRegistryId}`);
     assert.equal(platformAudit.response.status, 200);
     assert.ok(Array.isArray(platformAudit.body));
     assert.ok((platformAudit.body as Array<{ resource: string; resourceId: string | null }>).length > 0);
     assert.ok((platformAudit.body as Array<{ resource: string; resourceId: string | null }>)
-      .every((row) => row.resource === "ROLE" && row.resourceId === manager.roleId));
+      .every((row) => row.resource === "ROLE" && row.resourceId === manager.roleRegistryId));
 
     const created = await request(`/users/${target.userId}/role-bindings`, {
       method: "POST",
       body: JSON.stringify({
         organizationId: target.organizationId,
-        roleId: manager.roleId,
+        roleId: manager.roleRegistryId,
         scopeType: "ORGANIZATION",
       }),
     });
@@ -1031,7 +1120,7 @@ test("authorization routes run through a real HTTP app with injected currentUser
       method: "POST",
       body: JSON.stringify({
         organizationId: target.organizationId,
-        roleId: manager.roleId,
+        roleId: manager.roleRegistryId,
         scopeType: "ORGANIZATION",
       }),
     });
@@ -1042,7 +1131,7 @@ test("authorization routes run through a real HTTP app with injected currentUser
         method: "POST",
         body: JSON.stringify({
           organizationId: target.organizationId,
-          roleId: manager.roleId,
+          roleId: manager.roleRegistryId,
           scopeType,
           scopeId: initialScopeId,
         }),
@@ -1097,7 +1186,7 @@ test("authorization routes run through a real HTTP app with injected currentUser
         method: "POST",
         body: JSON.stringify({
           organizationId: target.organizationId,
-          roleId: manager.roleId,
+          roleId: manager.roleRegistryId,
           scopeType: directoryTarget.scopeType,
           scopeId: targetRecord.id,
         }),
@@ -1127,7 +1216,7 @@ test("authorization routes run through a real HTTP app with injected currentUser
         method: "POST",
         body: JSON.stringify({
           organizationId: target.organizationId,
-          roleId: manager.roleId,
+          roleId: manager.roleRegistryId,
           scopeType,
           scopeId: randomUUID(),
         }),
@@ -1143,7 +1232,7 @@ test("authorization routes run through a real HTTP app with injected currentUser
     const [inactiveTeamBinding] = await db.insert(userRoleBindingsTable).values({
       userId: target.userId,
       organizationId: target.organizationId,
-      roleId: manager.roleId,
+      roleId: manager.roleCode,
       scopeType: "TEAM",
       scopeId: inactiveTeam.id,
       grantedBy: platform.userId,
@@ -1157,7 +1246,7 @@ test("authorization routes run through a real HTTP app with injected currentUser
     const [deletedVendorBinding] = await db.insert(userRoleBindingsTable).values({
       userId: target.userId,
       organizationId: target.organizationId,
-      roleId: manager.roleId,
+      roleId: manager.roleCode,
       scopeType: "VENDOR_ASSIGNMENT",
       scopeId: deletedVendorAssignment.id,
       grantedBy: platform.userId,
@@ -1172,7 +1261,7 @@ test("authorization routes run through a real HTTP app with injected currentUser
     const [crossOrganizationHistoricalBinding] = await db.insert(userRoleBindingsTable).values({
       userId: target.userId,
       organizationId: target.organizationId,
-      roleId: manager.roleId,
+      roleId: manager.roleCode,
       scopeType: "TEAM",
       scopeId: foreignOrganizationTeam.id,
       grantedBy: platform.userId,
@@ -1187,7 +1276,7 @@ test("authorization routes run through a real HTTP app with injected currentUser
       method: "POST",
       body: JSON.stringify({
         organizationId: target.organizationId,
-        roleId: manager.roleId,
+        roleId: manager.roleRegistryId,
         scopeType: "FACILITY",
         scopeId: namedFacility.id,
       }),
@@ -1230,7 +1319,7 @@ test("authorization routes run through a real HTTP app with injected currentUser
       method: "POST",
       body: JSON.stringify({
         organizationId: target.organizationId,
-        roleId: manager.roleId,
+        roleId: manager.roleRegistryId,
         scopeType: "BUILDING",
         scopeId: missingScopeId,
       }),
@@ -1239,7 +1328,7 @@ test("authorization routes run through a real HTTP app with injected currentUser
     const [historicalScopeBinding] = await db.insert(userRoleBindingsTable).values({
       userId: target.userId,
       organizationId: target.organizationId,
-      roleId: manager.roleId,
+      roleId: manager.roleCode,
       scopeType: "BUILDING",
       scopeId: missingScopeId,
       grantedBy: platform.userId,
@@ -1254,7 +1343,7 @@ test("authorization routes run through a real HTTP app with injected currentUser
     const [inactiveScopeBinding] = await db.insert(userRoleBindingsTable).values({
       userId: target.userId,
       organizationId: target.organizationId,
-      roleId: manager.roleId,
+      roleId: manager.roleCode,
       scopeType: "FACILITY",
       scopeId: inactiveFacility.id,
       grantedBy: platform.userId,
@@ -1283,7 +1372,7 @@ test("authorization routes run through a real HTTP app with injected currentUser
     assert.ok(listedPage.total >= listedBindings.length);
     assert.ok(listedBindings.every((binding) => canonicalRoleValues.includes(binding.roleCode as typeof canonicalRoleValues[number])));
     assert.ok(listedBindings.some((binding) =>
-      binding.roleId === manager.roleId && binding.roleCode === "FACILITY_MANAGER"));
+      binding.roleId === manager.roleRegistryId && binding.roleCode === "FACILITY_MANAGER"));
     assert.ok(listedBindings.some((row) => row.id === createdBindingId));
     assert.ok(listedBindings
       .some((row) => row.scopeId === namedFacility.id &&
@@ -1441,7 +1530,7 @@ test("authorization routes run through a real HTTP app with injected currentUser
     assert.equal(crossOrgExport.response.status, 403);
     const crossOrgCreate = await request(`/users/${target.userId}/role-bindings`, {
       method: "POST",
-      body: JSON.stringify({ organizationId: target.organizationId, roleId: manager.roleId, scopeType: "ORGANIZATION" }),
+      body: JSON.stringify({ organizationId: target.organizationId, roleId: manager.roleRegistryId, scopeType: "ORGANIZATION" }),
     });
     assert.equal(crossOrgCreate.response.status, 403);
     const crossOrgDelete = await request(`/users/${target.userId}/role-bindings/${createdBindingId}`, { method: "DELETE" });
@@ -1471,7 +1560,7 @@ test("authorization routes run through a real HTTP app with injected currentUser
     const restored = roleCapabilityRows
       .filter(([, roleCode]) => roleCode === "FACILITY_MANAGER")
       .flatMap(([resource, , actions, defaultScopeType]) => actions.map((action) => ({
-        roleId: manager.roleId,
+        roleId: manager.roleCode,
         permissionId: seededPermissions.get(`${resource}.${action}`)!,
         defaultScopeType: defaultScopeType as "ORGANIZATION",
         effect: "ALLOW" as const,
@@ -1577,7 +1666,7 @@ test("permission introspection follows binding scope intersection and deny prece
     await db.insert(userRoleBindingsTable).values({
       userId: manager.userId,
       organizationId: manager.organizationId,
-      roleId: manager.roleId,
+      roleId: manager.roleCode,
       scopeType: "FACILITY",
       scopeId: null,
       grantedBy: manager.userId,
@@ -1604,7 +1693,7 @@ test("permission introspection follows binding scope intersection and deny prece
     await db.insert(userRoleBindingsTable).values({
       userId: manager.userId,
       organizationId: manager.organizationId,
-      roleId: manager.roleId,
+      roleId: manager.roleCode,
       scopeType: "FACILITY",
       scopeId: facilityScopeId,
       grantedBy: manager.userId,

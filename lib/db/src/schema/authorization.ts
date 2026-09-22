@@ -1,6 +1,7 @@
 import {
   pgEnum,
   pgTable,
+  jsonb,
   text,
   timestamp,
   unique,
@@ -8,11 +9,13 @@ import {
 } from "drizzle-orm/pg-core";
 import { organizationsTable } from "./organizations";
 import { usersTable } from "./users";
+import { canonicalRoleEnum } from "./memberships";
 
 export const roleStatusValues = ["ACTIVE", "DEPRECATED"] as const;
 export const permissionStatusValues = ["ACTIVE", "DEPRECATED"] as const;
 export const permissionEffectValues = ["ALLOW", "DENY"] as const;
-export const bindingStatusValues = ["ACTIVE", "SUSPENDED", "EXPIRED"] as const;
+export const bindingStatusValues = ["ACTIVE", "SUSPENDED", "EXPIRED", "REVOKED"] as const;
+export const writableBindingStatusValues = ["ACTIVE", "SUSPENDED", "EXPIRED"] as const;
 export const scopeTypeValues = [
   "PLATFORM",
   "ORGANIZATION",
@@ -27,11 +30,13 @@ export const scopeTypeValues = [
   "OWNED_REQUEST",
 ] as const;
 
+// These enum names intentionally match the production schema. The UUID registry
+// remains additive, while authorization rows continue to use canonical_role.
 export const roleStatusEnum = pgEnum("authorization_role_status", roleStatusValues);
-export const permissionStatusEnum = pgEnum("authorization_permission_status", permissionStatusValues);
-export const permissionEffectEnum = pgEnum("authorization_permission_effect", permissionEffectValues);
-export const bindingStatusEnum = pgEnum("authorization_binding_status", bindingStatusValues);
-export const scopeTypeEnum = pgEnum("authorization_scope_type", scopeTypeValues);
+export const permissionStatusEnum = pgEnum("permission_status", permissionStatusValues);
+export const permissionEffectEnum = pgEnum("permission_effect", permissionEffectValues);
+export const bindingStatusEnum = pgEnum("binding_status", bindingStatusValues);
+export const scopeTypeEnum = pgEnum("scope_type", scopeTypeValues);
 
 /** Canonical role registry. The existing memberships.role remains unchanged. */
 export const rolesTable = pgTable("authorization_roles", {
@@ -57,14 +62,14 @@ export const permissionsTable = pgTable("permissions", {
 
 export const rolePermissionsTable = pgTable("role_permissions", {
   id: uuid("id").primaryKey().defaultRandom(),
-  roleId: uuid("role_id").notNull().references(() => rolesTable.id, { onDelete: "cascade" }),
+  roleId: canonicalRoleEnum("role").notNull().$type<string>(),
   permissionId: uuid("permission_id").notNull().references(() => permissionsTable.id, { onDelete: "restrict" }),
   defaultScopeType: scopeTypeEnum("default_scope_type").notNull(),
   effect: permissionEffectEnum("effect").notNull().default("ALLOW"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => [
-  unique("role_permissions_role_permission_scope_unique").on(
+  unique("role_permission_scope_unique").on(
     table.roleId,
     table.permissionId,
     table.defaultScopeType,
@@ -75,7 +80,7 @@ export const userRoleBindingsTable = pgTable("user_role_bindings", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
   organizationId: uuid("organization_id").notNull().references(() => organizationsTable.id, { onDelete: "cascade" }),
-  roleId: uuid("role_id").notNull().references(() => rolesTable.id, { onDelete: "restrict" }),
+  roleId: canonicalRoleEnum("role").notNull().$type<string>(),
   version: uuid("version").notNull().defaultRandom(),
   scopeType: scopeTypeEnum("scope_type").notNull(),
   scopeId: uuid("scope_id"),
@@ -101,12 +106,15 @@ export const authorizationAuditLogsTable = pgTable("authorization_audit_logs", {
   id: uuid("id").primaryKey().defaultRandom(),
   organizationId: uuid("organization_id").references(() => organizationsTable.id, { onDelete: "set null" }),
   actorUserId: uuid("actor_user_id").references(() => usersTable.id, { onDelete: "set null" }),
-  action: text("action").notNull(),
+  role: canonicalRoleEnum("role"),
+  permission: text("permission").notNull().default(""),
   resource: text("resource").notNull(),
   resourceId: text("resource_id"),
-  decision: text("decision").notNull(),
+  decision: permissionEffectEnum("decision").notNull(),
   reasonCode: text("reason_code").notNull(),
   scopeEvaluated: text("scope_evaluated"),
+  requestContext: jsonb("request_context").notNull().default({}),
+  action: text("action"),
   requestId: text("request_id"),
   beforeState: text("before_state"),
   afterState: text("after_state"),

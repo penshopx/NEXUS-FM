@@ -1,7 +1,7 @@
-import { and, asc, eq, gt, inArray, isNull, lte, or } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNull, lte, or, sql } from "drizzle-orm";
 import {
   authorizationAuditLogsTable,
-  bindingStatusValues,
+  writableBindingStatusValues,
   db,
   membershipsTable,
   organizationsTable,
@@ -185,7 +185,7 @@ export function validateRoleBindingState(input: {
   if (typeof input.scopeType !== "string" || !scopeTypeValues.includes(input.scopeType as never)) {
     return { valid: false, error: "scopeType must be a valid authorization scope" };
   }
-  if (typeof input.status !== "string" || !bindingStatusValues.includes(input.status as never)) {
+  if (typeof input.status !== "string" || !writableBindingStatusValues.includes(input.status as never)) {
     return { valid: false, error: "status must be ACTIVE, SUSPENDED, or EXPIRED" };
   }
   let scopeId: string | null = null;
@@ -254,6 +254,7 @@ export async function recordAuthorizationConfigurationAudit(input: {
   await db.insert(authorizationAuditLogsTable).values({
     actorUserId: input.actorUserId,
     organizationId: input.organizationId ?? null,
+    permission: input.action,
     action: input.action,
     resource: input.resource,
     resourceId: input.resourceId ?? null,
@@ -279,6 +280,7 @@ async function auditDecision(request: AuthorizationRequest, decision: Authorizat
   await (request.database ?? db).insert(authorizationAuditLogsTable).values({
     actorUserId: request.actorUserId,
     organizationId: request.organizationId ?? null,
+    permission: request.permission,
     action: request.permission.split(".")[1] ?? "UNKNOWN",
     resource: request.resourceType,
     resourceId: request.resourceId ?? null,
@@ -331,14 +333,11 @@ export async function authorize(request: AuthorizationRequest): Promise<Authoriz
 
   const now = new Date();
    const bindings = await database.select({
-    binding: userRoleBindingsTable,
-    role: rolesTable,
-  }).from(userRoleBindingsTable)
-    .innerJoin(rolesTable, eq(userRoleBindingsTable.roleId, rolesTable.id))
+     binding: userRoleBindingsTable,
+   }).from(userRoleBindingsTable)
     .where(and(
       eq(userRoleBindingsTable.userId, request.actorUserId),
       eq(userRoleBindingsTable.organizationId, request.organizationId),
-      eq(rolesTable.status, "ACTIVE"),
       eq(userRoleBindingsTable.status, "ACTIVE"),
       or(isNull(userRoleBindingsTable.startsAt), lte(userRoleBindingsTable.startsAt, now)),
       or(isNull(userRoleBindingsTable.endsAt), gt(userRoleBindingsTable.endsAt, now)),
@@ -353,12 +352,14 @@ export async function authorize(request: AuthorizationRequest): Promise<Authoriz
     binding: userRoleBindingsTable,
   }).from(rolePermissionsTable)
     .innerJoin(permissionsTable, eq(rolePermissionsTable.permissionId, permissionsTable.id))
-    .innerJoin(userRoleBindingsTable, eq(rolePermissionsTable.roleId, userRoleBindingsTable.roleId))
-    .innerJoin(rolesTable, eq(rolePermissionsTable.roleId, rolesTable.id))
+     .innerJoin(rolesTable, and(
+       sql`${rolePermissionsTable.roleId} = ${rolesTable.code}::canonical_role`,
+       eq(rolesTable.status, "ACTIVE"),
+     ))
+     .innerJoin(userRoleBindingsTable, eq(rolePermissionsTable.roleId, userRoleBindingsTable.roleId))
     .where(and(
       eq(permissionsTable.code, permission),
       eq(permissionsTable.status, "ACTIVE"),
-      eq(rolesTable.status, "ACTIVE"),
       eq(userRoleBindingsTable.userId, request.actorUserId),
       eq(userRoleBindingsTable.organizationId, request.organizationId),
       eq(userRoleBindingsTable.status, "ACTIVE"),
@@ -512,19 +513,21 @@ async function lockAuthorizationState(database: any, actorUserId: string, organi
     eq(userRoleBindingsTable.userId, actorUserId),
     eq(userRoleBindingsTable.organizationId, organizationId),
   )).orderBy(asc(userRoleBindingsTable.id)));
-  const roleIds: string[] = Array.from(new Set<string>(bindings.map((binding: any) => binding.roleId as string))).sort();
-  const roles = roleIds.length
-    ? await lock(database.select().from(rolesTable).where(inArray(rolesTable.id, roleIds)).orderBy(asc(rolesTable.id)))
-    : [];
-  const rolePermissions = roleIds.length
-    ? await lock(database.select().from(rolePermissionsTable).where(inArray(rolePermissionsTable.roleId, roleIds))
-      .orderBy(asc(rolePermissionsTable.roleId), asc(rolePermissionsTable.permissionId), asc(rolePermissionsTable.defaultScopeType)))
+   const roleCodes: string[] = Array.from(new Set<string>(bindings.map((binding: any) => binding.roleId as string))).sort();
+   const rolePermissions = roleCodes.length
+      ? await lock(database.select().from(rolePermissionsTable)
+        .innerJoin(rolesTable, and(
+          sql`${rolePermissionsTable.roleId} = ${rolesTable.code}::canonical_role`,
+          eq(rolesTable.status, "ACTIVE"),
+        ))
+        .where(inArray(rolePermissionsTable.roleId, roleCodes as any))
+       .orderBy(asc(rolePermissionsTable.roleId), asc(rolePermissionsTable.permissionId), asc(rolePermissionsTable.defaultScopeType)))
     : [];
   const permissionIds: string[] = Array.from(new Set<string>(rolePermissions.map((permission: any) => permission.permissionId as string))).sort();
   const permissions = permissionIds.length
     ? await lock(database.select().from(permissionsTable).where(inArray(permissionsTable.id, permissionIds)).orderBy(asc(permissionsTable.id)))
     : [];
-  return { user, organization, memberships, bindings, roles, rolePermissions, permissions };
+   return { user, organization, memberships, bindings, rolePermissions, permissions };
 }
 
 export function authorizationProbeAvailable(environment = process.env.NODE_ENV) {
@@ -532,20 +535,21 @@ export function authorizationProbeAvailable(environment = process.env.NODE_ENV) 
 }
 
 export async function listUserPermissions(userId: string, organizationId: string) {
-  const rows = await db.select({
-    permission: permissionsTable,
-    role: rolesTable,
-    binding: userRoleBindingsTable,
-    rolePermission: rolePermissionsTable,
-  }).from(userRoleBindingsTable)
-    .innerJoin(rolesTable, eq(userRoleBindingsTable.roleId, rolesTable.id))
-    .innerJoin(rolePermissionsTable, eq(rolePermissionsTable.roleId, rolesTable.id))
+   const rows = await db.select({
+     permission: permissionsTable,
+     binding: userRoleBindingsTable,
+     rolePermission: rolePermissionsTable,
+   }).from(userRoleBindingsTable)
+     .innerJoin(rolePermissionsTable, eq(rolePermissionsTable.roleId, userRoleBindingsTable.roleId))
+     .innerJoin(rolesTable, and(
+       sql`${rolePermissionsTable.roleId} = ${rolesTable.code}::canonical_role`,
+       eq(rolesTable.status, "ACTIVE"),
+     ))
     .innerJoin(permissionsTable, eq(rolePermissionsTable.permissionId, permissionsTable.id))
     .where(and(
       eq(userRoleBindingsTable.userId, userId),
       eq(userRoleBindingsTable.organizationId, organizationId),
       eq(userRoleBindingsTable.status, "ACTIVE"),
-      eq(rolesTable.status, "ACTIVE"),
       eq(permissionsTable.status, "ACTIVE"),
       or(isNull(userRoleBindingsTable.startsAt), lte(userRoleBindingsTable.startsAt, new Date())),
       or(isNull(userRoleBindingsTable.endsAt), gt(userRoleBindingsTable.endsAt, new Date())),

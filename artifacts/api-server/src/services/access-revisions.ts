@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import {
   db,
   membershipsTable,
@@ -189,7 +189,7 @@ export async function getAccessRevision(
     version: userRoleBindingsTable.version,
     rolePolicyVersion: rolesTable.policyVersion,
   }).from(userRoleBindingsTable)
-    .innerJoin(rolesTable, eq(userRoleBindingsTable.roleId, rolesTable.id))
+    .innerJoin(rolesTable, sql`${userRoleBindingsTable.roleId} = ${rolesTable.code}::canonical_role`)
     .where(and(
       eq(userRoleBindingsTable.userId, userId),
       eq(userRoleBindingsTable.organizationId, organizationId),

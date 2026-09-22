@@ -246,7 +246,9 @@ async function seedAuthorizationCatalogOnce() {
       const permission = permissionByCode.get(`${resource}.${action}`);
       if (!permission) continue;
       await db.insert(rolePermissionsTable).values({
-        roleId: role.id,
+        // Production stores the canonical role in role_permissions.role.
+        // Keep the registry UUID only as an API-facing identifier.
+        roleId: role.code,
         permissionId: permission.id,
         defaultScopeType: scopeType as "PLATFORM",
         effect: "ALLOW",

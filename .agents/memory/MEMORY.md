@@ -11,3 +11,4 @@
 - [PostgreSQL bitmap plan assertions](postgres-bitmap-plan-assertions.md) — GIN bitmap index nodes identify the index but may omit the relation name.
 - [Access revision signals](access-revision-signals.md) — realtime access events are advisory; reconnect checks must compare a revision derived from persistent authorization state.
 - [Concurrent index migrations](concurrent-index-migrations.md) — concurrent indexes use session locking, validity checks, and journal-after-success retry semantics.
+- [Managed-publish authorization compatibility](managed-publish-authorization-compatibility.md) — production authorization rows stay on legacy role enums until Publish supports the required data backfill.
