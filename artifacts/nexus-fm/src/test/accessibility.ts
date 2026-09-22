@@ -10,6 +10,14 @@ export async function expectNoHighImpactAccessibilityViolations(
   const { violations } = await axe.run(context, {
     resultTypes: ['violations'],
     ...options,
+    rules: {
+      ...options?.rules,
+      // axe's color analysis requires a real canvas, which jsdom intentionally
+      // does not provide. Disable only this visual rule in the jsdom helper;
+      // semantic rules such as button-name, link-name, label, and
+      // aria-dialog-name remain enabled.
+      'color-contrast': { enabled: false },
+    },
   });
   const highImpactViolations = violations.filter(
     (violation) => violation.impact && HIGH_IMPACT_LEVELS.has(violation.impact),
