@@ -644,13 +644,13 @@ describe('facility portfolio import browser regressions', () => {
   });
 
   it.each([
-    [400, 'validation_error'],
-    [403, 'authorization_error'],
-    [409, 'conflict'],
-    [503, 'server_error'],
-    [418, 'request_failed'],
-    [undefined, 'request_failed'],
-  ])('records commit status %s as %s without exposing raw response data', async (status, reason) => {
+    [400, 'validation_error', 'CSV berisi kesalahan validasi.'],
+    [403, 'authorization_error', 'Anda tidak memiliki izin untuk mengimpor portofolio ini.'],
+    [409, 'conflict', 'Registry berubah setelah validasi. Validasi kembali file ini, tinjau perubahan terbaru, lalu lakukan commit lagi.'],
+    [503, 'server_error', 'Portofolio tidak dapat diimpor. Silakan coba lagi.'],
+    [418, 'request_failed', 'Portofolio tidak dapat diimpor. Silakan coba lagi.'],
+    [undefined, 'request_failed', 'Portofolio tidak dapat diimpor. Silakan coba lagi.'],
+  ])('records commit status %s as %s without exposing raw response data', async (status, reason, guidance) => {
     const user = userEvent.setup();
     const rawResponseData = `Private response details for ${status ?? 'missing status'}`;
     api.validateImport.mockReturnValue(idleMutation(
@@ -686,7 +686,9 @@ describe('facility portfolio import browser regressions', () => {
     await screen.findByTestId('alert-import-preview');
     await user.click(screen.getByTestId('button-submit-portfolio-import'));
 
-    expect(await screen.findByTestId('text-import-failure')).toBeVisible();
+    expect(await screen.findByTestId('text-import-failure')).toHaveTextContent(guidance);
+    expect(screen.queryByTestId('alert-import-preview')).not.toBeInTheDocument();
+    expect(screen.getByTestId('button-submit-portfolio-import')).toHaveTextContent('Validasi dan tinjau');
     expect(analytics.track).toHaveBeenCalledWith('portfolio_import', {
       stage: 'commit_failure',
       workflow_stage: 'commit',

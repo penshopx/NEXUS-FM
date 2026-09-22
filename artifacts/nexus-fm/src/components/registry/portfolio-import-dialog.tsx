@@ -335,6 +335,15 @@ function describeImportFailure(error: unknown): ImportFailure {
   return { message: 'Portofolio tidak dapat diimpor. Silakan coba lagi.' };
 }
 
+function describeCommitFailure(error: unknown): ImportFailure {
+  if (getErrorStatus(error) === 409) {
+    return {
+      message: 'Registry berubah setelah validasi. Validasi kembali file ini, tinjau perubahan terbaru, lalu lakukan commit lagi.',
+    };
+  }
+  return describeImportFailure(error);
+}
+
 interface PortfolioImportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -489,7 +498,7 @@ export function PortfolioImportDialog({
           facility_count: boundedCount(preview.facilities),
         });
         setPreview(null);
-        setFailure(describeImportFailure(error));
+        setFailure(describeCommitFailure(error));
       },
     });
   };
