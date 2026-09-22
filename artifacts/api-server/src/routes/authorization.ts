@@ -316,6 +316,10 @@ function bindingAuditState(input: Record<string, unknown>) {
 export type AuthorizationRouteDependencies = {
   currentUser?: typeof defaultCurrentUser;
   db?: typeof db;
+  onMemberAccessExportBatchWritten?: (batch: {
+    batchNumber: number;
+    rowCount: number;
+  }) => void | Promise<void>;
 };
 
 export async function getActiveOrganizationId(userId: string, database = db) {
@@ -356,6 +360,7 @@ export function createAuthorizationRouter(dependencies: AuthorizationRouteDepend
 const router: IRouter = Router();
 const database = dependencies.db ?? db;
 const resolveCurrentUser = dependencies.currentUser ?? defaultCurrentUser;
+const onMemberAccessExportBatchWritten = dependencies.onMemberAccessExportBatchWritten;
 
 router.get("/permissions", async (req, res): Promise<void> => {
   if (!await requireAdmin(req, res, "PERMISSION.MANAGE", resolveCurrentUser, database)) return;
@@ -979,6 +984,7 @@ router.get("/users/:userId/role-bindings/export", async (req, res): Promise<void
     await database.transaction(async (snapshot: any) => {
       let after: { createdAt: string; id: string } | undefined;
       let headerWritten = false;
+      let batchNumber = 0;
       for (;;) {
         await recheckAccess();
         const filters = [...baseFilters];
@@ -1039,6 +1045,8 @@ router.get("/users/:userId/role-bindings/export", async (req, res): Promise<void
             row.endsAt,
           ].map(csvCell).join(",")}\n`);
         }
+        batchNumber += 1;
+        await onMemberAccessExportBatchWritten?.({ batchNumber, rowCount: rows.length });
         if (rows.length < MEMBER_ACCESS_EXPORT_BATCH_SIZE) break;
         const last = rows.at(-1)!;
         after = { createdAt: last.createdAt, id: last.id };

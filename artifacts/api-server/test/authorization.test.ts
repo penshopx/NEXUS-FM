@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 import { randomUUID } from "node:crypto";
 import express from "express";
-import { createServer } from "node:http";
+import { createServer, request as httpRequest } from "node:http";
 import { setTimeout as delay } from "node:timers/promises";
 import { EventEmitter } from "node:events";
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
@@ -3200,6 +3200,115 @@ test("large member access exports are complete, ordered, filtered, and organizat
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
   }
+});
+
+async function runPausedMemberAccessExport(
+  actor: Fixture,
+  whilePaused: () => Promise<void>,
+) {
+  await db.insert(userContextsTable).values({
+    userId: actor.userId,
+    activeOrganizationId: actor.organizationId,
+  }).onConflictDoUpdate({
+    target: userContextsTable.userId,
+    set: { activeOrganizationId: actor.organizationId },
+  });
+  await db.insert(userRoleBindingsTable).values(Array.from({ length: 500 }, () => ({
+    userId: actor.userId,
+    organizationId: actor.organizationId,
+    roleId: actor.roleId,
+    scopeType: "BUILDING" as const,
+    scopeId: randomUUID(),
+    status: "ACTIVE" as const,
+    grantedBy: actor.userId,
+  })));
+
+  let releaseFirstBatch!: () => void;
+  const firstBatchReleased = new Promise<void>((resolve) => {
+    releaseFirstBatch = resolve;
+  });
+  let firstBatchWritten!: () => void;
+  const firstBatch = new Promise<void>((resolve) => {
+    firstBatchWritten = resolve;
+  });
+  const app = express();
+  app.use(createAuthorizationRouter({
+    currentUser: async () => {
+      const [user] = await db.select().from(usersTable).where(eq(usersTable.id, actor.userId));
+      return user ?? null;
+    },
+    onMemberAccessExportBatchWritten: async ({ batchNumber }) => {
+      if (batchNumber !== 1) return;
+      firstBatchWritten();
+      await firstBatchReleased;
+    },
+  }));
+  const server = createServer(app);
+  await new Promise<void>((resolve) => server.listen(0, resolve));
+  try {
+    const address = server.address();
+    assert.ok(address && typeof address === "object");
+    const responsePromise = new Promise<{ statusCode: number | undefined; text: string }>((resolve, reject) => {
+      const request = httpRequest({
+        hostname: "127.0.0.1",
+        port: address.port,
+        path: `/users/${actor.userId}/role-bindings/export`,
+      }, (response) => {
+        const chunks: Buffer[] = [];
+        response.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
+        const finish = () => resolve({
+          statusCode: response.statusCode,
+          text: Buffer.concat(chunks).toString("utf8"),
+        });
+        response.once("end", finish);
+        response.once("aborted", finish);
+        response.once("error", finish);
+      });
+      request.once("error", reject);
+      request.end();
+    });
+    await firstBatch;
+    await whilePaused();
+    releaseFirstBatch();
+    const response = await responsePromise;
+    assert.equal(response.statusCode, 200);
+    return response.text.trim().split("\n");
+  } finally {
+    releaseFirstBatch();
+    await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+  }
+}
+
+test("member access export stops after USER.VIEW is revoked between batches", async () => {
+  const actor = await makeFixture("FACILITY_MANAGER", "ORGANIZATION");
+  const lines = await runPausedMemberAccessExport(actor, async () => {
+    await db.update(userRoleBindingsTable).set({ status: "SUSPENDED" })
+      .where(eq(userRoleBindingsTable.id, actor.bindingId));
+  });
+  assert.equal(lines.length, 501);
+});
+
+test("organization-scoped member access export stops after active organization changes", async () => {
+  const actor = await makeFixture("FACILITY_MANAGER", "ORGANIZATION");
+  const other = await makeFixture("FACILITY_MANAGER", "ORGANIZATION");
+  const lines = await runPausedMemberAccessExport(actor, async () => {
+    await db.update(userContextsTable).set({ activeOrganizationId: other.organizationId })
+      .where(eq(userContextsTable.userId, actor.userId));
+  });
+  assert.equal(lines.length, 501);
+});
+
+test("platform member access export continues only while platform USER.VIEW remains effective", async () => {
+  const continuingActor = await makeFixture("PLATFORM_ADMIN", "PLATFORM");
+  const completeLines = await runPausedMemberAccessExport(continuingActor, async () => {});
+  assert.equal(completeLines.length, 502);
+
+  const revokedActor = await makeFixture("PLATFORM_ADMIN", "PLATFORM");
+  const stoppedLines = await runPausedMemberAccessExport(revokedActor, async () => {
+    await db.update(userRoleBindingsTable).set({ status: "SUSPENDED" })
+      .where(eq(userRoleBindingsTable.id, revokedActor.bindingId));
+  });
+  assert.equal(stoppedLines.length, 501);
 });
 
 test("mutation authorization linearizes against concurrent revocation and policy deny", async () => {
