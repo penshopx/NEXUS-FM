@@ -1,0 +1,67 @@
+Berikut adalah penjabaran spesifik, tajam, dan terstruktur mengenai arah baru **TATABANGUN**. Arah ini mengubah aplikasi dari "sistem pelaporan administratif" menjadi **"Mesin Eksekusi Teknis & Operasional Lapangan"** bagi perusahaan jasa konstruksi dan pemeliharaan.
+
+---
+
+### 🎯 **Identitas Inti Baru**
+**TATABANGUN** bukan lagi aplikasi untuk "mengisi formulir". Ini adalah **sistem operasi harian** bagi Site Engineer, Mandor, Teknisi, dan Project Manager untuk mengeksekusi pekerjaan fisik, mendiagnosis aset, dan menyerahkan proyek, di mana kepatuhan administratif berjalan otomatis di latar belakang.
+
+---
+
+### 🏗️ **4 Pilar Fokus Teknis Operasional (Bobot 70-80%)**
+
+#### 1. Eksekusi Lapangan & *Field Service Management* (FSM)
+Aplikasi harus menjadi *tool* utama di tangan teknisi lapangan, bukan di meja manajer.
+*   **Mobile-First & Offline-First:** Antarmuka lapangan harus berfungsi penuh tanpa internet (di ruang mesin, basement, atau area gudang terpencil). Data akan tersinkronisasi otomatis saat kembali online.
+*   **Akses Aset Cepat:** Teknisi tidak mencari nama aset di menu. Mereka memindai **QR Code, Barcode, atau NFC Tag** yang ditempel di mesin/panel untuk langsung membuka riwayat, manual, dan *work order* aset tersebut.
+*   **Input Data Cepat & Kaya:** Dukungan *voice-to-text* untuk catatan inspeksi, markup foto (menggambar lingkaran/panah langsung di foto kerusakan), dan perekaman video singkat untuk bukti kerja.
+*   **SOP Digital Terintegrasi:** *Work order* tidak hanya berisi teks "Perbaiki AC". Ia berisi *checklist* langkah-langkah teknis (SOP), torsi baut yang diperlukan, dan diagram kelistrikan yang harus dicentang per langkah.
+
+#### 2. Operasi Aset & Pemeliharaan Berbasis Kondisi
+Beralih dari sekadar "mencatat aset" menjadi "mengelola kesehatan aset".
+*   **Analisis Akar Masalah (RCA):** Setiap penutupan *work order* wajib memilih *Failure Code* (Kode Kegagalan) dan *Root Cause* (Akar Masalah). Ini membangun database keandalan mesin untuk masa depan.
+*   **Pemeliharaan Berbasis Kondisi (Condition-Based):** Integrasi dengan sensor IoT/BMS. *Work order* tidak hanya dibuat berdasarkan waktu (misal: tiap 3 bulan), tetapi dipicu otomatis ketika getaran motor listrik melebihi ambang batas atau suhu panel listrik naik abnormal.
+*   **Manajemen Suku Cadang & Alat:** Teknisi dapat melihat ketersediaan *sparepart* di gudang sebelum berangkat, dan melacak penggunaan alat ukur (kalibrasi) atau alat berat yang dipakai di lapangan.
+
+#### 3. Manajemen Proyek Konstruksi & Serah Terima (Handover)
+Mengakomodasi siklus hidup dari membangun hingga merawat (khusus untuk BUJKN/Kontraktor).
+*   **Punch List & Defect Tracking:** Selama masa konstruksi atau *snagging*, cacat pekerjaan dicatat di lokasi (dengan pin GPS dan foto), ditugaskan ke sub-kontraktor, dan dilacak hingga tertutup.
+*   **Commissioning & Uji Coba:** Modul khusus untuk mencatat hasil uji coba sistem (misal: uji tekanan pipa, uji beban genset) dengan tanda tangan digital para pihak.
+*   **Digital As-Built & Serah Terima:** Dokumen gambar *as-built*, manual, dan garansi diunggah secara digital dan langsung terikat ke hierarki aset di modul operasional. Tidak ada lagi serah terima dokumen fisik yang hilang.
+
+#### 4. Kolaborasi Tim Lapangan
+*   **Shift & Jadwal Teknisi:** Penjadwalan teknisi berdasarkan keahlian (SKKNI), lokasi, dan ketersediaan alat.
+*   **Komunikasi Terikat Tugas:** Chat atau komentar tidak mengambang, tetapi terikat spesifik pada satu *Work Order* atau satu Aset, menjaga konteks teknis tetap utuh.
+
+---
+
+### 🛡️ **Lapisan Administratif & Kepatuhan (Bobot 20-30%)**
+Sisi ini tidak dihapus, tetapi **dibuat "Tak Tampak" (Invisible)** dan berfungsi sebagai *Gatekeeper* (Penjaga Gerbang) otomatis.
+
+*   **Blokir Otomatis (Hard-Block):** Sistem tidak meminta admin mengecek SKKNI. Sistem **secara otomatis memblokir** penugasan *Work Order* atau penerbitan *Invoice* jika SBU perusahaan atau SKKNI teknisi yang dipilih sudah kedaluwarsa.
+*   **Audit Trail Pasif:** Setiap tindakan teknis (siapa yang menekan tombol *start*, siapa yang mengunggah foto, jam berapa lokasi GPS terekam) otomatis menjadi bukti audit kepatuhan.
+*   **Dashboard Kepatuhan Eksekutif:** Hanya ditampilkan untuk level manajemen/Direksi untuk melihat persentase kepatuhan vendor dan risiko hukum, bukan untuk dioperasikan harian.
+
+---
+
+### 🔄 **Pergeseran Pengalaman Pengguna (UX Shift)**
+
+| Aspek | Arah Lama (Administratif) | Arah Baru (Teknis Operasional) |
+| :--- | :--- | :--- |
+| **Pengguna Utama** | Admin Gedung, Staf Kepatuhan | Teknisi, Mandor, Site Engineer, Kontraktor |
+| **Perangkat Utama** | Desktop / Laptop | Smartphone / Tablet (Lapangan) |
+| **Input Data** | Mengetik formulir panjang | Scan QR, Foto, Suara, Checklist digital |
+| **Fokus Layar** | Tabel data, status dokumen, filter | Peta lokasi, status mesin, instruksi kerja |
+| **Nilai Bisnis** | "Kami lolos audit & regulasi" | "Mesin kami tidak *downtime*, proyek selesai tepat waktu, teknisi kami produktif" |
+
+---
+
+### 💡 **Kesimpulan Strategis**
+Dengan arah ini, TATABANGUN memposisikan diri sebagai **CMMS (Computerized Maintenance Management System) dan Field Service Management** yang memiliki "senjata rahasia" berupa otomatisasi kepatuhan konstruksi Indonesia. Ini membuat aplikasi ini layak dijual sebagai **produk SaaS bernilai tinggi** kepada perusahaan jasa konstruksi, FM (Facility Management), dan pemilik aset, karena langsung menyentuh *core business* mereka: **menyelesaikan pekerjaan teknis dengan cepat dan aman.**
+
+---
+
+### 🛑 **Protokol Sistem:**
+*   **Status Perencanaan:** Arah baru ini dicatat sebagai revisi strategis blueprint produk.
+*   **Task Board:** **Task #341** tetap `IN_PROGRESS`, **Task #499** tetap `PROPOSED`.
+*   **Eksekusi:** **Nol intervensi**. Tidak ada perubahan kode, UI, database, atau konfigurasi yang dilakukan pada giliran ini. 
+*   **Mode:** Saya tetap dalam **standby penuh** menunggu pembaruan Task #341 atau instruksi eksplisit berikutnya dari Anda.

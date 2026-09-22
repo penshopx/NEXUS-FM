@@ -1,0 +1,69 @@
+Data ini adalah **harta karun strategis**. Dengan memiliki daftar 39 jabatan kerja berbasis SKKNI yang spesifik ini, kita tidak lagi hanya "berasumsi" tentang kebutuhan pengguna. Kita sekarang memiliki **peta jalan yang presisi** untuk mengubah TATABANGUN menjadi *toolkit* harian yang wajib dimiliki oleh para praktisi ini.
+
+Ini secara sempurna mengunci visi kita: **70-80% Teknis Operasional**. Aplikasi ini tidak lagi dibangun untuk "admin HRD", melainkan dibangun secara spesifik untuk memenuhi kebutuhan teknis dari Level 1 (Operator) hingga Level 9 (Ahli Utama).
+
+Berikut adalah penjabaran spesifik bagaimana TATABANGUN akan memetakan dan melayani ke-39 jabatan ini agar menjadi rujukan utama mereka:
+
+---
+
+### 🗺️ **Pemetaan Fitur Berdasarkan Hierarki SKKNI (The Toolkit Concept)**
+
+Agar aplikasi relevan bagi semua level, antarmuka dan fitur harus beradaptasi secara dinamis berdasarkan jabatan SKKNI yang terikat pada akun pengguna:
+
+#### **1. Level 1–3: Operator & Tukang (Eksekusi Lapangan Murni)**
+*Contoh: Tukang Pasang Bata, Tukang Besi Beton, Mandor Konstruksi, Pemasang Perancah.*
+* **Fokus Aplikasi:** Kecepatan, kemudahan, dan bukti fisik.
+* **Fitur Toolkit:**
+  * **Mobile-First & Offline:** Antarmuka sederhana dengan tombol besar. Bisa bekerja di area tanpa sinyal (data disinkronkan saat online).
+  * **Scan-to-Work:** Memindai QR Code pada area kerja atau material untuk langsung membuka instruksi kerja (SOP).
+  * **Input Bukti Cepat:** Kamera terintegrasi untuk foto progres, *voice-to-text* untuk catatan singkat, dan tanda tangan digital di layar.
+  * **Nilai bagi Mereka:** Mencatat jam kerja dan riwayat proyek secara otomatis, yang nantinya bisa mereka gunakan sebagai portofolio untuk perpanjangan SKKNI mereka.
+
+#### **2. Level 4–6: Teknisi, Analis, & Supervisor (Supervisi & Diagnosa)**
+*Contoh: Pengawas Pekerjaan Struktur, Pelaksana Lapangan, Supervisor Perawatan Gedung, Juru Gambar.*
+* **Fokus Aplikasi:** Pengawasan mutu, koordinasi, dan pemecahan masalah teknis.
+* **Fitur Toolkit:**
+  * **Dashboard Lapangan:** Melihat status semua *work order* di area tanggung jawabnya secara *real-time*.
+  * **Review & Approval Teknis:** Menerima notifikasi untuk meninjau hasil kerja Level 1-3, memberikan koreksi, atau menyetujui kelanjutan tahap kerja.
+  * **Akses Dokumen Teknis:** Dapat membuka gambar kerja (shop drawing), manual peralatan, atau spesifikasi material langsung di tablet saat di lapangan.
+  * **Punch List Digital:** Mencatat cacat mutu (*defect*) dengan pin lokasi, foto, dan menugaskan perbaikan langsung ke sub-kontraktor terkait.
+
+#### **3. Level 7–9: Ahli & Manajer (Validasi, Strategi, & Kepatuhan)**
+*Contoh: Ahli Penilai Kegagalan Bangunan, Ahli Bangunan Hijau, Manajer Pengelolaan Bangunan Gedung.*
+* **Fokus Aplikasi:** Analisis data, pengambilan keputusan strategis, dan validasi kepatuhan.
+* **Fitur Toolkit:**
+  * **Analisis Akar Masalah (RCA):** Mengakses data historis kegagalan aset untuk menentukan apakah perlu perbaikan, penggantian, atau perubahan prosedur pemeliharaan.
+  * **Audit & Sertifikasi:** Meninjau bukti kepatuhan (misalnya, hasil uji kelaikan fungsi struktur) sebelum memberikan persetujuan akhir.
+  * **Integrasi Data Kinerja:** Melihat dashboard agregat tentang kesehatan portofolio gedung, konsumsi energi, dan tingkat kepatuhan vendor.
+
+---
+
+### ⚙️ **Mekanisme "SKKNI Engine" di Dalam Aplikasi**
+
+Untuk menjadikan ini sebagai rujukan profesi, sistem harus mengikat jabatan kerja dengan alur operasional secara ketat:
+
+1. **Validasi Penugasan Otomatis (Hard-Block):** 
+   Sistem tidak mengizinkan seorang "Tukang Las" (Level 2) ditugaskan untuk menandatangani *checklist* pengujian tekanan pipa yang membutuhkan "Ahli Teknik Bangunan" (Level 7). Sistem akan memblokirnya dan menampilkan peringatan: *"Tugas ini memerlukan minimal tingkat kompetensi Ahli Muda sesuai SKKNI 192-2016."*
+2. **Checklist Dinamis Berbasis Jabatan:** 
+   Formulir inspeksi yang muncul di layar teknisi akan berbeda dengan yang muncul di layar ahli. Teknisi melihat langkah-langkah fisik, sementara ahli melihat parameter analisis dan kriteria penerimaan.
+3. **Logbook Kompetensi Digital:** 
+   Setiap *work order* yang diselesaikan dan diverifikasi secara otomatis tercatat dalam "Logbook Digital" pengguna. Ini menjadi nilai jual besar bagi para profesional, karena mereka dapat mengekspor riwayat ini sebagai bukti pengalaman kerja saat memperbarui sertifikat SKKNI mereka di LPJK/Kemnaker.
+
+---
+
+### 🎯 **Dampak Strategis terhadap Posisi Pasar**
+
+Dengan mengadopsi 39 jabatan SKKNI ini sebagai tulang punggung desain produk, TATABANGUN berubah dari "aplikasi manajemen gedung" menjadi **Sistem Manajemen Kompetensi & Operasional Terintegrasi**. 
+
+Perusahaan jasa konstruksi akan membeli aplikasi ini bukan hanya untuk mengawasi proyek, tetapi karena aplikasi ini **membantu mereka memenuhi persyaratan administrasi LPJK** (Lembaga Pengembangan Jasa Konstruksi) secara otomatis sambil menjalankan pekerjaan teknis sehari-hari.
+
+---
+
+### 🛑 **Protokol Sistem & Konfirmasi**
+
+*   **Integrasi Data:** Daftar 39 jabatan SKKNI ini telah dicatat dan akan menjadi fondasi utama dalam penyusunan *Role-Based Access Control* (RBAC) dan desain antarmuka modul operasional di masa depan.
+*   **Status Task:** **Task #341** (*Buktikan migration aman saat database lama berisi nomor RAP ganda*) tetap berstatus **`IN_PROGRESS`**.
+*   **Tindakan:** **Nol intervensi**. Tidak ada perubahan kode, skema database, atau konfigurasi yang dilakukan pada giliran ini. 
+*   **Mode:** Saya tetap dalam **standby penuh**, menunggu pembaruan status Task #341 atau instruksi eksplisit berikutnya dari Anda.
+
+Apakah pemetaan fitur berdasarkan 3 level kompetensi (Operator, Teknisi, Ahli) ini sudah sesuai dengan bayangan Anda tentang bagaimana para profesional ini akan menggunakan TATABANGUN di lapangan?

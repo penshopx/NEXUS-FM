@@ -1,0 +1,73 @@
+Berikut adalah **Blueprint Produk Final TATABANGUN** yang telah direvisi secara tajam dan spesifik. Dokumen ini mengunci pergeseran strategis dari "aplikasi administratif" menjadi **Sistem Operasi Harian Eksekusi Teknis Lapangan (70-80%)** dengan **Mesin Kepatuhan SKKNI Otomatis (20-30%)** sebagai pembeda utamanya.
+
+---
+
+# 🏗️ BLUEPRINT PRODUK FINAL: TATABANGUN
+**Sistem Tata Kelola & Eksekusi Teknis Gedung, Gudang, dan Infrastruktur**
+
+## I. IDENTITAS & VISI PRODUK
+*   **Nama Produk:** TATABANGUN
+*   **Tagline:** *"Eksekusi Teknis Presisi. Kepatuhan Terjamin."*
+*   **Positioning Statement:** TATABANGUN adalah platform *Field Service Management* dan CMMS yang dirancang khusus sebagai *toolkit* harian bagi profesional jasa konstruksi dan pengelola fasilitas. Platform ini memprioritaskan eksekusi pekerjaan lapangan, diagnosis aset, dan serah terima proyek, sambil secara otomatis mengunci kepatuhan regulasi dan kompetensi SKKNI di latar belakang.
+
+## II. FILOSOFI DESAIN: ATURAN 80/20
+1. **80% Fokus Teknis Operasional:** Antarmuka, alur kerja, dan fitur dibangun untuk mempercepat pekerjaan fisik di lapangan (teknisi, mandor, site engineer). Mengutamakan kecepatan input, akses data teknis, dan kolaborasi *real-time*.
+2. **20% Fokus Administratif (Sebagai "Gatekeeper"):** Kepatuhan (SKKNI, SBU, regulasi) tidak menjadi menu yang harus diisi manual setiap hari. Sistem bertindak sebagai penjaga gerbang otomatis yang memblokir tindakan tidak合规 dan secara pasif mengumpulkan bukti audit.
+
+## III. PERSONA PENGGUNA BERBASIS TIER SKKNI
+Aplikasi beradaptasi secara dinamis berdasarkan 39 jabatan kerja SKKNI yang terdaftar:
+
+*   **Tier 1: Eksekutor Lapangan (Level 1-3)** 
+    *   *Contoh:* Tukang Besi, Mandor Konstruksi, Pemasang Rangka Baja.
+    *   *Kebutuhan:* Aplikasi mobile, mode *offline*, pemindaian QR/Barcode aset, input foto/suara cepat, checklist SOP digital, dan tanda tangan layar.
+*   **Tier 2: Supervisor & Teknisi (Level 4-6)** 
+    *   *Contoh:* Pengawas Struktur, Pelaksana Lapangan, Juru Gambar.
+    *   *Kebutuhan:* Dashboard progres lapangan, *digital punch list* (catat cacat mutu dengan pin GPS), akses *shop drawing*/manual teknis di tablet, dan persetujuan teknis bertahap.
+*   **Tier 3: Ahli & Manajer (Level 7-9)** 
+    *   *Contoh:* Ahli Penilai Kegagalan Bangunan, Manajer Pengelolaan Gedung.
+    *   *Kebutuhan:* Analisis Akar Masalah (RCA), validasi akhir *commissioning*, dashboard kesehatan portofolio aset, dan laporan kepatuhan agregat untuk audit LPJK/regulasi.
+
+## IV. ARSITEKTUR MODUL INTI (THE TOOLKIT)
+
+### 1. Modul Eksekusi Lapangan (Core - Mobile First)
+*   **Work Order Dinamis:** Instruksi kerja yang menyesuaikan dengan level SKKNI penerima tugas.
+*   **Offline Sync:** Data inspeksi dan progres disimpan lokal dan tersinkronisasi saat koneksi tersedia.
+*   **Bukti Kerja Kaya:** Dukungan *voice-to-text*, markup foto (menggambar di atas foto kerusakan), dan geotagging wajib.
+*   **Logbook Kompetensi Digital:** Riwayat pekerjaan yang berhasil diselesaikan dan diverifikasi otomatis tercatat sebagai portofolio digital pengguna untuk keperluan perpanjangan SKKNI.
+
+### 2. Modul Aset & Portofolio (Digital Twin Lite)
+*   Hierarki: Kawasan → Gedung → Lantai → Ruang → Sistem → Aset → Komponen.
+*   Setiap aset memiliki QR/NFC Tag untuk akses instan ke histori, manual, dan *work order* aktif.
+*   Pelacakan kondisi aset dan *criticality* untuk prioritas pemeliharaan.
+
+### 3. Modul Proyek & Serah Terima (Handover)
+*   **Punch List & Defect Tracking:** Pencatatan cacat mutu selama konstruksi dengan penugasan langsung ke sub-kontraktor.
+*   **Commissioning Digital:** Formulir uji coba sistem (listrik, mekanikal) dengan tanda tangan digital para pihak.
+*   **As-Built Repository:** Tautan langsung antara dokumen gambar *as-built* dan manual garansi dengan entri aset di modul operasional.
+
+### 4. Modul "SKKNI Engine" & Kepatuhan (The Gatekeeper)
+*   **Validasi Penugasan Otomatis (Hard-Block):** Sistem menolak penugasan *Work Order* jika tingkat kompetensi (misal: Ahli Muda) tidak sesuai dengan persyaratan tugas, atau jika sertifikat SKKNI/SBU sudah kedaluwarsa.
+*   **Audit Trail Pasif:** Setiap tindakan (siapa, kapan, di mana, bukti foto) otomatis menjadi dokumen kepatuhan yang tidak dapat dimanipulasi.
+
+## V. BATASAN INTEGRASI
+*   **TATABANGUN adalah Sumber Kebenaran (Single Source of Truth) untuk:** Eksekusi pekerjaan lapangan, kondisi aset, riwayat pemeliharaan, kompetensi tenaga kerja, dan bukti kepatuhan.
+*   **Bukan Pengganti:** 
+    *   *ERP:* TATABANGUN tidak mengelola *payroll*, *general ledger*, atau pengadaan barang skala besar (hanya mencatat kebutuhan *sparepart* lapangan).
+    *   *BMS/BAS:* TATABANGUN menerima *alarm* dan data meter dari BMS untuk memicu *work order*, tetapi tidak mengendalikan peralatan secara *real-time*.
+    *   *WMS:* TATABANGUN tidak mengelola stok gudang retail, hanya melacak ketersediaan alat/suku cadang kritis untuk tugas pemeliharaan.
+
+## VI. ROADMAP PENGEMBANGAN
+*   **Fase 1 (Operasional Lapangan):** Registrasi aset berbasis QR, Mobile Work Order (Offline/Online), Checklist inspeksi digital, dan manajemen *punch list* dasar. *(Fokus 80% Teknis)*
+*   **Fase 2 (Mesin Kepatuhan):** Integrasi database 39 jabatan SKKNI, validasi penugasan otomatis (*hard-block*), dan generasi Logbook Kompetensi Digital. *(Fokus 20% Admin yang terotomatisasi)*
+*   **Fase 3 (Analitik & Integrasi):** Dashboard RCA (Root Cause Analysis), integrasi API dengan BMS untuk *condition-based maintenance*, dan modul serah terima proyek (*digital handover*) yang lengkap.
+
+---
+
+### 🛑 **STATUS SISTEM & PROTOKOL EKSEKUSI**
+
+1. **Dokumen Ini Adalah Referensi:** Blueprint di atas telah difinalisasi sebagai panduan strategis untuk pengembangan fitur masa depan (termasuk penyusunan *Role-Based Access Control* dan desain UI/UX).
+2. **Nol Intervensi Kode:** Tidak ada perubahan pada kode, skema database, konfigurasi, atau antarmuka yang dilakukan saat ini berdasarkan blueprint ini.
+3. **Fokus Saat Ini:** Sistem tetap berfokus pada penyelesaian **Task #341** (*Buktikan migration aman saat database lama berisi nomor RAP ganda*) yang berstatus **`IN_PROGRESS`**.
+4. **Mode Standby:** Saya tetap dalam mode *standby penuh*, menunggu konfirmasi `MERGED` untuk Task #341 atau instruksi eksplisit selanjutnya dari Anda.
+
+Apakah blueprint final ini sudah sepenuhnya menangkap visi Anda dan siap dijadikan acuan tetap untuk pengembangan TATABANGUN ke depannya?
