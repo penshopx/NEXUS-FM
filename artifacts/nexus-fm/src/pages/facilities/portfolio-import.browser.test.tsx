@@ -643,8 +643,16 @@ describe('facility portfolio import browser regressions', () => {
     expect(JSON.stringify(analytics.track.mock.calls)).not.toContain('Private Campus');
   });
 
-  it('records bounded commit failures without exposing error details', async () => {
+  it.each([
+    [400, 'validation_error'],
+    [403, 'authorization_error'],
+    [409, 'conflict'],
+    [503, 'server_error'],
+    [418, 'request_failed'],
+    [undefined, 'request_failed'],
+  ])('records commit status %s as %s without exposing raw response data', async (status, reason) => {
     const user = userEvent.setup();
+    const rawResponseData = `Private response details for ${status ?? 'missing status'}`;
     api.validateImport.mockReturnValue(idleMutation(
       vi.fn((_variables: unknown, options: MutationOptions<unknown>) => {
         options.onSuccess?.({
@@ -661,8 +669,12 @@ describe('facility portfolio import browser regressions', () => {
     api.importPortfolio.mockReturnValue(idleMutation(
       vi.fn((_variables: unknown, options: MutationOptions<never>) => {
         options.onError?.({
-          status: 403,
-          data: 'Private authorization details must not reach analytics',
+          ...(status === undefined ? {} : { status }),
+          data: rawResponseData,
+          response: {
+            body: 'Private nested response body',
+            headers: { 'x-private-debug': 'internal trace' },
+          },
         });
       }),
     ));
@@ -674,19 +686,20 @@ describe('facility portfolio import browser regressions', () => {
     await screen.findByTestId('alert-import-preview');
     await user.click(screen.getByTestId('button-submit-portfolio-import'));
 
-    expect(await screen.findByTestId('text-import-failure')).toHaveTextContent(
-      'Anda tidak memiliki izin untuk mengimpor portofolio ini.',
-    );
+    expect(await screen.findByTestId('text-import-failure')).toBeVisible();
     expect(analytics.track).toHaveBeenCalledWith('portfolio_import', {
       stage: 'commit_failure',
       workflow_stage: 'commit',
-      reason: 'authorization_error',
+      reason,
       record_count: 100_000,
       facility_count: 2,
     });
-    expect(JSON.stringify(analytics.track.mock.calls)).not.toContain('portfolio.csv');
-    expect(JSON.stringify(analytics.track.mock.calls)).not.toContain('Private Campus');
-    expect(JSON.stringify(analytics.track.mock.calls)).not.toContain('Private authorization details');
+    const analyticsPayloads = JSON.stringify(analytics.track.mock.calls);
+    expect(analyticsPayloads).not.toContain('portfolio.csv');
+    expect(analyticsPayloads).not.toContain('Private Campus');
+    expect(analyticsPayloads).not.toContain(rawResponseData);
+    expect(analyticsPayloads).not.toContain('Private nested response body');
+    expect(analyticsPayloads).not.toContain('internal trace');
   });
 
   it('keeps importing when analytics throws', async () => {
