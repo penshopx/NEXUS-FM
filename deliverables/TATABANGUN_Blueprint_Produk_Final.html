@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TATABANGUN — Blueprint Produk Final</title>
+  <style>
+    :root { --ink:#14233a; --muted:#53657d; --blue:#155eef; --cyan:#0ea5a8; --soft:#edf4ff; --line:#d8e1ed; --paper:#fff; }
+    * { box-sizing:border-box; }
+    @page { size:A4; margin:18mm 17mm 18mm; }
+    body { margin:0; background:#e9eef5; color:var(--ink); font:10.5pt/1.55 Arial, Helvetica, sans-serif; }
+    main { width:210mm; margin:0 auto; background:var(--paper); }
+    section { padding:18mm 17mm; }
+    .cover { min-height:297mm; display:flex; flex-direction:column; justify-content:space-between; color:white;
+      background:linear-gradient(145deg,#071427 0%,#102a52 58%,#0b6d78 100%); }
+    .eyebrow { font-size:9pt; text-transform:uppercase; letter-spacing:2.2px; font-weight:700; color:#8fe6df; }
+    .cover h1 { margin:16px 0 8px; font-size:38pt; letter-spacing:1px; line-height:1; }
+    .cover h2 { margin:0; max-width:150mm; font-size:19pt; line-height:1.25; font-weight:400; color:#dbeafe; }
+    .tagline { margin-top:34px; font-size:13pt; font-weight:700; color:#fff; }
+    .cover-meta { border-top:1px solid rgba(255,255,255,.3); padding-top:16px; color:#cbd8ea; }
+    h1,h2,h3 { page-break-after:avoid; }
+    h1 { font-size:24pt; line-height:1.15; margin:0 0 14px; }
+    h2 { margin:28px 0 10px; font-size:16pt; color:#123f80; border-bottom:2px solid var(--line); padding-bottom:7px; }
+    h3 { margin:18px 0 6px; font-size:12pt; color:#0b6970; }
+    p { margin:6px 0 10px; }
+    ul,ol { margin:6px 0 12px; padding-left:21px; }
+    li { margin:3px 0; }
+    .lead { font-size:13pt; line-height:1.5; color:#29415f; }
+    .statement { margin:18px 0; padding:16px 18px; background:linear-gradient(90deg,#e9f2ff,#edfafa);
+      border-left:5px solid var(--blue); font-size:13pt; font-weight:700; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:12px 0; }
+    .card { padding:13px; border:1px solid var(--line); border-radius:8px; background:#fbfdff; break-inside:avoid; }
+    .card strong { display:block; color:#123f80; margin-bottom:4px; }
+    table { width:100%; border-collapse:collapse; margin:10px 0 16px; font-size:9.2pt; break-inside:auto; }
+    th { background:#15345f; color:#fff; text-align:left; }
+    th,td { padding:7px 8px; border:1px solid var(--line); vertical-align:top; }
+    tr { break-inside:avoid; }
+    tr:nth-child(even) td { background:#f6f9fd; }
+    .pill { display:inline-block; padding:2px 7px; margin:2px; border-radius:12px; background:var(--soft); color:#154b94; font-size:8.5pt; font-weight:700; }
+    .flow { padding:12px; border:1px dashed #6b8caf; border-radius:8px; text-align:center; font-weight:700; color:#234a73; background:#f7fbff; }
+    .note { padding:10px 12px; background:#fff8df; border-left:4px solid #d99b00; color:#664b05; }
+    .page-break { break-before:page; }
+    .footer-note { margin-top:24px; color:var(--muted); font-size:8.5pt; }
+    .toc a { color:var(--ink); text-decoration:none; }
+    .toc li { margin:6px 0; }
+    @media print { body { background:#fff; } main { width:auto; } section { min-height:auto; } }
+  </style>
+</head>
+<body>
+<main>
+  <section class="cover">
+    <div>
+      <div class="eyebrow">Blueprint Produk Final</div>
+      <h1>TATABANGUN</h1>
+      <h2>Sistem Tata Kelola Gedung, Gudang, dan Infrastruktur</h2>
+      <div class="tagline">Kelola fasilitasnya. Pastikan kompetensinya. Buktikan kepatuhannya.</div>
+    </div>
+    <div class="cover-meta">
+      <strong>Facility Governance Platform</strong><br>
+      Untuk badan usaha dan profesional jasa konstruksi<br><br>
+      Versi 1.0 · September 2026
+    </div>
+  </section>
+
+  <section class="page-break">
+    <div class="eyebrow">Ringkasan Eksekutif</div>
+    <h1>Arah Produk</h1>
+    <p class="lead">TATABANGUN adalah platform tata kelola fasilitas yang menghubungkan objek fisik, pekerjaan, badan usaha, tenaga profesional, inspeksi, pemeliharaan, otomasi bangunan, dan bukti kepatuhan.</p>
+    <div class="statement">Aset yang tepat, dikerjakan oleh pihak yang tepat, dengan kompetensi yang tepat, pada lokasi yang tepat, dan disertai bukti yang dapat diaudit.</div>
+    <p>Produk berfokus pada gedung, gudang, kawasan, utilitas, dan infrastruktur pendukung. TATABANGUN bukan ERP konstruksi, WMS persediaan, atau pengganti BMS/BAS. Platform ini menjadi pusat tata kelola yang menghubungkan sistem-sistem tersebut dengan fasilitas, pekerjaan, risiko, dan kepatuhan.</p>
+
+    <h2>Daftar Isi</h2>
+    <ol class="toc">
+      <li>Identitas dan positioning</li>
+      <li>Masalah pasar dan nilai produk</li>
+      <li>Pengguna dan persona</li>
+      <li>Batas produk dan ekosistem</li>
+      <li>Model domain konseptual</li>
+      <li>Modul produk</li>
+      <li>Alur kerja utama</li>
+      <li>Klasifikasi usaha dan kompetensi SKKNI</li>
+      <li>BMS/BAS, utilitas, dan gudang</li>
+      <li>Keamanan, bukti, dan kepatuhan</li>
+      <li>KPI dan analitik</li>
+      <li>Roadmap rilis</li>
+      <li>Kriteria keberhasilan</li>
+    </ol>
+  </section>
+
+  <section class="page-break">
+    <div class="eyebrow">01 · Identitas</div>
+    <h1>Identitas dan Positioning</h1>
+    <table>
+      <tr><th>Elemen</th><th>Keputusan</th></tr>
+      <tr><td>Nama</td><td><strong>TATABANGUN</strong></td></tr>
+      <tr><td>Deskriptor</td><td>Sistem Tata Kelola Gedung, Gudang, dan Infrastruktur</td></tr>
+      <tr><td>Kategori</td><td>Facility Governance and Management Platform</td></tr>
+      <tr><td>Tagline</td><td>Kelola fasilitasnya. Pastikan kompetensinya. Buktikan kepatuhannya.</td></tr>
+      <tr><td>Pasar utama</td><td>Pemilik/pengelola fasilitas, BUJKN/BUJKA, facility management provider, kontraktor, konsultan, dan tenaga profesional jasa konstruksi.</td></tr>
+    </table>
+
+    <h2>Positioning Statement</h2>
+    <p class="lead">TATABANGUN membantu organisasi memastikan gedung, gudang, dan fasilitas infrastruktur dikelola oleh badan usaha yang sesuai, dikerjakan oleh tenaga profesional yang kompeten, diperiksa melalui proses yang jelas, serta didukung bukti yang dapat dipertanggungjawabkan.</p>
+
+    <h2>Prinsip Produk</h2>
+    <div class="grid">
+      <div class="card"><strong>Asset-centric</strong>Fasilitas, sistem, aset, dan komponennya menjadi pusat konteks.</div>
+      <div class="card"><strong>Evidence-first</strong>Status tidak cukup; pekerjaan harus memiliki bukti dan verifikasi.</div>
+      <div class="card"><strong>Competency-aware</strong>Kelayakan vendor dan personel diperiksa sesuai pekerjaan.</div>
+      <div class="card"><strong>Risk-based</strong>Prioritas ditentukan oleh keselamatan, layanan, lingkungan, dan kepatuhan.</div>
+      <div class="card"><strong>Integration-ready</strong>BMS/BAS, WMS, ERP, BIM, dan IoT tetap menjadi sistem khusus.</div>
+      <div class="card"><strong>Audit by design</strong>Perubahan, persetujuan, bukti, dan keputusan dapat ditelusuri.</div>
+    </div>
+  </section>
+
+  <section class="page-break">
+    <div class="eyebrow">02 · Nilai Produk</div>
+    <h1>Masalah Pasar dan Nilai</h1>
+    <h2>Masalah yang Diselesaikan</h2>
+    <ul>
+      <li>Data fasilitas dan aset tersebar serta tidak mempunyai hierarki yang konsisten.</li>
+      <li>Pekerjaan sulit dilacak dari temuan sampai penutupan.</li>
+      <li>Pemeliharaan berkala terlambat atau tidak mempunyai bukti lengkap.</li>
+      <li>Vendor dan personel ditugaskan tanpa pemeriksaan legalitas dan kompetensi yang memadai.</li>
+      <li>Hasil proyek tidak diserahkan secara lengkap ke pengelola aset.</li>
+      <li>Alarm sistem otomasi tidak selalu berubah menjadi tindakan yang terkelola.</li>
+      <li>Audit membutuhkan pengumpulan dokumen manual dari banyak pihak.</li>
+    </ul>
+
+    <h2>Janji Produk</h2>
+    <div class="grid">
+      <div class="card"><strong>Visibilitas</strong>Lokasi, kondisi, penanggung jawab, dan riwayat setiap objek diketahui.</div>
+      <div class="card"><strong>Kontrol Pekerjaan</strong>Temuan menjadi pekerjaan terukur dengan SLA dan verifikasi.</div>
+      <div class="card"><strong>Kelayakan Pelaksana</strong>Vendor, SBU, personel, dan sertifikat diperiksa sebelum penugasan.</div>
+      <div class="card"><strong>Kepatuhan</strong>Persyaratan dihubungkan langsung dengan kontrol dan bukti.</div>
+      <div class="card"><strong>Keandalan</strong>Preventive maintenance dan inspeksi mengurangi kegagalan berulang.</div>
+      <div class="card"><strong>Akuntabilitas</strong>Keputusan dan perubahan mempunyai jejak audit yang jelas.</div>
+    </div>
+  </section>
+
+  <section class="page-break">
+    <div class="eyebrow">03 · Pengguna</div>
+    <h1>Pengguna dan Persona</h1>
+    <table>
+      <tr><th>Persona</th><th>Kebutuhan Utama</th><th>Hasil yang Diharapkan</th></tr>
+      <tr><td>Pemilik/Manajemen</td><td>Risiko, biaya, kondisi portofolio, kepatuhan</td><td>Keputusan investasi dan prioritas berbasis data</td></tr>
+      <tr><td>Building/Facility Manager</td><td>Pekerjaan, inspeksi, SLA, vendor, eskalasi</td><td>Operasi terkendali dan backlog berkurang</td></tr>
+      <tr><td>Engineering</td><td>Aset, alarm, PM, kerusakan, pengujian</td><td>Keandalan sistem dan waktu pemulihan lebih baik</td></tr>
+      <tr><td>Housekeeping/Layanan</td><td>Jadwal, checklist, area, keluhan</td><td>Standar layanan konsisten</td></tr>
+      <tr><td>Inspektor/Auditor</td><td>Checklist, temuan, bukti, histori</td><td>Audit cepat dan dapat dipertanggungjawabkan</td></tr>
+      <tr><td>Vendor/Kontraktor</td><td>Paket kerja, izin, personel, bukti</td><td>Pelaksanaan jelas dan administrasi sederhana</td></tr>
+      <tr><td>Tenaga Profesional</td><td>Penugasan, kompetensi, sertifikat, ruang lingkup</td><td>Pekerjaan sesuai kewenangan dan kemampuan</td></tr>
+      <tr><td>Administrator</td><td>Organisasi, akses, referensi, integrasi</td><td>Kontrol aman tanpa menghambat operasi</td></tr>
+    </table>
+  </section>
+
+  <section class="page-break">
+    <div class="eyebrow">04 · Batas Produk</div>
+    <h1>Ekosistem dan Batas Tanggung Jawab</h1>
+    <table>
+      <tr><th>Sistem</th><th>Sumber Kebenaran</th><th>Hubungan dengan TATABANGUN</th></tr>
+      <tr><td>TATABANGUN</td><td>Fasilitas, aset, kondisi, pekerjaan, inspeksi, pemeliharaan, vendor, kompetensi, bukti, kepatuhan</td><td>Pusat tata kelola</td></tr>
+      <tr><td>BMS/BAS</td><td>Sensor, controller, alarm lokal, interlock, sequence, kendali real-time, historian</td><td>Menyuplai telemetry/alarm; tetap mengendalikan sistem lokal</td></tr>
+      <tr><td>WMS</td><td>SKU, stok, receiving, put-away, picking, packing, shipping</td><td>Menyuplai kapasitas/pemanfaatan yang relevan</td></tr>
+      <tr><td>ERP</td><td>Keuangan, procurement, invoice, pembayaran, payroll</td><td>Menyuplai nomor referensi dan ringkasan biaya</td></tr>
+      <tr><td>BIM/CDE</td><td>Model desain, koordinasi, dokumen teknis</td><td>Menyuplai identitas objek, dokumen, dan as-built</td></tr>
+      <tr><td>IoT Platform</td><td>Konektivitas perangkat dan stream sensor</td><td>Menyuplai data terukur beserta kualitasnya</td></tr>
+    </table>
+    <div class="note"><strong>Batas utama:</strong> TATABANGUN tidak menggantikan kontrol keselamatan BMS/BAS, transaksi stok WMS, atau pembukuan ERP.</div>
+  </section>
+
+  <section class="page-break">
+    <div class="eyebrow">05 · Domain</div>
+    <h1>Model Domain Konseptual</h1>
+    <h2>Hierarki Fisik</h2>
+    <div class="flow">Organisasi → Portofolio/Kawasan → Fasilitas → Gedung/Gudang/Infrastruktur → Lantai/Ruang/Zona → Sistem → Aset → Komponen</div>
+
+    <h2>Hierarki Pekerjaan</h2>
+    <div class="flow">Program/Proyek → Kontrak → Paket Pekerjaan → Work Order → Aktivitas → Inspeksi/Pengujian → Bukti → Serah Terima</div>
+
+    <h2>Domain Inti</h2>
+    <table>
+      <tr><th>Domain</th><th>Entitas Utama</th></tr>
+      <tr><td>Fasilitas</td><td>Portofolio, fasilitas, gedung, gudang, infrastruktur, ruang, zona</td></tr>
+      <tr><td>Aset</td><td>Sistem, aset, komponen, meter, dokumen, kondisi, criticality</td></tr>
+      <tr><td>Kerja</td><td>Permintaan, temuan, work order, tugas, SLA, izin kerja, bukti</td></tr>
+      <tr><td>Pemeliharaan</td><td>Program, rencana, jadwal, prosedur, interval, failure mode</td></tr>
+      <tr><td>Inspeksi</td><td>Template, checklist version, inspeksi, hasil ukur, finding, corrective action</td></tr>
+      <tr><td>Badan Usaha</td><td>Organisasi legal, BUJKN/BUJKA, SBU, klasifikasi, kontrak, vendor</td></tr>
+      <tr><td>Tenaga Kerja</td><td>Personel, jabatan SKKNI, level, sertifikat, pengalaman, penugasan</td></tr>
+      <tr><td>Kepatuhan</td><td>Regulasi, persyaratan, kontrol, penerapan, bukti, pengecualian</td></tr>
+      <tr><td>Integrasi</td><td>Connector, point, alarm, reading, event, mapping, integration health</td></tr>
+    </table>
+  </section>
+
+  <section class="page-break">
+    <div class="eyebrow">06 · Modul</div>
+    <h1>Arsitektur Modul Produk</h1>
+    <div class="grid">
+      <div class="card"><strong>Dasbor</strong>Kondisi portofolio, pekerjaan, risiko, kepatuhan, utilitas.</div>
+      <div class="card"><strong>Portofolio</strong>Kawasan, gedung, gudang, ruang, zona, infrastruktur.</div>
+      <div class="card"><strong>Aset</strong>Sistem, equipment, komponen, kondisi, dokumen, lifecycle.</div>
+      <div class="card"><strong>Kerja</strong>Permintaan, work order, jadwal, izin, bukti, SLA.</div>
+      <div class="card"><strong>Inspeksi</strong>Checklist, hasil ukur, temuan, risiko, corrective action.</div>
+      <div class="card"><strong>Rawat</strong>Preventive, corrective, predictive, condition-based maintenance.</div>
+      <div class="card"><strong>Mitra</strong>Vendor, BUJKN/BUJKA, SBU, kontrak, evaluasi.</div>
+      <div class="card"><strong>Kompetensi</strong>Personel, SKKNI, sertifikat, level, kelayakan penugasan.</div>
+      <div class="card"><strong>Proyek</strong>Paket kerja, mutu, defect, commissioning, handover.</div>
+      <div class="card"><strong>Otomasi</strong>BMS/BAS, alarms, telemetry, meters, integration health.</div>
+      <div class="card"><strong>Patuh</strong>Regulasi, kontrol, bukti, ketidaksesuaian, audit.</div>
+      <div class="card"><strong>Administrasi</strong>Organisasi, anggota, peran, izin, scope, referensi.</div>
+    </div>
+  </section>
+
+  <section class="page-break">
+    <div class="eyebrow">07 · Workflow</div>
+    <h1>Alur Kerja Utama</h1>
+    <h2>Temuan sampai Penutupan</h2>
+    <div class="flow">Temuan → Triage → Risiko → Inspeksi/Diagnosis → Rencana → Persetujuan → Penugasan → Pelaksanaan → Pengujian → Verifikasi → Penutupan</div>
+
+    <h2>Preventive Maintenance</h2>
+    <div class="flow">Sumber Persyaratan → Maintenance Plan → Jadwal → Work Order → Checklist → Bukti → Verifikasi → Next Due</div>
+
+    <h2>Vendor dan Personel</h2>
+    <div class="flow">Paket Kerja → Klasifikasi Diperlukan → Validasi SBU → Kompetensi Personel → Persetujuan → Penugasan → Monitoring</div>
+
+    <h2>Project-to-Asset Handover</h2>
+    <div class="flow">Paket Selesai → Testing & Commissioning → Defect Closure → As-built/Manual/Garansi → Verifikasi → Registrasi Aset → Maintenance Plan Aktif</div>
+
+    <h2>Alarm-to-Work</h2>
+    <div class="flow">Alarm/Event → Deduplication → Dampak & Prioritas → Work Order → Investigasi → Tindakan → Disposition → Feedback ke Integrasi</div>
+  </section>
+
+  <section class="page-break">
+    <div class="eyebrow">08 · Kelayakan</div>
+    <h1>Klasifikasi Usaha dan Kompetensi</h1>
+    <h2>Klasifikasi Badan Usaha</h2>
+    <p>
+      <span class="pill">BG · Bangunan Gedung</span>
+      <span class="pill">BS · Bangunan Sipil</span>
+      <span class="pill">KK · Konstruksi Khusus</span>
+      <span class="pill">KP · Prapabrikasi</span>
+      <span class="pill">PA · Penyewaan Peralatan</span>
+      <span class="pill">PB · Penyelesaian Bangunan</span>
+      <span class="pill">PL · Persiapan</span>
+    </p>
+    <p>Klasifikasi terhubung ke badan usaha, perizinan, kontrak, dan paket pekerjaan. Kode bersifat versioned dan tidak diubah secara retroaktif.</p>
+
+    <h2>Kompetensi Personel</h2>
+    <p>Personel memiliki jabatan kerja, kategori Ahli/Teknisi/Operator, jenjang, referensi SKKNI/SKK Khusus, sertifikat, penerbit, masa berlaku, dan status verifikasi.</p>
+
+    <h2>Dua Gerbang Keputusan</h2>
+    <table>
+      <tr><th>Gerbang</th><th>Pertanyaan</th><th>Hasil</th></tr>
+      <tr><td>Otorisasi</td><td>Apakah pengguna boleh melakukan tindakan pada scope tersebut?</td><td>ALLOW/DENY dengan audit akses</td></tr>
+      <tr><td>Kelayakan</td><td>Apakah vendor dan personel memenuhi syarat pekerjaan?</td><td>ELIGIBLE/INELIGIBLE dengan alasan dan bukti</td></tr>
+    </table>
+    <div class="note">Sertifikat kompetensi tidak otomatis memberikan akses administratif. Hak akses juga tidak membuktikan kompetensi.</div>
+  </section>
+
+  <section class="page-break">
+    <div class="eyebrow">09 · Fasilitas Cerdas</div>
+    <h1>BMS/BAS, Utilitas, dan Gudang</h1>
+    <h2>BMS/BAS Integration Contract</h2>
+    <ul>
+      <li>Normalisasi site, equipment, point, alarm, event, reading, unit, quality, dan timestamp.</li>
+      <li>Setiap point dipetakan ke aset atau lokasi TATABANGUN.</li>
+      <li>Data stale, connector failure, schema change, dan rejected event terlihat.</li>
+      <li>Alarm dideduplikasi sebelum menghasilkan pekerjaan.</li>
+      <li>Perintah balik hanya bila diizinkan, diaudit, dan tidak melewati proteksi lokal.</li>
+    </ul>
+
+    <h2>Gudang sebagai Fasilitas</h2>
+    <p>TATABANGUN mengelola bangunan gudang, zona, rack, dock, staging area, jalur forklift, area berbahaya, kapasitas ruang, proteksi kebakaran, utilitas, forklift, conveyor, charger, dan equipment lainnya.</p>
+    <p>Transaksi stok, receiving, put-away, picking, packing, dan shipping tetap berada di WMS.</p>
+
+    <h2>Utilitas dan Lingkungan</h2>
+    <p>Kelistrikan, air, bahan bakar, HVAC, temperatur, kelembapan, kualitas udara, limbah, dan emisi dapat dipantau bila sumber data tersedia. Setiap KPI menyimpan satuan, formula, periode, faktor, dan kualitas data.</p>
+  </section>
+
+  <section class="page-break">
+    <div class="eyebrow">10 · Trust</div>
+    <h1>Keamanan, Bukti, dan Kepatuhan</h1>
+    <h2>Prinsip Keamanan</h2>
+    <ul>
+      <li>Tenant dan organisasi terisolasi.</li>
+      <li>Akses mengikuti peran dan scope lokasi/pekerjaan.</li>
+      <li>Least privilege dan separation of duties.</li>
+      <li>Perubahan kritis membutuhkan persetujuan.</li>
+      <li>Integrasi menggunakan identitas layanan yang terpisah.</li>
+      <li>Perintah operasional mempunyai provenance dan audit.</li>
+    </ul>
+
+    <h2>Evidence Record</h2>
+    <p>Setiap bukti menyimpan objek, pekerjaan, pelaksana, waktu, lokasi, sumber persyaratan, checklist version, foto/dokumen, hasil ukur, status verifikasi, dan histori perubahan.</p>
+
+    <h2>Baseline Regulasi</h2>
+    <p>Permen PU 24/PRT/M/2008 digunakan sebagai baseline referensi pemeliharaan dan perawatan bangunan. Materi ajar dan presentasi teknis digunakan sebagai input desain, bukan otoritas hukum. Status berlaku, peraturan pengganti, applicability, dan interpretasi profesional harus direkam sebelum klaim kepatuhan.</p>
+  </section>
+
+  <section class="page-break">
+    <div class="eyebrow">11 · Pengukuran</div>
+    <h1>KPI Produk dan Operasional</h1>
+    <table>
+      <tr><th>Area</th><th>KPI</th></tr>
+      <tr><td>Keandalan</td><td>Availability, downtime, MTBF, MTTR, repeat failure, critical asset health</td></tr>
+      <tr><td>Pemeliharaan</td><td>PM completion, on-time rate, overdue backlog, preventive/corrective ratio</td></tr>
+      <tr><td>Inspeksi</td><td>Due/overdue, open findings, high-risk findings, closure time, recurrence</td></tr>
+      <tr><td>Pekerjaan</td><td>SLA compliance, first-time fix, reopen rate, evidence completeness</td></tr>
+      <tr><td>Vendor</td><td>Compliance rate, quality score, lateness, defect recurrence, safety incidents</td></tr>
+      <tr><td>Kompetensi</td><td>Valid certificates, expiring certificates, qualified assignment rate</td></tr>
+      <tr><td>Utilitas</td><td>Consumption, demand, intensity, cost, anomaly, data completeness</td></tr>
+      <tr><td>Integrasi</td><td>Connector uptime, stale points, rejected events, alarm-to-work latency</td></tr>
+    </table>
+  </section>
+
+  <section class="page-break">
+    <div class="eyebrow">12 · Roadmap</div>
+    <h1>Roadmap Produk</h1>
+    <h2>Rilis 1 — Facility Operations Core</h2>
+    <ul>
+      <li>Rebranding NEXUS-FM menjadi TATABANGUN.</li>
+      <li>Jenis fasilitas: gedung, gudang, infrastruktur.</li>
+      <li>Detail aset, kondisi, dan criticality.</li>
+      <li>Work request, work order, inspeksi, temuan, dan corrective action.</li>
+      <li>Preventive maintenance dan evidence-based close-out.</li>
+    </ul>
+
+    <h2>Rilis 2 — Workforce and Vendor Compliance</h2>
+    <ul>
+      <li>Vendor dan profil badan usaha.</li>
+      <li>BUJKN/BUJKA, Umum/Spesialis, BG/BS/KK/KP/PA/PB/PL.</li>
+      <li>Personel, SKKNI, sertifikat, dan validitas.</li>
+      <li>Pemeriksaan kelayakan vendor dan personel.</li>
+    </ul>
+
+    <h2>Rilis 3 — Project-to-Asset Handover</h2>
+    <ul>
+      <li>Proyek, kontrak, dan paket pekerjaan.</li>
+      <li>Quality inspection, defect list, commissioning.</li>
+      <li>As-built, manual, garansi, dan registrasi aset.</li>
+    </ul>
+
+    <h2>Rilis 4 — Connected Facilities</h2>
+    <ul>
+      <li>BMS/BAS, telemetry, alarms, runtime, dan meters.</li>
+      <li>Alarm-to-work, integration health, energi, dan lingkungan.</li>
+      <li>Analitik risiko dan prediksi kegagalan.</li>
+    </ul>
+  </section>
+
+  <section class="page-break">
+    <div class="eyebrow">13 · Keberhasilan</div>
+    <h1>Kriteria Keberhasilan</h1>
+    <h2>Outcome Pengguna</h2>
+    <ul>
+      <li>Pengguna dapat menemukan fasilitas, sistem, dan aset beserta konteks lokasinya.</li>
+      <li>Temuan dapat berubah menjadi pekerjaan dan ditutup dengan bukti terverifikasi.</li>
+      <li>PM jatuh tempo terlihat dan dapat dieskalasi.</li>
+      <li>Vendor serta personel yang tidak memenuhi syarat dapat terdeteksi sebelum penugasan.</li>
+      <li>Audit dapat menelusuri keputusan, bukti, dan perubahan tanpa rekonstruksi manual.</li>
+      <li>Alarm eksternal dapat ditindaklanjuti tanpa menduplikasi pekerjaan secara tidak terkendali.</li>
+    </ul>
+
+    <h2>Guardrails</h2>
+    <ul>
+      <li>Jangan mencampur jabatan SKKNI dengan role akses.</li>
+      <li>Jangan menyimpulkan klasifikasi usaha hanya dari nama fasilitas.</li>
+      <li>Jangan memperlakukan materi pelatihan sebagai aturan hukum.</li>
+      <li>Jangan menggantikan kontrol real-time dan proteksi BMS/BAS.</li>
+      <li>Jangan membangun transaksi WMS atau akuntansi ERP di dalam inti produk.</li>
+      <li>Jangan menutup pekerjaan tanpa bukti dan verifikasi yang diwajibkan.</li>
+    </ul>
+
+    <div class="statement">TATABANGUN menjadi pusat tata kelola yang memastikan fasilitas terpelihara, pekerjaan terkendali, pelaksana memenuhi syarat, dan setiap hasil dapat dibuktikan.</div>
+    <p class="footer-note">Dokumen ini merupakan blueprint produk. Detail implementasi, skema data, arsitektur teknis, dan persyaratan legal final harus diturunkan melalui desain terpisah serta validasi ahli terkait.</p>
+  </section>
+</main>
+</body>
+</html>
