@@ -45,12 +45,12 @@ export function FacilitiesPage() {
   const handleCreate = (values: RegistryInput) => {
     createFacility.mutate({ data: values }, {
       onSuccess: () => {
-        toast({ title: 'Facility created successfully' });
+        toast({ title: 'Fasilitas berhasil dibuat' });
         setIsCreateOpen(false);
         queryClient.invalidateQueries({ queryKey: ['/api/facilities'] });
       },
       onError: (err) => {
-        toast({ title: 'Failed to create facility', description: getSafeMutationMessage(err), variant: 'destructive' });
+        toast({ title: 'Gagal membuat fasilitas', description: getSafeMutationMessage(err), variant: 'destructive' });
       }
     });
   };
@@ -59,12 +59,12 @@ export function FacilitiesPage() {
     if (!editingItem) return;
     updateFacility.mutate({ id: editingItem.id, data: values }, {
       onSuccess: () => {
-        toast({ title: 'Facility updated successfully' });
+        toast({ title: 'Fasilitas berhasil diperbarui' });
         setEditingItem(null);
         queryClient.invalidateQueries({ queryKey: ['/api/facilities'] });
       },
       onError: (err) => {
-        toast({ title: 'Failed to update facility', description: getSafeMutationMessage(err), variant: 'destructive' });
+        toast({ title: 'Gagal memperbarui fasilitas', description: getSafeMutationMessage(err), variant: 'destructive' });
       }
     });
   };
@@ -73,25 +73,25 @@ export function FacilitiesPage() {
     if (!deletingItem) return;
     deleteFacility.mutate({ id: deletingItem.id }, {
       onSuccess: () => {
-        toast({ title: 'Facility deleted successfully' });
+        toast({ title: 'Fasilitas berhasil dihapus' });
         setDeletingItem(null);
         queryClient.invalidateQueries({ queryKey: ['/api/facilities'] });
       },
       onError: (err) => {
-        toast({ title: 'Failed to delete facility', description: getSafeMutationMessage(err), variant: 'destructive' });
+        toast({ title: 'Gagal menghapus fasilitas', description: getSafeMutationMessage(err), variant: 'destructive' });
       }
     });
   };
   
   if (error) {
-    return <ApiErrorState error={error} title="Error Loading Facilities" />;
+    return <ApiErrorState error={error} title="Gagal Memuat Fasilitas" />;
   }
   
   return (
     <div className="space-y-6 max-w-6xl mx-auto animate-in fade-in duration-500">
       <RegistryList
-        title="Facilities"
-        description="Manage top-level facilities across your real estate portfolio."
+        title="Fasilitas"
+        description="Kelola fasilitas tingkat teratas di seluruh portofolio properti Anda."
         items={data?.items as RegistryRecord[]}
         isLoading={isLoading}
         searchQuery={pagination.search}
@@ -115,8 +115,8 @@ export function FacilitiesPage() {
         onOpenChange={setIsImportOpen}
         onImported={(imported) => {
           toast({
-            title: 'Portfolio imported successfully',
-            description: `${imported} ${imported === 1 ? 'record was' : 'records were'} created.`,
+            title: 'Portofolio berhasil diimpor',
+            description: `${imported} ${imported === 1 ? 'catatan berhasil' : 'catatan berhasil'} dibuat.`,
           });
           pagination.reset();
           queryClient.invalidateQueries({ queryKey: getListFacilitiesQueryKey() });
@@ -126,8 +126,8 @@ export function FacilitiesPage() {
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Create Facility</DialogTitle>
-            <DialogDescription>Add a new facility to the organizational portfolio.</DialogDescription>
+            <DialogTitle>Buat Fasilitas</DialogTitle>
+            <DialogDescription>Tambahkan fasilitas baru ke portofolio organisasi.</DialogDescription>
           </DialogHeader>
           <RegistryForm
             onSubmit={handleCreate}
@@ -140,8 +140,8 @@ export function FacilitiesPage() {
       <Dialog open={!!editingItem} onOpenChange={(open) => !open && setEditingItem(null)}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Edit Facility</DialogTitle>
-            <DialogDescription>Update facility details.</DialogDescription>
+            <DialogTitle>Edit Fasilitas</DialogTitle>
+            <DialogDescription>Perbarui detail fasilitas.</DialogDescription>
           </DialogHeader>
           {editingItem && (
             <RegistryForm
@@ -157,20 +157,20 @@ export function FacilitiesPage() {
       <AlertDialog open={!!deletingItem} onOpenChange={(open) => !open && setDeletingItem(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogTitle>Apakah Anda benar-benar yakin?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the facility "{deletingItem?.name}" and all of its associated buildings, spaces, systems, and assets. This action cannot be undone.
+              Tindakan ini akan menghapus permanen fasilitas "{deletingItem?.name}" beserta bangunan, ruang, sistem, dan aset terkait. Tindakan ini tidak dapat dibatalkan.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteFacility.isPending} data-testid="dialog-delete-cancel">Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleteFacility.isPending} data-testid="dialog-delete-cancel">Batal</AlertDialogCancel>
             <AlertDialogAction 
               onClick={(e) => { e.preventDefault(); handleDelete(); }}
               disabled={deleteFacility.isPending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               data-testid="dialog-delete-confirm"
             >
-              {deleteFacility.isPending ? 'Deleting...' : 'Delete Facility'}
+              {deleteFacility.isPending ? 'Menghapus...' : 'Hapus Fasilitas'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

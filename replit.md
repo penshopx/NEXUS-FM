@@ -5,6 +5,7 @@ NEXUS-FM is an evidence-based facility management operating system.
 ## Product rules
 
 - Facility-first and asset-centric.
+- Bahasa Indonesia is the required language for all app-owned user-facing copy, including navigation, forms, tables, dialogs, errors, empty states, exports, and accessibility text. Keep product names, identifiers, API values, and technical terms unchanged when translating them would reduce correctness.
 - Completed work is not automatically verified or closed.
 - A critical issue takes precedence over average scores.
 - Business rules belong in service/domain modules, not route handlers or UI components.

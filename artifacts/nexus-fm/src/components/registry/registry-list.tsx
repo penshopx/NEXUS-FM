@@ -61,8 +61,8 @@ export function RegistryList<T extends RegistryRecord>({
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
             <Input
-              placeholder="Search (3+ characters)"
-              aria-label={`Search ${title}`}
+              placeholder="Cari (minimal 3 karakter)"
+              aria-label={`Cari ${title}`}
               aria-describedby={searchHelpId}
               className="pl-9 bg-card border-border focus-visible:ring-primary"
               value={searchQuery}
@@ -74,20 +74,20 @@ export function RegistryList<T extends RegistryRecord>({
               className="mt-1.5 text-xs text-muted-foreground"
               data-testid={`text-search-help-${testIdPrefix}`}
             >
-              Enter at least 3 characters to search.
+              Masukkan minimal 3 karakter untuk mencari.
             </p>
           </div>
           <div className="flex items-center gap-2">
             {onImport && (
               <Button variant="outline" onClick={onImport} data-testid={`button-import-${testIdPrefix}`}>
                 <Upload className="size-4 mr-2" />
-                Import CSV
+                Impor CSV
               </Button>
             )}
             {onCreate && (
               <Button onClick={onCreate} data-testid={`button-create-${testIdPrefix}`}>
                 <Plus className="size-4 mr-2" />
-                Create
+                Buat
               </Button>
             )}
           </div>
@@ -99,10 +99,10 @@ export function RegistryList<T extends RegistryRecord>({
           <table className="w-full text-sm text-left">
             <thead className="text-xs text-muted-foreground uppercase bg-muted/30 border-b border-border font-mono">
               <tr>
-                <th className="px-6 py-4 font-medium">Name</th>
-                <th className="px-6 py-4 font-medium">Code</th>
+                <th className="px-6 py-4 font-medium">Nama</th>
+                <th className="px-6 py-4 font-medium">Kode</th>
                 <th className="px-6 py-4 font-medium">Status</th>
-                <th className="px-6 py-4 font-medium text-right">Actions</th>
+                <th className="px-6 py-4 font-medium text-right">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -118,7 +118,7 @@ export function RegistryList<T extends RegistryRecord>({
               ) : items?.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="px-6 py-12 text-center text-muted-foreground">
-                    No records found matching your criteria.
+                    Tidak ada catatan yang sesuai dengan kriteria Anda.
                   </td>
                 </tr>
               ) : (
@@ -141,7 +141,7 @@ export function RegistryList<T extends RegistryRecord>({
                           ? 'bg-primary/10 text-primary border-primary/20' 
                           : 'bg-muted text-muted-foreground border-border'
                       }`}>
-                        {item.status}
+                        {item.status === 'ACTIVE' ? 'Aktif' : 'Tidak aktif'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
@@ -164,7 +164,7 @@ export function RegistryList<T extends RegistryRecord>({
                             size="icon"
                             className="size-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                             onClick={() => onDelete(item)}
-                            aria-label={`Delete ${item.name}`}
+                            aria-label={`Hapus ${item.name}`}
                             data-testid={`button-delete-${testIdPrefix}-${item.id}`}
                           >
                             <Trash2 className="size-4" />
@@ -173,7 +173,7 @@ export function RegistryList<T extends RegistryRecord>({
                         <Button variant="ghost" size="icon" className="size-8 ml-2 hover:bg-primary hover:text-primary-foreground" asChild>
                           <Link
                             href={renderItemLink(item)}
-                            aria-label={`View ${item.name}`}
+                            aria-label={`Lihat ${item.name}`}
                             data-testid={`link-view-${testIdPrefix}-${item.id}`}
                           >
                             <ArrowRight className="size-4" />
@@ -191,7 +191,7 @@ export function RegistryList<T extends RegistryRecord>({
         {totalItems > 0 && (
           <div className="px-6 py-4 border-t border-border flex items-center justify-between text-sm text-muted-foreground font-mono bg-muted/10">
             <div>
-              Showing {Math.min((page - 1) * limit + 1, totalItems)} to {Math.min(page * limit, totalItems)} of {totalItems}
+                Menampilkan {Math.min((page - 1) * limit + 1, totalItems)} sampai {Math.min(page * limit, totalItems)} dari {totalItems}
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -202,9 +202,9 @@ export function RegistryList<T extends RegistryRecord>({
                 disabled={!canGoPrevious}
                 data-testid={`button-prev-page-${testIdPrefix}`}
               >
-                Prev
+                Sebelumnya
               </Button>
-              <div className="px-2">Page {page}</div>
+               <div className="px-2">Halaman {page}</div>
               <Button
                 variant="outline"
                 size="sm"
@@ -213,7 +213,7 @@ export function RegistryList<T extends RegistryRecord>({
                 disabled={!hasNextPage}
                 data-testid={`button-next-page-${testIdPrefix}`}
               >
-                Next
+                Berikutnya
               </Button>
             </div>
           </div>

@@ -78,12 +78,12 @@ export function BuildingDetailPage() {
   const handleCreate = (values: RegistryInput,) => {
     createSpace.mutate({ id: buildingId, data: values }, {
       onSuccess: () => {
-        toast({ title: 'Space created successfully' });
+         toast({ title: 'Ruang berhasil dibuat' });
         setIsCreateOpen(false);
         queryClient.invalidateQueries({ queryKey: [`/api/buildings/${buildingId}/spaces`] });
       },
       onError: (err) => {
-        toast({ title: 'Failed to create space', description: getSafeMutationMessage(err), variant: 'destructive' });
+         toast({ title: 'Gagal membuat ruang', description: getSafeMutationMessage(err), variant: 'destructive' });
       }
     });
   };
@@ -92,12 +92,12 @@ export function BuildingDetailPage() {
     if (!editingItem) return;
     updateSpace.mutate({ id: editingItem.id, data: values }, {
       onSuccess: () => {
-        toast({ title: 'Space updated successfully' });
+         toast({ title: 'Ruang berhasil diperbarui' });
         setEditingItem(null);
         queryClient.invalidateQueries({ queryKey: [`/api/buildings/${buildingId}/spaces`] });
       },
       onError: (err) => {
-        toast({ title: 'Failed to update space', description: getSafeMutationMessage(err), variant: 'destructive' });
+         toast({ title: 'Gagal memperbarui ruang', description: getSafeMutationMessage(err), variant: 'destructive' });
       }
     });
   };
@@ -106,12 +106,12 @@ export function BuildingDetailPage() {
     if (!deletingItem) return;
     deleteSpace.mutate({ id: deletingItem.id }, {
       onSuccess: () => {
-        toast({ title: 'Space deleted successfully' });
+         toast({ title: 'Ruang berhasil dihapus' });
         setDeletingItem(null);
         queryClient.invalidateQueries({ queryKey: [`/api/buildings/${buildingId}/spaces`] });
       },
       onError: (err) => {
-        toast({ title: 'Failed to delete space', description: getSafeMutationMessage(err), variant: 'destructive' });
+         toast({ title: 'Gagal menghapus ruang', description: getSafeMutationMessage(err), variant: 'destructive' });
       }
     });
   };
@@ -121,14 +121,14 @@ export function BuildingDetailPage() {
   }
   
   if (buildingError || !building) {
-    return <ApiErrorState error={buildingError || { status: 404 }} title="Building Not Found" goBackHref="/app/facilities" />;
+    return <ApiErrorState error={buildingError || { status: 404 }} title="Bangunan Tidak Ditemukan" goBackHref="/app/facilities" />;
   }
   
   return (
     <div className="space-y-6 max-w-6xl mx-auto animate-in fade-in duration-500">
       <Breadcrumbs 
         items={[
-          { label: 'Facilities', href: '/app/facilities' },
+           { label: 'Fasilitas', href: '/app/facilities' },
           ...(facility ? [{ label: facility.name, href: `/app/facilities/${facility.id}` }] : []),
           { label: building.name }
         ]} 
@@ -137,22 +137,22 @@ export function BuildingDetailPage() {
       <div className="bg-card border border-border rounded-lg p-6 mb-8">
         <h1 className="text-3xl font-bold tracking-tight mb-2">{building.name}</h1>
         <div className="flex items-center gap-4 text-sm font-mono text-muted-foreground">
-          {building.code && <span>Code: {building.code}</span>}
+           {building.code && <span>Kode: {building.code}</span>}
           <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${
             building.status === 'ACTIVE' ? 'bg-primary/10 text-primary border-primary/20' : 'bg-muted border-border'
           }`}>
-            {building.status}
+            {building.status === 'ACTIVE' ? 'Aktif' : 'Tidak aktif'}
           </span>
         </div>
         {building.description && <p className="mt-4 text-muted-foreground max-w-3xl">{building.description}</p>}
       </div>
       
       {spacesError ? (
-        <ApiErrorState error={spacesError} title="Failed to Load Spaces" />
+         <ApiErrorState error={spacesError} title="Gagal Memuat Ruang" />
       ) : (
         <RegistryList
-          title="Spaces"
-          description={`Manage physical spaces and rooms within ${building.name}.`}
+           title="Ruang"
+           description={`Kelola ruang fisik di dalam ${building.name}.`}
           items={allSpaces}
           isLoading={spacesLoading}
           searchQuery={pagination.search}
@@ -174,8 +174,8 @@ export function BuildingDetailPage() {
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Create Space</DialogTitle>
-            <DialogDescription>Add a new space to {building.name}.</DialogDescription>
+           <DialogTitle>Buat Ruang</DialogTitle>
+           <DialogDescription>Tambahkan ruang baru ke {building.name}.</DialogDescription>
           </DialogHeader>
           <RegistryForm
             onSubmit={handleCreate}
@@ -188,8 +188,8 @@ export function BuildingDetailPage() {
       <Dialog open={!!editingItem} onOpenChange={(open) => !open && setEditingItem(null)}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Edit Space</DialogTitle>
-            <DialogDescription>Update space details.</DialogDescription>
+           <DialogTitle>Edit Ruang</DialogTitle>
+           <DialogDescription>Perbarui detail ruang.</DialogDescription>
           </DialogHeader>
           {editingItem && (
             <RegistryForm
@@ -205,20 +205,20 @@ export function BuildingDetailPage() {
       <AlertDialog open={!!deletingItem} onOpenChange={(open) => !open && setDeletingItem(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+           <AlertDialogTitle>Apakah Anda benar-benar yakin?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the space "{deletingItem?.name}" and all of its associated systems and assets.
+               Tindakan ini akan menghapus permanen ruang "{deletingItem?.name}" beserta sistem dan aset terkait.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteSpace.isPending} data-testid="dialog-delete-cancel">Cancel</AlertDialogCancel>
+           <AlertDialogCancel disabled={deleteSpace.isPending} data-testid="dialog-delete-cancel">Batal</AlertDialogCancel>
             <AlertDialogAction 
               onClick={(e) => { e.preventDefault(); handleDelete(); }}
               disabled={deleteSpace.isPending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               data-testid="dialog-delete-confirm"
             >
-              {deleteSpace.isPending ? 'Deleting...' : 'Delete Space'}
+               {deleteSpace.isPending ? 'Menghapus...' : 'Hapus Ruang'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

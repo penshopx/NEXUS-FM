@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RegistryInputStatus } from '@workspace/api-client-react';
 
 const schema = z.object({
-  name: z.string().min(1, 'Name is required').max(200),
+  name: z.string().min(1, 'Nama wajib diisi').max(200),
   code: z.string().max(100).optional().nullable(),
   description: z.string().max(4000).optional().nullable(),
   status: z.enum([RegistryInputStatus.ACTIVE, RegistryInputStatus.INACTIVE]).optional(),
@@ -32,7 +32,7 @@ export interface RegistryFormProps {
   onCancel?: () => void;
 }
 
-export function RegistryForm({ defaultValues, onSubmit, isPending, submitLabel = 'Save', onCancel }: RegistryFormProps) {
+export function RegistryForm({ defaultValues, onSubmit, isPending, submitLabel = 'Simpan', onCancel }: RegistryFormProps) {
   const form = useForm<RegistryFormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -52,9 +52,9 @@ export function RegistryForm({ defaultValues, onSubmit, isPending, submitLabel =
             name="name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Name</FormLabel>
+                <FormLabel>Nama</FormLabel>
                 <FormControl>
-                  <Input placeholder="E.g. Main Campus" {...field} data-testid="input-name" />
+                  <Input placeholder="Contoh: Kampus Utama" {...field} data-testid="input-name" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -65,9 +65,9 @@ export function RegistryForm({ defaultValues, onSubmit, isPending, submitLabel =
             name="code"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Code</FormLabel>
+                <FormLabel>Kode</FormLabel>
                 <FormControl>
-                  <Input placeholder="E.g. MC-01" {...field} value={field.value || ''} data-testid="input-code" />
+                  <Input placeholder="Contoh: MC-01" {...field} value={field.value || ''} data-testid="input-code" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -83,12 +83,12 @@ export function RegistryForm({ defaultValues, onSubmit, isPending, submitLabel =
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger data-testid="select-status">
-                    <SelectValue placeholder="Select status" />
+                    <SelectValue placeholder="Pilih status" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value={RegistryInputStatus.ACTIVE}>Active</SelectItem>
-                  <SelectItem value={RegistryInputStatus.INACTIVE}>Inactive</SelectItem>
+                  <SelectItem value={RegistryInputStatus.ACTIVE}>Aktif</SelectItem>
+                  <SelectItem value={RegistryInputStatus.INACTIVE}>Tidak aktif</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -100,10 +100,10 @@ export function RegistryForm({ defaultValues, onSubmit, isPending, submitLabel =
           name="description"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Description</FormLabel>
+              <FormLabel>Deskripsi</FormLabel>
               <FormControl>
                 <Textarea 
-                  placeholder="Additional details..." 
+                  placeholder="Detail tambahan..."
                   className="resize-none min-h-[100px]" 
                   {...field} 
                   value={field.value || ''}
@@ -117,11 +117,11 @@ export function RegistryForm({ defaultValues, onSubmit, isPending, submitLabel =
         <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
           {onCancel && (
             <Button type="button" variant="outline" onClick={onCancel} disabled={isPending} data-testid="button-cancel">
-              Cancel
+              Batal
             </Button>
           )}
           <Button type="submit" disabled={isPending} data-testid="button-submit">
-            {isPending ? 'Saving...' : submitLabel}
+            {isPending ? 'Menyimpan...' : submitLabel}
           </Button>
         </div>
       </form>

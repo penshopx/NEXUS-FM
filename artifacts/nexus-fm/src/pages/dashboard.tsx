@@ -22,9 +22,9 @@ export function Dashboard() {
         <div className="size-16 rounded-full bg-muted flex items-center justify-center mb-4">
           <ShieldAlert className="size-8 text-muted-foreground" />
         </div>
-        <h2 className="text-2xl font-mono font-bold tracking-tight">NO ORGANIZATION SELECTED</h2>
+         <h2 className="text-2xl font-mono font-bold tracking-tight">BELUM ADA ORGANISASI DIPILIH</h2>
         <p className="text-muted-foreground max-w-md">
-          You must select an active organization context from the top navigation to view the foundation dashboard.
+           Anda harus memilih konteks organisasi aktif dari navigasi atas untuk melihat dasbor fondasi.
         </p>
       </div>
     );
@@ -33,9 +33,9 @@ export function Dashboard() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-mono font-bold tracking-tight">Foundation Status</h1>
+         <h1 className="text-3xl font-mono font-bold tracking-tight">Status Fondasi</h1>
         <p className="text-muted-foreground text-sm">
-          Operational overview for <strong className="text-foreground">{session.activeOrganization.organization.name}</strong>.
+           Ikhtisar operasional untuk <strong className="text-foreground">{session.activeOrganization.organization.name}</strong>.
         </p>
       </div>
 
@@ -45,9 +45,9 @@ export function Dashboard() {
         <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-6 flex items-start gap-4">
           <AlertCircle className="size-6 text-destructive shrink-0 mt-1" />
           <div>
-            <h3 className="text-lg font-mono font-semibold text-destructive">System Query Failed</h3>
+             <h3 className="text-lg font-mono font-semibold text-destructive">Kueri Sistem Gagal</h3>
             <p className="text-sm text-muted-foreground mt-1">
-              Unable to retrieve foundation summary. The server may be unreachable or your session has expired.
+               Ringkasan fondasi tidak dapat diambil. Server mungkin tidak dapat dijangkau atau sesi Anda telah berakhir.
             </p>
           </div>
         </div>
@@ -55,23 +55,23 @@ export function Dashboard() {
         <div className="grid gap-6">
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <SummaryCard 
-              title="Active Members" 
+               title="Anggota Aktif"
               value={summary.memberCount.toString()} 
               icon={<Users className="size-4 text-primary" />} 
             />
             <SummaryCard 
-              title="Canonical Roles" 
+               title="Peran Kanonis"
               value={summary.canonicalRoleCount.toString()} 
               icon={<Fingerprint className="size-4 text-primary" />} 
             />
             <SummaryCard 
-              title="Your Role" 
+               title="Peran Anda"
               value={summary.currentRole.replace('_', ' ')} 
               icon={<ShieldAlert className="size-4 text-primary" />} 
               valueClass="text-base sm:text-lg whitespace-nowrap overflow-hidden text-ellipsis"
             />
             <SummaryCard 
-              title="Audit Status" 
+               title="Status Audit"
               value={summary.auditStatus} 
               icon={<Activity className="size-4 text-primary" />} 
               valueClass={summary.auditStatus === 'ACTIVE' ? 'text-primary' : 'text-muted-foreground'}
@@ -79,23 +79,23 @@ export function Dashboard() {
           </div>
 
           <h2 className="text-xl font-mono font-semibold tracking-tight mt-4 border-b border-border pb-2">
-            Subsystem Readiness
+             Kesiapan Subsistem
           </h2>
           <div className="grid md:grid-cols-3 gap-4">
             <StatusCard 
-              title="Authentication" 
+               title="Autentikasi"
               status={summary.authenticationStatus} 
-              description="Identity verification and session issuance."
+               description="Verifikasi identitas dan penerbitan sesi."
             />
             <StatusCard 
-              title="Organization Context" 
+               title="Konteks Organisasi"
               status={summary.organizationContextStatus} 
-              description="Tenant scoping and isolation boundary."
+               description="Cakupan tenant dan batas isolasi."
             />
             <StatusCard 
-              title="Authorization" 
+               title="Otorisasi"
               status={summary.authorizationStatus} 
-              description="Role-based access control and enforcement."
+               description="Kontrol akses berbasis peran dan penerapannya."
             />
           </div>
         </div>

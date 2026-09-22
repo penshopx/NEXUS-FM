@@ -70,12 +70,12 @@ export function FacilityDetailPage() {
   const handleCreate = (values: RegistryInput,) => {
     createBuilding.mutate({ id: facilityId, data: values }, {
       onSuccess: () => {
-        toast({ title: 'Building created successfully' });
+        toast({ title: 'Bangunan berhasil dibuat' });
         setIsCreateOpen(false);
         queryClient.invalidateQueries({ queryKey: [`/api/facilities/${facilityId}/buildings`] });
       },
       onError: (err) => {
-        toast({ title: 'Failed to create building', description: getSafeMutationMessage(err), variant: 'destructive' });
+        toast({ title: 'Gagal membuat bangunan', description: getSafeMutationMessage(err), variant: 'destructive' });
       }
     });
   };
@@ -84,12 +84,12 @@ export function FacilityDetailPage() {
     if (!editingItem) return;
     updateBuilding.mutate({ id: editingItem.id, data: values }, {
       onSuccess: () => {
-        toast({ title: 'Building updated successfully' });
+        toast({ title: 'Bangunan berhasil diperbarui' });
         setEditingItem(null);
         queryClient.invalidateQueries({ queryKey: [`/api/facilities/${facilityId}/buildings`] });
       },
       onError: (err) => {
-        toast({ title: 'Failed to update building', description: getSafeMutationMessage(err), variant: 'destructive' });
+        toast({ title: 'Gagal memperbarui bangunan', description: getSafeMutationMessage(err), variant: 'destructive' });
       }
     });
   };
@@ -98,12 +98,12 @@ export function FacilityDetailPage() {
     if (!deletingItem) return;
     deleteBuilding.mutate({ id: deletingItem.id }, {
       onSuccess: () => {
-        toast({ title: 'Building deleted successfully' });
+        toast({ title: 'Bangunan berhasil dihapus' });
         setDeletingItem(null);
         queryClient.invalidateQueries({ queryKey: [`/api/facilities/${facilityId}/buildings`] });
       },
       onError: (err) => {
-        toast({ title: 'Failed to delete building', description: getSafeMutationMessage(err), variant: 'destructive' });
+        toast({ title: 'Gagal menghapus bangunan', description: getSafeMutationMessage(err), variant: 'destructive' });
       }
     });
   };
@@ -113,14 +113,14 @@ export function FacilityDetailPage() {
   }
   
   if (facilityError || !facility) {
-    return <ApiErrorState error={facilityError || { status: 404 }} title="Facility Not Found" goBackHref="/app/facilities" />;
+    return <ApiErrorState error={facilityError || { status: 404 }} title="Fasilitas Tidak Ditemukan" goBackHref="/app/facilities" />;
   }
   
   return (
     <div className="space-y-6 max-w-6xl mx-auto animate-in fade-in duration-500">
       <Breadcrumbs 
         items={[
-          { label: 'Facilities', href: '/app/facilities' },
+          { label: 'Fasilitas', href: '/app/facilities' },
           { label: facility.name }
         ]} 
       />
@@ -130,11 +130,11 @@ export function FacilityDetailPage() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight mb-2">{facility.name}</h1>
             <div className="flex items-center gap-4 text-sm font-mono text-muted-foreground">
-              {facility.code && <span>Code: {facility.code}</span>}
+              {facility.code && <span>Kode: {facility.code}</span>}
               <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${
                 facility.status === 'ACTIVE' ? 'bg-primary/10 text-primary border-primary/20' : 'bg-muted border-border'
               }`}>
-                {facility.status}
+                {facility.status === 'ACTIVE' ? 'Aktif' : 'Tidak aktif'}
               </span>
             </div>
             {facility.description && <p className="mt-4 text-muted-foreground max-w-3xl">{facility.description}</p>}
@@ -143,11 +143,11 @@ export function FacilityDetailPage() {
       </div>
       
       {buildingsError ? (
-        <ApiErrorState error={buildingsError} title="Failed to Load Buildings" />
+         <ApiErrorState error={buildingsError} title="Gagal Memuat Bangunan" />
       ) : (
         <RegistryList
-          title="Buildings"
-          description={`Manage physical buildings within ${facility.name}.`}
+           title="Bangunan"
+           description={`Kelola bangunan fisik di dalam ${facility.name}.`}
           items={allBuildings}
           isLoading={buildingsLoading}
           searchQuery={pagination.search}
@@ -169,8 +169,8 @@ export function FacilityDetailPage() {
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Create Building</DialogTitle>
-            <DialogDescription>Add a new building to {facility.name}.</DialogDescription>
+           <DialogTitle>Buat Bangunan</DialogTitle>
+           <DialogDescription>Tambahkan bangunan baru ke {facility.name}.</DialogDescription>
           </DialogHeader>
           <RegistryForm
             onSubmit={handleCreate}
@@ -183,8 +183,8 @@ export function FacilityDetailPage() {
       <Dialog open={!!editingItem} onOpenChange={(open) => !open && setEditingItem(null)}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Edit Building</DialogTitle>
-            <DialogDescription>Update building details.</DialogDescription>
+           <DialogTitle>Edit Bangunan</DialogTitle>
+           <DialogDescription>Perbarui detail bangunan.</DialogDescription>
           </DialogHeader>
           {editingItem && (
             <RegistryForm
@@ -200,20 +200,20 @@ export function FacilityDetailPage() {
       <AlertDialog open={!!deletingItem} onOpenChange={(open) => !open && setDeletingItem(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+           <AlertDialogTitle>Apakah Anda benar-benar yakin?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the building "{deletingItem?.name}" and all of its associated spaces, systems, and assets.
+               Tindakan ini akan menghapus permanen bangunan "{deletingItem?.name}" beserta ruang, sistem, dan aset terkait.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteBuilding.isPending} data-testid="dialog-delete-cancel">Cancel</AlertDialogCancel>
+           <AlertDialogCancel disabled={deleteBuilding.isPending} data-testid="dialog-delete-cancel">Batal</AlertDialogCancel>
             <AlertDialogAction 
               onClick={(e) => { e.preventDefault(); handleDelete(); }}
               disabled={deleteBuilding.isPending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               data-testid="dialog-delete-confirm"
             >
-              {deleteBuilding.isPending ? 'Deleting...' : 'Delete Building'}
+               {deleteBuilding.isPending ? 'Menghapus...' : 'Hapus Bangunan'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

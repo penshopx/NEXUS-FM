@@ -24,9 +24,9 @@ export function Profile() {
       <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-6 flex items-start gap-4">
         <AlertCircle className="size-6 text-destructive shrink-0 mt-1" />
         <div>
-          <h3 className="text-lg font-mono font-semibold text-destructive">Identity Sync Failed</h3>
+           <h3 className="text-lg font-mono font-semibold text-destructive">Sinkronisasi Identitas Gagal</h3>
           <p className="text-sm text-muted-foreground mt-1">
-            Unable to retrieve session data from the server.
+             Data sesi tidak dapat diambil dari server.
           </p>
         </div>
       </div>
@@ -40,9 +40,9 @@ export function Profile() {
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-mono font-bold tracking-tight">Identity & Access</h1>
+         <h1 className="text-3xl font-mono font-bold tracking-tight">Identitas & Akses</h1>
         <p className="text-muted-foreground text-sm">
-          Cryptographic proof of identity and your access vectors across the NEXUS-FM system.
+           Bukti kriptografis identitas dan vektor akses Anda di seluruh sistem NEXUS-FM.
         </p>
       </div>
 
@@ -52,30 +52,30 @@ export function Profile() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg font-mono">
                 <Fingerprint className="size-5 text-primary" />
-                Principal Subject
+                 Subjek Utama
               </CardTitle>
               <CardDescription>
-                Your canonical user record in the operational system.
+                 Catatan pengguna kanonis Anda dalam sistem operasional.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 font-mono text-sm">
               <div className="space-y-1">
-                <span className="text-xs text-muted-foreground block uppercase tracking-wider">Internal ID</span>
+                 <span className="text-xs text-muted-foreground block uppercase tracking-wider">ID Internal</span>
                 <span className="break-all">{session.user.id}</span>
               </div>
               <div className="space-y-1">
-                <span className="text-xs text-muted-foreground block uppercase tracking-wider">Display Name</span>
+                 <span className="text-xs text-muted-foreground block uppercase tracking-wider">Nama Tampilan</span>
                 <span>{session.user.displayName}</span>
               </div>
               <div className="space-y-1">
-                <span className="text-xs text-muted-foreground block uppercase tracking-wider">Contact Vector</span>
+                 <span className="text-xs text-muted-foreground block uppercase tracking-wider">Vektor Kontak</span>
                 <span className="flex items-center gap-2">
                   <Mail className="size-3" />
                   {session.user.email}
                 </span>
               </div>
               <div className="space-y-1 pt-2 border-t border-border">
-                <span className="text-xs text-muted-foreground block uppercase tracking-wider">External Auth Ref</span>
+                 <span className="text-xs text-muted-foreground block uppercase tracking-wider">Referensi Autentikasi Eksternal</span>
                 <span className="text-xs break-all text-muted-foreground">{session.user.externalAuthId}</span>
               </div>
             </CardContent>
@@ -85,15 +85,15 @@ export function Profile() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg font-mono">
                 <ShieldAlert className="size-5 text-primary" />
-                Access Vectors
+                 Vektor Akses
               </CardTitle>
               <CardDescription>
-                Organizations and canonical roles assigned to this principal.
+                 Organisasi dan peran kanonis yang ditetapkan untuk subjek ini.
               </CardDescription>
             </CardHeader>
             <CardContent>
               {session.memberships.length === 0 ? (
-                <div className="text-sm text-muted-foreground italic">No access vectors found.</div>
+                 <div className="text-sm text-muted-foreground italic">Tidak ditemukan vektor akses.</div>
               ) : (
                 <div className="space-y-4">
                   {session.memberships.map((membership) => {
@@ -112,12 +112,12 @@ export function Profile() {
                           </div>
                           {isActive && (
                             <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/20 rounded-sm font-mono uppercase">
-                              Active
+                               Aktif
                             </Badge>
                           )}
                         </div>
                         <div className="text-xs font-mono text-muted-foreground flex justify-between">
-                          <span>Role</span>
+                           <span>Peran</span>
                           <span className={isActive ? 'text-foreground' : ''}>{membership.role}</span>
                         </div>
                       </div>
@@ -132,9 +132,9 @@ export function Profile() {
         <div className="lg:col-span-8">
           <Card className="bg-card/50">
             <CardHeader>
-              <CardTitle className="font-mono">Authentication Boundary</CardTitle>
+               <CardTitle className="font-mono">Batas Autentikasi</CardTitle>
               <CardDescription>
-                Identity credentials and session security are managed by Clerk. NEXUS-FM stores only the application identity, organization memberships, and canonical roles required for access control.
+                 Kredensial identitas dan keamanan sesi dikelola oleh Clerk. NEXUS-FM hanya menyimpan identitas aplikasi, keanggotaan organisasi, dan peran kanonis yang diperlukan untuk kontrol akses.
               </CardDescription>
             </CardHeader>
           </Card>

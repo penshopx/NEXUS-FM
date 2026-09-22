@@ -138,36 +138,36 @@ function FacilityPreviewGroup({ facility, index, filter }: {
                 className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-muted-foreground"
                 data-testid={`status-import-facility-${index}`}
               >
-                {isExistingFacility ? 'EXISTING REGISTRY FACILITY' : 'NEW FACILITY'}
+                 {isExistingFacility ? 'FASILITAS REGISTRY YANG ADA' : 'FASILITAS BARU'}
               </span>
             </span>
             <span
               className="block truncate font-mono text-xs text-muted-foreground"
               data-testid={`identifier-import-facility-${index}`}
             >
-              {isExistingFacility ? `registry ID: ${facility.id}` : `CSV ref: ${facility.clientRef}`}
-              {facility.code ? ` · code: ${facility.code}` : ''}
+               {isExistingFacility ? `ID registry: ${facility.id}` : `ref CSV: ${facility.clientRef}`}
+               {facility.code ? ` · kode: ${facility.code}` : ''}
             </span>
           </span>
           <span className="shrink-0 text-xs text-muted-foreground">
             {isFiltering
-              ? `${matchingDescendantCount + (facilityMatches ? 1 : 0)} ${matchingDescendantCount + (facilityMatches ? 1 : 0) === 1 ? 'match' : 'matches'}`
-              : `${descendantCount} ${descendantCount === 1 ? 'descendant' : 'descendants'}`}
+              ? `${matchingDescendantCount + (facilityMatches ? 1 : 0)} kecocokan`
+              : `${descendantCount} turunan`}
           </span>
         </button>
       </CollapsibleTrigger>
       <CollapsibleContent>
         <div className="border-t px-3 py-2">
           <p className="mb-2 text-xs text-muted-foreground">
-            {facility.counts.buildings} buildings · {facility.counts.spaces} spaces ·{' '}
-            {facility.counts.systems} systems · {facility.counts.assets} assets
+            {facility.counts.buildings} bangunan · {facility.counts.spaces} ruang ·{' '}
+            {facility.counts.systems} sistem · {facility.counts.assets} aset
           </p>
           {isFiltering && facilityMatches && matchingDescendantCount === 0 ? (
             <p className="py-2 text-xs text-muted-foreground">
-              The facility matches. Its {descendantCount} {descendantCount === 1 ? 'descendant is' : 'descendants are'} kept collapsed.
+               Fasilitas ini cocok. {descendantCount} turunannya tetap diciutkan.
             </p>
           ) : descendantCount === 0 ? (
-            <p className="py-2 text-xs text-muted-foreground">No descendants are planned for this facility.</p>
+             <p className="py-2 text-xs text-muted-foreground">Tidak ada turunan yang direncanakan untuk fasilitas ini.</p>
           ) : (
             <ul className="space-y-1" data-testid={`list-import-facility-records-${index}`}>
               {visibleRecords.map(({ record, depth }) => {
@@ -187,7 +187,7 @@ function FacilityPreviewGroup({ facility, index, filter }: {
                         {record.kind}
                       </span>
                       {record.status === 'INACTIVE' && (
-                        <span className="text-[10px] font-medium text-muted-foreground">INACTIVE</span>
+                        <span className="text-[10px] font-medium text-muted-foreground">TIDAK AKTIF</span>
                       )}
                     </div>
                     <div className="mt-1 break-all font-mono text-[11px] text-muted-foreground">
@@ -211,7 +211,7 @@ function FacilityPreviewGroup({ facility, index, filter }: {
               onClick={() => setVisibleCount((count) => count + PREVIEW_PAGE_SIZE)}
               data-testid={`button-show-more-import-records-${index}`}
             >
-              Show next {Math.min(PREVIEW_PAGE_SIZE, matchingDescendantCount - visibleCount)} records
+               Tampilkan {Math.min(PREVIEW_PAGE_SIZE, matchingDescendantCount - visibleCount)} catatan berikutnya
             </Button>
           )}
         </div>
@@ -270,17 +270,17 @@ function describeImportFailure(error: unknown): ImportFailure {
 
   if (status === 400) {
     return {
-      message: 'The CSV contains validation errors. Download the report, correct the listed rows, and upload the file again.',
+      message: 'CSV berisi kesalahan validasi. Unduh laporan, perbaiki baris yang tercantum, lalu unggah kembali file tersebut.',
       report,
     };
   }
   if (status === 403) {
-    return { message: 'You do not have permission to import this portfolio. Ask an administrator to grant the required registry access.' };
+    return { message: 'Anda tidak memiliki izin untuk mengimpor portofolio ini. Minta administrator memberikan akses registry yang diperlukan.' };
   }
   if (status === 413) {
-    return { message: 'This CSV is larger than the 2 MB upload limit. Split it into smaller files and try again.' };
+    return { message: 'CSV ini lebih besar dari batas unggah 2 MB. Bagi menjadi beberapa file yang lebih kecil lalu coba lagi.' };
   }
-  return { message: 'The portfolio could not be imported. Please try again.' };
+  return { message: 'Portofolio tidak dapat diimpor. Silakan coba lagi.' };
 }
 
 interface PortfolioImportDialogProps {
@@ -354,7 +354,7 @@ export function PortfolioImportDialog({
     const isRetry = attemptNumber > 1;
 
     if (file.size > MAX_IMPORT_BYTES) {
-      setFailure({ message: 'This CSV is larger than the 2 MB upload limit. Split it into smaller files and try again.' });
+      setFailure({ message: 'CSV ini lebih besar dari batas unggah 2 MB. Bagi menjadi beberapa file yang lebih kecil lalu coba lagi.' });
       trackEvent('portfolio_import', {
         stage: 'validation_failure',
         workflow_stage: 'validation',
@@ -440,9 +440,9 @@ export function PortfolioImportDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[760px]" data-testid="dialog-portfolio-import">
         <DialogHeader>
-          <DialogTitle>Import portfolio from CSV</DialogTitle>
+          <DialogTitle>Impor portofolio dari CSV</DialogTitle>
           <DialogDescription>
-            Use the template to add facilities and their buildings, spaces, systems, and assets in one validated import.
+            Gunakan templat untuk menambahkan fasilitas beserta bangunan, ruang, sistem, dan asetnya dalam satu impor tervalidasi.
           </DialogDescription>
         </DialogHeader>
 
@@ -450,8 +450,8 @@ export function PortfolioImportDialog({
           <div className="rounded-lg border border-border bg-muted/20 p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-sm font-medium">1. Download the CSV template</p>
-                <p className="mt-1 text-xs text-muted-foreground">Keep the header names unchanged.</p>
+                <p className="text-sm font-medium">1. Unduh templat CSV</p>
+                <p className="mt-1 text-xs text-muted-foreground">Pertahankan nama header tanpa perubahan.</p>
               </div>
               <Button
                 type="button"
@@ -461,13 +461,13 @@ export function PortfolioImportDialog({
                 data-testid="button-download-import-template"
               >
                 <Download className="mr-2 size-4" />
-                {isDownloadingTemplate ? 'Downloading...' : 'Download template'}
+                {isDownloadingTemplate ? 'Mengunduh...' : 'Unduh templat'}
               </Button>
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="portfolio-import-file">2. Select completed CSV</Label>
+            <Label htmlFor="portfolio-import-file">2. Pilih CSV yang telah diisi</Label>
             <Input
               ref={inputRef}
               id="portfolio-import-file"
@@ -482,21 +482,21 @@ export function PortfolioImportDialog({
               }}
               data-testid="input-portfolio-import-file"
             />
-            <p className="text-xs text-muted-foreground">CSV files only, up to 2 MB. Nothing is saved unless every row is valid.</p>
+            <p className="text-xs text-muted-foreground">Hanya file CSV, maksimal 2 MB. Tidak ada yang disimpan kecuali semua baris valid.</p>
           </div>
 
           {file && (
             <p className="text-sm text-foreground" data-testid="text-selected-import-file">
-              Selected: <span className="font-medium">{file.name}</span>
+              Dipilih: <span className="font-medium">{file.name}</span>
             </p>
           )}
 
           {preview && (
             <Alert data-testid="alert-import-preview">
               <CheckCircle2 className="size-4" />
-              <AlertTitle>Review changes before import</AlertTitle>
+              <AlertTitle>Tinjau perubahan sebelum mengimpor</AlertTitle>
               <AlertDescription>
-                <p className="mb-3">Validation passed. Committing will create {preview.total} records.</p>
+                <p className="mb-3">Validasi berhasil. Commit akan membuat {preview.total} catatan.</p>
                 <dl className="grid grid-cols-2 gap-2 sm:grid-cols-5">
                   {[
                     ['Facilities', preview.facilities],
@@ -512,15 +512,15 @@ export function PortfolioImportDialog({
                   ))}
                 </dl>
                 <div className="mt-4">
-                  <p className="mb-2 text-sm font-medium">Planned hierarchy by facility</p>
+                  <p className="mb-2 text-sm font-medium">Hierarki yang direncanakan berdasarkan fasilitas</p>
                   <div className="relative mb-2">
                     <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" aria-hidden="true" />
                     <Input
                       type="search"
                       value={previewFilter}
                       onChange={(event) => setPreviewFilter(event.target.value)}
-                      placeholder="Filter by name, code, reference, or kind"
-                      aria-label="Filter planned hierarchy"
+                      placeholder="Filter berdasarkan nama, kode, referensi, atau jenis"
+                      aria-label="Filter hierarki yang direncanakan"
                       className="pl-9 pr-9"
                       data-testid="input-filter-import-preview"
                     />
@@ -531,7 +531,7 @@ export function PortfolioImportDialog({
                         size="icon"
                         className="absolute right-0.5 top-0.5 size-8"
                         onClick={() => setPreviewFilter('')}
-                        aria-label="Clear preview filter"
+                        aria-label="Hapus filter pratinjau"
                         data-testid="button-clear-import-preview-filter"
                       >
                         <X className="size-4" />
@@ -570,14 +570,14 @@ export function PortfolioImportDialog({
                         }, query) || facility.records.some((record) => includesPreviewQuery(record, query));
                       }) && (
                         <p className="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">
-                          No planned records match this filter.
+                          Tidak ada catatan yang direncanakan sesuai filter ini.
                         </p>
                       )}
                     </div>
                   </ScrollArea>
                 </div>
                 <p className="mt-3 text-xs text-muted-foreground">
-                  The file will be validated again when you commit.
+                  File akan divalidasi kembali saat Anda melakukan commit.
                 </p>
               </AlertDescription>
             </Alert>
@@ -586,7 +586,7 @@ export function PortfolioImportDialog({
           {failure && (
             <Alert variant="destructive" data-testid="alert-import-failure">
               <FileWarning className="size-4" />
-              <AlertTitle>Import not completed</AlertTitle>
+              <AlertTitle>Impor belum selesai</AlertTitle>
               <AlertDescription>
                 <p data-testid="text-import-failure">{failure.message}</p>
                 {failure.report && (
@@ -599,7 +599,7 @@ export function PortfolioImportDialog({
                     data-testid="button-download-validation-report"
                   >
                     <Download className="mr-2 size-4" />
-                    Download validation report
+                    Unduh laporan validasi
                   </Button>
                 )}
               </AlertDescription>
@@ -615,7 +615,7 @@ export function PortfolioImportDialog({
             disabled={importPortfolio.isPending || validatePortfolio.isPending}
             data-testid="button-cancel-portfolio-import"
           >
-            Cancel
+            Batal
           </Button>
           <Button
             type="button"
@@ -625,12 +625,12 @@ export function PortfolioImportDialog({
           >
             <Upload className="mr-2 size-4" />
             {importPortfolio.isPending
-              ? 'Importing...'
+              ? 'Mengimpor...'
               : validatePortfolio.isPending
-                ? 'Validating...'
+                ? 'Memvalidasi...'
                 : preview
-                  ? 'Commit import'
-                  : 'Validate and review'}
+                  ? 'Commit impor'
+                  : 'Validasi dan tinjau'}
           </Button>
         </DialogFooter>
       </DialogContent>

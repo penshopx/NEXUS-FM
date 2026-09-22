@@ -56,31 +56,31 @@ export default function Landing() {
           <div className="container relative z-10 flex flex-col items-center text-center">
             <div className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-sm text-primary mb-8 backdrop-blur-sm">
               <span className="flex size-1.5 rounded-full bg-primary mr-2 animate-pulse" />
-              <span className="font-mono text-xs uppercase tracking-wider">System Operational</span>
+               <span className="font-mono text-xs uppercase tracking-wider">Sistem Operasional</span>
             </div>
             
             <h1 className="max-w-4xl text-5xl font-bold tracking-tight sm:text-6xl md:text-7xl lg:text-8xl">
-              Precision control for <br />
+               Kendali presisi untuk <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-400">
-                facility teams.
+                 tim fasilitas.
               </span>
             </h1>
             
             <p className="mt-8 max-w-2xl text-lg text-muted-foreground sm:text-xl leading-relaxed">
-              NEXUS-FM is the trusted digital operating system providing evidence-based control of organizations, access, facilities, assets, work, risk, and compliance.
+               NEXUS-FM adalah sistem operasi digital tepercaya yang menyediakan kendali berbasis bukti atas organisasi, akses, fasilitas, aset, pekerjaan, risiko, dan kepatuhan.
             </p>
             
             <div className="mt-10 flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
               {isSignedIn ? (
                 <Link href="/app">
                   <Button size="lg" className="font-mono w-full sm:w-auto px-8 h-12 shadow-[0_0_25px_rgba(0,229,255,0.25)] hover:shadow-[0_0_35px_rgba(0,229,255,0.4)] transition-all">
-                    ACCESS TERMINAL <ArrowRight className="ml-2 size-4" />
+                     AKSES TERMINAL <ArrowRight className="ml-2 size-4" />
                   </Button>
                 </Link>
               ) : (
                 <Link href="/sign-up">
                   <Button size="lg" className="font-mono w-full sm:w-auto px-8 h-12 shadow-[0_0_25px_rgba(0,229,255,0.25)] hover:shadow-[0_0_35px_rgba(0,229,255,0.4)] transition-all">
-                    INITIALIZE SYSTEM <ArrowRight className="ml-2 size-4" />
+                     INISIALISASI SISTEM <ArrowRight className="ml-2 size-4" />
                   </Button>
                 </Link>
               )}
@@ -96,9 +96,9 @@ export default function Landing() {
                 <div className="size-12 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
                   <Database className="size-6" />
                 </div>
-                <h3 className="text-xl font-semibold font-mono">Asset Lifecycle</h3>
+                 <h3 className="text-xl font-semibold font-mono">Siklus Hidup Aset</h3>
                 <p className="text-muted-foreground leading-relaxed">
-                  Track every asset from acquisition to decommission. Precise state management, lifecycle events, and audit trails.
+                   Lacak setiap aset sejak diperoleh hingga dinonaktifkan. Kelola status secara presisi, peristiwa siklus hidup, dan jejak audit.
                 </p>
               </div>
 
@@ -106,9 +106,9 @@ export default function Landing() {
                 <div className="size-12 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
                   <Network className="size-6" />
                 </div>
-                <h3 className="text-xl font-semibold font-mono">Work Orchestration</h3>
+                 <h3 className="text-xl font-semibold font-mono">Orkestrasi Pekerjaan</h3>
                 <p className="text-muted-foreground leading-relaxed">
-                  Dynamic routing of work orders. Canonical roles dictate access and action limits. Pure operational flow.
+                   Perutean dinamis untuk perintah kerja. Peran kanonis menentukan batas akses dan tindakan. Alur operasional yang murni.
                 </p>
               </div>
 
@@ -116,9 +116,9 @@ export default function Landing() {
                 <div className="size-12 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
                   <ShieldCheck className="size-6" />
                 </div>
-                <h3 className="text-xl font-semibold font-mono">Compliance & Risk</h3>
+                 <h3 className="text-xl font-semibold font-mono">Kepatuhan & Risiko</h3>
                 <p className="text-muted-foreground leading-relaxed">
-                  Continuous audit state. Immutable historical logs. Mathematical certainty for facility compliance.
+                   Status audit berkelanjutan. Log historis yang tidak dapat diubah. Kepastian matematis untuk kepatuhan fasilitas.
                 </p>
               </div>
             </div>
@@ -132,23 +132,23 @@ export default function Landing() {
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               <div>
                 <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-6">
-                  Information density without cognitive overload.
+                   Kepadatan informasi tanpa beban kognitif.
                 </h2>
                 <p className="text-lg text-muted-foreground mb-8">
-                  Designed for operators who read tables, not charts. We prioritized scanning efficiency, stark typography, and unambiguous states over marketing fluff.
+                   Dirancang untuk operator yang membaca tabel, bukan grafik. Kami mengutamakan efisiensi pemindaian, tipografi tegas, dan status yang jelas daripada bualan pemasaran.
                 </p>
                 <ul className="space-y-4 font-mono text-sm">
                   <li className="flex items-center gap-3">
                     <Activity className="size-4 text-primary" />
-                    <span>Real-time state synchronization</span>
+                     <span>Sinkronisasi status waktu nyata</span>
                   </li>
                   <li className="flex items-center gap-3">
                     <ShieldCheck className="size-4 text-primary" />
-                    <span>Role-Based Access Control (RBAC) enforcement</span>
+                     <span>Penerapan Kontrol Akses Berbasis Peran (RBAC)</span>
                   </li>
                   <li className="flex items-center gap-3">
                     <Database className="size-4 text-primary" />
-                    <span>High-throughput entity tables</span>
+                     <span>Tabel entitas berthroughput tinggi</span>
                   </li>
                 </ul>
               </div>
@@ -160,9 +160,9 @@ export default function Landing() {
                     <div className="absolute inset-0 rounded-full border border-primary/50 animate-ping opacity-20" />
                     <Activity className="size-8 text-primary" />
                   </div>
-                  <h3 className="text-xl font-mono font-bold">SYSTEM READY</h3>
+                   <h3 className="text-xl font-mono font-bold">SISTEM SIAP</h3>
                   <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-                    Awaiting authorization to initialize organizational context and synchronize infrastructure vectors.
+                     Menunggu otorisasi untuk menginisialisasi konteks organisasi dan menyinkronkan vektor infrastruktur.
                   </p>
                 </div>
               </div>
@@ -180,7 +180,7 @@ export default function Landing() {
             <span>NEXUS-FM OS V1.0.0</span>
           </div>
           <div className="text-xs text-muted-foreground font-mono text-center sm:text-right">
-            SECURE FACILITY OPERATIONS<br/>
+             OPERASI FASILITAS AMAN<br/>
             &copy; {new Date().getFullYear()} NEXUS SYSTEMS
           </div>
         </div>

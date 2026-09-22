@@ -78,10 +78,10 @@ export function AuthorizationPage() {
             <div className="size-10 bg-primary/20 rounded-md flex items-center justify-center">
               <ShieldCheck className="size-5 text-primary" />
             </div>
-            <h1 className="text-3xl font-bold tracking-tight">Authorization</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Otorisasi</h1>
           </div>
           <p className="text-muted-foreground text-lg">
-            Manage canonical role policies, user bindings, and inspect access history.
+            Kelola kebijakan peran kanonis, penetapan akses pengguna, dan tinjau riwayat akses.
           </p>
         </div>
 
@@ -93,7 +93,7 @@ export function AuthorizationPage() {
                 className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-6 h-full"
                 data-testid="tab-roles"
               >
-                Role Policies
+                Kebijakan Peran
               </TabsTrigger>
             )}
             {showBindings && (
@@ -102,7 +102,7 @@ export function AuthorizationPage() {
                 className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-6 h-full"
                 data-testid="tab-bindings"
               >
-                User Bindings
+                Penetapan Pengguna
               </TabsTrigger>
             )}
             {showAudit && (
@@ -111,7 +111,7 @@ export function AuthorizationPage() {
                 className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-6 h-full"
                 data-testid="tab-audit"
               >
-                Audit History
+                Riwayat Audit
               </TabsTrigger>
             )}
           </TabsList>

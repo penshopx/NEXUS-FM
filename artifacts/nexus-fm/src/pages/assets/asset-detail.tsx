@@ -39,14 +39,14 @@ export function AssetDetailPage() {
   }
   
   if (assetError || !asset) {
-    return <ApiErrorState error={assetError || { status: 404 }} title="Asset Not Found" goBackHref="/app/facilities" />;
+    return <ApiErrorState error={assetError || { status: 404 }} title="Aset Tidak Ditemukan" goBackHref="/app/facilities" />;
   }
   
   return (
     <div className="space-y-6 max-w-6xl mx-auto animate-in fade-in duration-500">
       <Breadcrumbs 
         items={[
-          { label: 'Facilities', href: '/app/facilities' },
+           { label: 'Fasilitas', href: '/app/facilities' },
           ...(facility ? [{ label: facility.name, href: `/app/facilities/${facility.id}` }] : []),
           ...(building ? [{ label: building.name, href: `/app/buildings/${building.id}` }] : []),
           ...(space ? [{ label: space.name, href: `/app/spaces/${space.id}` }] : []),
@@ -65,22 +65,22 @@ export function AssetDetailPage() {
                 </div>
                 <div>
                   <h1 className="text-3xl font-bold tracking-tight" data-testid="text-asset-name">{asset.name}</h1>
-                  {asset.code && <span className="font-mono text-sm text-muted-foreground" data-testid="text-asset-code">Code: {asset.code}</span>}
+                   {asset.code && <span className="font-mono text-sm text-muted-foreground" data-testid="text-asset-code">Kode: {asset.code}</span>}
                 </div>
               </div>
               <span className={`px-3 py-1 rounded-full text-xs font-medium border font-mono ${
                 asset.status === 'ACTIVE' ? 'bg-primary/10 text-primary border-primary/20' : 'bg-muted border-border'
               }`} data-testid="status-asset">
-                {asset.status}
+                {asset.status === 'ACTIVE' ? 'Aktif' : 'Tidak aktif'}
               </span>
             </div>
             
             <div className="mt-8 border-t border-border pt-6">
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">Description</h2>
+               <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">Deskripsi</h2>
               {asset.description ? (
                 <p className="text-foreground leading-relaxed" data-testid="text-asset-description">{asset.description}</p>
               ) : (
-                <p className="text-muted-foreground italic">No description provided.</p>
+                 <p className="text-muted-foreground italic">Tidak ada deskripsi.</p>
               )}
             </div>
           </div>
@@ -88,24 +88,24 @@ export function AssetDetailPage() {
         
         <div className="space-y-6">
           <div className="bg-card border border-border rounded-lg p-6">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">Metadata</h2>
+             <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">Metadata</h2>
             <div className="space-y-4">
               <div className="flex items-center gap-3 text-sm">
                 <Activity className="size-4 text-muted-foreground" />
                 <span className="text-muted-foreground w-24">Status</span>
-                <span className="font-medium text-foreground">{asset.status}</span>
+                <span className="font-medium text-foreground">{asset.status === 'ACTIVE' ? 'Aktif' : 'Tidak aktif'}</span>
               </div>
               {asset.createdAt && (
                 <div className="flex items-center gap-3 text-sm">
                   <Calendar className="size-4 text-muted-foreground" />
-                  <span className="text-muted-foreground w-24">Created</span>
+                   <span className="text-muted-foreground w-24">Dibuat</span>
                   <span className="font-mono text-foreground" data-testid="text-asset-created">{new Date(asset.createdAt).toLocaleDateString()}</span>
                 </div>
               )}
               {asset.updatedAt && (
                 <div className="flex items-center gap-3 text-sm">
                   <Calendar className="size-4 text-muted-foreground" />
-                  <span className="text-muted-foreground w-24">Updated</span>
+                   <span className="text-muted-foreground w-24">Diperbarui</span>
                   <span className="font-mono text-foreground" data-testid="text-asset-updated">{new Date(asset.updatedAt).toLocaleDateString()}</span>
                 </div>
               )}
@@ -113,26 +113,26 @@ export function AssetDetailPage() {
           </div>
 
           <div className="bg-card border border-border rounded-lg p-6">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">Location & Topology</h2>
+             <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">Lokasi & Topologi</h2>
             <div className="space-y-4 relative before:absolute before:inset-y-0 before:left-[11px] before:w-[2px] before:bg-border">
               {facility && (
                 <div className="flex items-center gap-3 text-sm relative">
                   <div className="size-6 rounded-full bg-card border-2 border-border flex items-center justify-center shrink-0 z-10" />
-                  <span className="text-muted-foreground w-20">Facility</span>
+                   <span className="text-muted-foreground w-20">Fasilitas</span>
                   <span className="font-medium truncate" data-testid="text-topology-facility">{facility.name}</span>
                 </div>
               )}
               {building && (
                 <div className="flex items-center gap-3 text-sm relative">
                   <div className="size-6 rounded-full bg-card border-2 border-border flex items-center justify-center shrink-0 z-10" />
-                  <span className="text-muted-foreground w-20">Building</span>
+                   <span className="text-muted-foreground w-20">Bangunan</span>
                   <span className="font-medium truncate" data-testid="text-topology-building">{building.name}</span>
                 </div>
               )}
               {space && (
                 <div className="flex items-center gap-3 text-sm relative">
                   <div className="size-6 rounded-full bg-card border-2 border-border flex items-center justify-center shrink-0 z-10" />
-                  <span className="text-muted-foreground w-20">Space</span>
+                   <span className="text-muted-foreground w-20">Ruang</span>
                   <span className="font-medium truncate" data-testid="text-topology-space">{space.name}</span>
                 </div>
               )}
@@ -141,7 +141,7 @@ export function AssetDetailPage() {
                   <div className="size-6 rounded-full bg-primary/20 border-2 border-primary flex items-center justify-center shrink-0 z-10">
                     <div className="size-2 bg-primary rounded-full" />
                   </div>
-                  <span className="text-muted-foreground w-20">System</span>
+                   <span className="text-muted-foreground w-20">Sistem</span>
                   <span className="font-medium text-primary truncate" data-testid="text-topology-system">{system.name}</span>
                 </div>
               )}
@@ -150,7 +150,7 @@ export function AssetDetailPage() {
                   <div className="size-6 rounded-full bg-primary/20 border-2 border-primary flex items-center justify-center shrink-0 z-10">
                     <div className="size-2 bg-primary rounded-full" />
                   </div>
-                  <span className="text-muted-foreground italic">Standalone</span>
+                   <span className="text-muted-foreground italic">Mandiri</span>
                 </div>
               )}
             </div>

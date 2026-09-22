@@ -19,10 +19,10 @@ export default function NotFound() {
           
           <div className="space-y-2 text-muted-foreground font-mono text-sm leading-relaxed">
             <p>
-              The requested vector could not be resolved.
+               Vektor yang diminta tidak dapat ditemukan.
             </p>
             <p>
-              Target path does not exist in the current operational index. Verify the endpoint or return to a secure zone.
+               Jalur target tidak ada dalam indeks operasional saat ini. Verifikasi endpoint atau kembali ke zona aman.
             </p>
           </div>
 
@@ -30,7 +30,7 @@ export default function NotFound() {
             <Link href="/">
               <Button className="w-full font-mono gap-2 shadow-[0_0_15px_rgba(0,229,255,0.1)] hover:shadow-[0_0_20px_rgba(0,229,255,0.2)]">
                 <ArrowLeft className="h-4 w-4" />
-                RETURN TO SYSTEM ROOT
+                 KEMBALI KE AKAR SISTEM
               </Button>
             </Link>
           </div>

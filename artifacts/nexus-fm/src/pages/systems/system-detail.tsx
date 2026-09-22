@@ -84,12 +84,12 @@ export function SystemDetailPage() {
   const handleCreate = (values: RegistryInput,) => {
     createAsset.mutate({ id: systemId, data: { ...values, spaceId: spaceId!, systemId } }, {
       onSuccess: () => {
-        toast({ title: 'Asset created successfully' });
+         toast({ title: 'Aset berhasil dibuat' });
         setIsCreateOpen(false);
         queryClient.invalidateQueries({ queryKey: [`/api/systems/${systemId}/assets`] });
       },
       onError: (err) => {
-        toast({ title: 'Failed to create asset', description: getSafeMutationMessage(err), variant: 'destructive' });
+         toast({ title: 'Gagal membuat aset', description: getSafeMutationMessage(err), variant: 'destructive' });
       }
     });
   };
@@ -98,12 +98,12 @@ export function SystemDetailPage() {
     if (!editingItem) return;
     updateAsset.mutate({ id: editingItem.id, data: values }, {
       onSuccess: () => {
-        toast({ title: 'Asset updated successfully' });
+         toast({ title: 'Aset berhasil diperbarui' });
         setEditingItem(null);
         queryClient.invalidateQueries({ queryKey: [`/api/systems/${systemId}/assets`] });
       },
       onError: (err) => {
-        toast({ title: 'Failed to update asset', description: getSafeMutationMessage(err), variant: 'destructive' });
+         toast({ title: 'Gagal memperbarui aset', description: getSafeMutationMessage(err), variant: 'destructive' });
       }
     });
   };
@@ -112,12 +112,12 @@ export function SystemDetailPage() {
     if (!deletingItem) return;
     deleteAsset.mutate({ id: deletingItem.id }, {
       onSuccess: () => {
-        toast({ title: 'Asset deleted successfully' });
+         toast({ title: 'Aset berhasil dihapus' });
         setDeletingItem(null);
         queryClient.invalidateQueries({ queryKey: [`/api/systems/${systemId}/assets`] });
       },
       onError: (err) => {
-        toast({ title: 'Failed to delete asset', description: getSafeMutationMessage(err), variant: 'destructive' });
+         toast({ title: 'Gagal menghapus aset', description: getSafeMutationMessage(err), variant: 'destructive' });
       }
     });
   };
@@ -127,14 +127,14 @@ export function SystemDetailPage() {
   }
   
   if (systemError || !system) {
-    return <ApiErrorState error={systemError || { status: 404 }} title="System Not Found" goBackHref="/app/facilities" />;
+    return <ApiErrorState error={systemError || { status: 404 }} title="Sistem Tidak Ditemukan" goBackHref="/app/facilities" />;
   }
   
   return (
     <div className="space-y-6 max-w-6xl mx-auto animate-in fade-in duration-500">
       <Breadcrumbs 
         items={[
-          { label: 'Facilities', href: '/app/facilities' },
+           { label: 'Fasilitas', href: '/app/facilities' },
           ...(facility ? [{ label: facility.name, href: `/app/facilities/${facility.id}` }] : []),
           ...(building ? [{ label: building.name, href: `/app/buildings/${building.id}` }] : []),
           ...(space ? [{ label: space.name, href: `/app/spaces/${space.id}` }] : []),
@@ -145,22 +145,22 @@ export function SystemDetailPage() {
       <div className="bg-card border border-border rounded-lg p-6 mb-8">
         <h1 className="text-3xl font-bold tracking-tight mb-2">{system.name}</h1>
         <div className="flex items-center gap-4 text-sm font-mono text-muted-foreground">
-          {system.code && <span>Code: {system.code}</span>}
+           {system.code && <span>Kode: {system.code}</span>}
           <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${
             system.status === 'ACTIVE' ? 'bg-primary/10 text-primary border-primary/20' : 'bg-muted border-border'
           }`}>
-            {system.status}
+            {system.status === 'ACTIVE' ? 'Aktif' : 'Tidak aktif'}
           </span>
         </div>
         {system.description && <p className="mt-4 text-muted-foreground max-w-3xl">{system.description}</p>}
       </div>
       
       {assetsError ? (
-        <ApiErrorState error={assetsError} title="Failed to Load Assets" />
+         <ApiErrorState error={assetsError} title="Gagal Memuat Aset" />
       ) : (
         <RegistryList
-          title="Assets"
-          description={`Manage physical assets tied to ${system.name}.`}
+           title="Aset"
+           description={`Kelola aset fisik yang terhubung ke ${system.name}.`}
           items={allAssets}
           isLoading={assetsLoading}
           searchQuery={pagination.search}
@@ -182,8 +182,8 @@ export function SystemDetailPage() {
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Create Asset</DialogTitle>
-            <DialogDescription>Add a new asset to {system.name}.</DialogDescription>
+             <DialogTitle>Buat Aset</DialogTitle>
+             <DialogDescription>Tambahkan aset baru ke {system.name}.</DialogDescription>
           </DialogHeader>
           <RegistryForm
             onSubmit={handleCreate}
@@ -196,8 +196,8 @@ export function SystemDetailPage() {
       <Dialog open={!!editingItem} onOpenChange={(open) => !open && setEditingItem(null)}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Edit Asset</DialogTitle>
-            <DialogDescription>Update asset details.</DialogDescription>
+             <DialogTitle>Edit Aset</DialogTitle>
+             <DialogDescription>Perbarui detail aset.</DialogDescription>
           </DialogHeader>
           {editingItem && (
             <RegistryForm
@@ -213,20 +213,20 @@ export function SystemDetailPage() {
       <AlertDialog open={!!deletingItem} onOpenChange={(open) => !open && setDeletingItem(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+             <AlertDialogTitle>Apakah Anda benar-benar yakin?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the asset "{deletingItem?.name}".
+               Tindakan ini akan menghapus permanen aset "{deletingItem?.name}".
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteAsset.isPending} data-testid="dialog-delete-cancel">Cancel</AlertDialogCancel>
+             <AlertDialogCancel disabled={deleteAsset.isPending} data-testid="dialog-delete-cancel">Batal</AlertDialogCancel>
             <AlertDialogAction 
               onClick={(e) => { e.preventDefault(); handleDelete(); }}
               disabled={deleteAsset.isPending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               data-testid="dialog-delete-confirm"
             >
-              {deleteAsset.isPending ? 'Deleting...' : 'Delete Asset'}
+               {deleteAsset.isPending ? 'Menghapus...' : 'Hapus Aset'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

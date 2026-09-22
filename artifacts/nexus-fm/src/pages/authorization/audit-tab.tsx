@@ -41,7 +41,7 @@ export function AuditTab() {
       <div className="p-4 border border-border rounded-lg bg-card shadow-sm flex flex-col sm:flex-row gap-4">
         <form onSubmit={handleSearch} className="flex-1 flex flex-col sm:flex-row gap-4">
           <div className="space-y-1 flex-1">
-            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Resource</label>
+            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Sumber Daya</label>
             <Input 
               placeholder="e.g. ROLE_BINDING" 
               value={resource}
@@ -51,9 +51,9 @@ export function AuditTab() {
             />
           </div>
           <div className="space-y-1 flex-1">
-            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Resource ID</label>
+            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">ID Sumber Daya</label>
             <Input 
-              placeholder="Target ID" 
+               placeholder="ID target"
               value={resourceId}
               onChange={(e) => setResourceId(e.target.value)}
               className="font-mono text-sm"
@@ -62,7 +62,7 @@ export function AuditTab() {
           </div>
           <div className="flex items-end">
             <Button type="submit" data-testid="button-search-audit">
-              <Search className="size-4 mr-2" /> Filter Logs
+               <Search className="size-4 mr-2" /> Saring Log
             </Button>
           </div>
         </form>
@@ -70,17 +70,17 @@ export function AuditTab() {
 
       <div className="flex items-center gap-2 text-xs text-muted-foreground ml-1">
         <Lock className="size-3" />
-        Audit records are immutable and appended securely by the foundation platform.
+         Catatan audit tidak dapat diubah dan ditambahkan secara aman oleh platform fondasi.
       </div>
 
       <div className="border border-border rounded-lg bg-card overflow-hidden h-[600px] flex flex-col">
         <div className="p-3 border-b border-border bg-muted/20 grid grid-cols-12 gap-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-          <div className="col-span-2">Time</div>
-          <div className="col-span-2">Actor</div>
-          <div className="col-span-2">Action</div>
-          <div className="col-span-3">Resource</div>
-          <div className="col-span-2">Decision</div>
-          <div className="col-span-1 text-right">Details</div>
+          <div className="col-span-2">Waktu</div>
+          <div className="col-span-2">Pelaku</div>
+          <div className="col-span-2">Tindakan</div>
+          <div className="col-span-3">Sumber Daya</div>
+          <div className="col-span-2">Keputusan</div>
+          <div className="col-span-1 text-right">Detail</div>
         </div>
         
         <ScrollArea className="flex-1">
@@ -92,7 +92,7 @@ export function AuditTab() {
             ) : logs?.length === 0 ? (
               <div className="p-12 text-center text-muted-foreground">
                 <History className="size-10 mx-auto mb-3 opacity-20" />
-                <p>No audit records found.</p>
+                 <p>Tidak ada catatan audit.</p>
               </div>
             ) : (
               logs?.map(log => (
@@ -120,7 +120,7 @@ export function AuditTab() {
                       size="sm"
                       className="h-8 w-8 p-0"
                       onClick={() => setSelectedLog(log)}
-                      aria-label={`View details for ${log.action} audit record`}
+                       aria-label={`Lihat detail catatan audit ${log.action}`}
                       data-testid={`button-audit-details-${log.id}`}
                     >
                       <Eye className="size-4" />
@@ -138,10 +138,10 @@ export function AuditTab() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <History className="size-5 text-primary" />
-              Audit Record Details
+               Detail Catatan Audit
             </DialogTitle>
             <DialogDescription>
-              Record ID: <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{selectedLog?.id}</code>
+               ID Catatan: <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{selectedLog?.id}</code>
             </DialogDescription>
           </DialogHeader>
           
@@ -149,53 +149,53 @@ export function AuditTab() {
             <div className="space-y-6">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-muted/20 p-4 rounded-lg border border-border">
                 <div>
-                  <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Action</div>
+                   <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Tindakan</div>
                   <div className="font-mono text-sm">{selectedLog.action}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Decision</div>
+                   <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Keputusan</div>
                   <Badge variant={selectedLog.decision === 'ALLOW' ? 'default' : 'destructive'}>
                     {selectedLog.decision}
                   </Badge>
                 </div>
                 <div>
-                  <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Reason Code</div>
+                   <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Kode Alasan</div>
                   <div className="font-mono text-xs">{selectedLog.reasonCode}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Timestamp</div>
+                   <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Stempel Waktu</div>
                   <div className="text-sm">{format(new Date(selectedLog.createdAt), 'PP pp')}</div>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-3 border border-border rounded-lg p-4">
-                  <h4 className="font-semibold text-sm border-b border-border pb-2">Context</h4>
+                   <h4 className="font-semibold text-sm border-b border-border pb-2">Konteks</h4>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Actor ID:</span>
+                       <span className="text-muted-foreground">ID Pelaku:</span>
                       <span className="font-mono text-xs">{selectedLog.actorUserId || 'SYSTEM'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Org ID:</span>
+                       <span className="text-muted-foreground">ID Organisasi:</span>
                       <span className="font-mono text-xs">{selectedLog.organizationId || 'N/A'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Scope Eval:</span>
+                       <span className="text-muted-foreground">Evaluasi Cakupan:</span>
                       <span className="font-mono text-xs">{selectedLog.scopeEvaluated || 'N/A'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Request ID:</span>
+                       <span className="text-muted-foreground">ID Permintaan:</span>
                       <span className="font-mono text-xs">{selectedLog.requestId || 'N/A'}</span>
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-3 border border-border rounded-lg p-4">
-                  <h4 className="font-semibold text-sm border-b border-border pb-2">Resource Target</h4>
+                   <h4 className="font-semibold text-sm border-b border-border pb-2">Target Sumber Daya</h4>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Type:</span>
+                       <span className="text-muted-foreground">Tipe:</span>
                       <span className="font-mono text-xs">{selectedLog.resource}</span>
                     </div>
                     <div className="flex justify-between flex-col gap-1">
@@ -208,10 +208,10 @@ export function AuditTab() {
 
               {(selectedLog.beforeState || selectedLog.afterState) && (
                 <div className="space-y-3">
-                  <h4 className="font-semibold text-sm">State Changes</h4>
+                   <h4 className="font-semibold text-sm">Perubahan Status</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="border border-border rounded-md overflow-hidden flex flex-col">
-                      <div className="bg-muted/30 p-2 text-xs font-medium border-b border-border">Before State</div>
+                       <div className="bg-muted/30 p-2 text-xs font-medium border-b border-border">Status Sebelum</div>
                       <ScrollArea className="h-40 bg-black/5 dark:bg-black/20 p-3">
                         <pre className="text-[10px] font-mono whitespace-pre-wrap">
                           {safeParseJSON(selectedLog.beforeState)}
@@ -219,7 +219,7 @@ export function AuditTab() {
                       </ScrollArea>
                     </div>
                     <div className="border border-border rounded-md overflow-hidden flex flex-col">
-                      <div className="bg-muted/30 p-2 text-xs font-medium border-b border-border">After State</div>
+                       <div className="bg-muted/30 p-2 text-xs font-medium border-b border-border">Status Sesudah</div>
                       <ScrollArea className="h-40 bg-black/5 dark:bg-black/20 p-3">
                         <pre className="text-[10px] font-mono whitespace-pre-wrap">
                           {safeParseJSON(selectedLog.afterState)}

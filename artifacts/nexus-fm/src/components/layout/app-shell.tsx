@@ -56,17 +56,17 @@ export function AppShell({ children }: { children: ReactNode }) {
   })();
 
   const navItems = [
-    { href: '/app', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/app/facilities', label: 'Facilities', icon: MapPin },
-    ...(hasAuthAccess ? [{ href: '/authorization', label: 'Authorization', icon: KeyRound }] : []),
-    { href: '/profile', label: 'Identity & Access', icon: Shield },
+    { href: '/app', label: 'Dasbor', icon: LayoutDashboard },
+    { href: '/app/facilities', label: 'Fasilitas', icon: MapPin },
+    ...(hasAuthAccess ? [{ href: '/authorization', label: 'Otorisasi', icon: KeyRound }] : []),
+    { href: '/profile', label: 'Identitas & Akses', icon: Shield },
   ];
 
   return (
     <div className="min-h-[100dvh] flex flex-col bg-background">
       <header className="sticky top-0 z-40 w-full border-b border-border bg-card">
         <div className="flex h-14 items-center px-4 md:px-6 gap-6">
-          <Link href="/app" aria-label="NEXUS-FM dashboard" className="flex items-center gap-2 mr-4">
+          <Link href="/app" aria-label="Dasbor NEXUS-FM" className="flex items-center gap-2 mr-4">
             <div className="size-6 bg-primary rounded flex items-center justify-center">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="size-4 text-primary-foreground">
                 <path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v4" strokeLinecap="round" strokeLinejoin="round"/>
@@ -83,13 +83,13 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="outline"
-                    aria-label={`Select organization, current organization: ${session.activeOrganization?.organization.name ?? 'none selected'}`}
+                    aria-label={`Pilih organisasi, organisasi saat ini: ${session.activeOrganization?.organization.name ?? 'belum dipilih'}`}
                     className="font-mono justify-between min-w-[200px] border-border hover:bg-muted/50"
                   >
                     <div className="flex items-center gap-2 truncate">
                       <Building2 className="size-4 text-primary" />
                       <span className="truncate">
-                        {session.activeOrganization?.organization.name ?? "Select Organization"}
+                        {session.activeOrganization?.organization.name ?? "Pilih Organisasi"}
                       </span>
                     </div>
                     <ChevronDown className="size-4 ml-2 opacity-50" />
@@ -97,7 +97,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-[240px] font-mono">
                   <DropdownMenuLabel className="text-xs text-muted-foreground uppercase tracking-wider">
-                    Available Organizations
+                    Organisasi yang Tersedia
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   {orgs?.map((orgAccess) => (
@@ -115,7 +115,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                   ))}
                   {orgs?.length === 0 && (
                     <div className="px-2 py-4 text-center text-xs text-muted-foreground">
-                      No organizations available.
+                       Tidak ada organisasi yang tersedia.
                     </div>
                   )}
                 </DropdownMenuContent>
@@ -127,16 +127,16 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Button
               variant="ghost"
               size="sm"
-              aria-label="Sign out"
+              aria-label="Keluar"
               onClick={() => signOut({ redirectUrl: import.meta.env.BASE_URL })}
             >
               <LogOut className="size-4" />
-              <span className="hidden sm:inline">Sign out</span>
+               <span className="hidden sm:inline">Keluar</span>
             </Button>
           </div>
         </div>
         <nav
-          aria-label="Primary navigation"
+          aria-label="Navigasi utama"
           className="flex items-center px-4 md:px-6 h-10 border-t border-border bg-background overflow-x-auto gap-1"
         >
           {navItems.map((item) => {

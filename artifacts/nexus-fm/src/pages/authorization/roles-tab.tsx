@@ -23,6 +23,27 @@ import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
+const displayLabel = (value: string) => value
+  .split('_')
+  .map((part) => ({
+    ALLOW: 'Izinkan',
+    DENY: 'Tolak',
+    PLATFORM: 'Platform',
+    ORGANIZATION: 'Organisasi',
+    PORTFOLIO: 'Portofolio',
+    FACILITY: 'Fasilitas',
+    BUILDING: 'Gedung',
+    SPACE: 'Ruang',
+    ASSET: 'Aset',
+    ASSIGNED: 'Ditugaskan',
+    TEAM: 'Tim',
+    VENDOR: 'Vendor',
+    ASSIGNMENT: 'Penugasan',
+    OWNED: 'Dimiliki',
+    REQUEST: 'Permintaan',
+  }[part] ?? part.toLowerCase()))
+  .join(' ');
+
 export function RolesTab() {
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
   const { data: roles, isLoading: rolesLoading } = useListRoles();
@@ -36,7 +57,7 @@ export function RolesTab() {
         <div className="p-4 border-b border-border bg-muted/30">
           <h2 className="font-semibold flex items-center gap-2">
             <Shield className="size-4" />
-            Canonical Roles
+            Peran Kanonis
           </h2>
         </div>
         <ScrollArea className="flex-1">
@@ -76,7 +97,7 @@ export function RolesTab() {
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-8 text-center">
             <KeyRound className="size-12 mb-4 opacity-20" />
-            <p>Select a canonical role to inspect or modify its capabilities.</p>
+            <p>Pilih peran kanonis untuk meninjau atau mengubah kapabilitasnya.</p>
           </div>
         )}
       </div>
@@ -146,7 +167,7 @@ function RoleEditor({ role }: { role: Role }) {
       }
     }, {
       onSuccess: (data) => {
-        toast({ title: 'Policy updated', description: 'Role permissions saved successfully.' });
+         toast({ title: 'Kebijakan diperbarui', description: 'Izin peran berhasil disimpan.' });
         setIsEditing(false);
         setConflictError(false);
         queryClient.setQueryData(getGetRolePermissionsQueryKey(role.id), data);
@@ -163,8 +184,8 @@ function RoleEditor({ role }: { role: Role }) {
           // parse out ApiError data if present
           const errData = error.data as { error?: string };
           toast({ 
-            title: 'Failed to update policy', 
-            description: errData?.error || 'Unknown error',
+             title: 'Gagal memperbarui kebijakan',
+             description: errData?.error || 'Kesalahan tidak diketahui',
             variant: 'destructive'
           });
         }
@@ -195,8 +216,8 @@ function RoleEditor({ role }: { role: Role }) {
     return (
       <div className="p-6 flex flex-col items-center justify-center text-destructive h-full">
         <AlertCircle className="size-8 mb-2" />
-        <p>Failed to load role permissions.</p>
-        <Button variant="outline" className="mt-4" onClick={() => refetch()}>Retry</Button>
+         <p>Gagal memuat izin peran.</p>
+         <Button variant="outline" className="mt-4" onClick={() => refetch()}>Coba lagi</Button>
       </div>
     );
   }
@@ -226,21 +247,21 @@ function RoleEditor({ role }: { role: Role }) {
         <div>
           <h2 className="text-xl font-bold tracking-tight">{role.code}</h2>
           <p className="text-sm text-muted-foreground mt-1 flex items-center gap-2">
-            Policy Version: <code className="bg-muted px-1.5 py-0.5 rounded text-xs">{rolePerms?.policyVersion}</code>
+             Versi Kebijakan: <code className="bg-muted px-1.5 py-0.5 rounded text-xs">{rolePerms?.policyVersion}</code>
           </p>
         </div>
         <div className="flex items-center gap-2">
           {!isEditing ? (
             <Button variant="outline" size="sm" onClick={handleEditChange} data-testid="button-edit-policy">
-              Edit Policy
+               Edit Kebijakan
             </Button>
           ) : (
             <>
               <Button variant="ghost" size="sm" onClick={handleEditChange} disabled={updatePerms.isPending}>
-                Cancel
+                 Batal
               </Button>
               <Button size="sm" onClick={handleSave} disabled={updatePerms.isPending} data-testid="button-save-policy">
-                {updatePerms.isPending ? 'Saving...' : <><Save className="size-4 mr-2" /> Save Changes</>}
+                 {updatePerms.isPending ? 'Menyimpan...' : <><Save className="size-4 mr-2" /> Simpan Perubahan</>}
               </Button>
             </>
           )}
@@ -250,12 +271,12 @@ function RoleEditor({ role }: { role: Role }) {
       {conflictError && (
         <Alert variant="destructive" className="m-4">
           <AlertTriangle className="size-4" />
-          <AlertTitle>Concurrent Update Detected (409 Conflict)</AlertTitle>
+           <AlertTitle>Pembaruan Bersamaan Terdeteksi (Konflik 409)</AlertTitle>
           <AlertDescription className="text-sm">
-            Another administrator has updated this policy since you loaded it. To prevent overwriting their changes, your save was rejected.
+             Administrator lain telah memperbarui kebijakan ini sejak Anda memuatnya. Untuk mencegah perubahan mereka tertimpa, penyimpanan Anda ditolak.
             <div className="mt-3">
               <Button variant="outline" size="sm" onClick={handleReloadStale}>
-                Reload Latest Policy
+                 Muat Ulang Kebijakan Terbaru
               </Button>
             </div>
           </AlertDescription>
@@ -266,11 +287,11 @@ function RoleEditor({ role }: { role: Role }) {
         <div className="px-4 pt-4 pb-2 text-sm text-muted-foreground bg-muted/20 border-b border-border">
           <p className="flex items-center gap-2 mb-2">
             <AlertCircle className="size-4 text-primary" />
-            <strong>Optimistic Concurrency:</strong> Changes are saved safely using <code className="text-xs bg-muted px-1 py-0.5 rounded">policyVersion</code> to prevent accidental overwrites.
+             <strong>Konkurensi Optimistis:</strong> Perubahan disimpan dengan aman menggunakan <code className="text-xs bg-muted px-1 py-0.5 rounded">policyVersion</code> untuk mencegah penimpaan yang tidak disengaja.
           </p>
           <p className="flex items-center gap-2">
             <AlertCircle className="size-4 text-primary" />
-            <strong>Default Deny:</strong> Capabilities omitted from the canonical assignments are inherently denied. Omitted capabilities are persisted as explicit DENY entries.
+             <strong>Tolak Secara Default:</strong> Kapabilitas yang tidak dicantumkan dalam penetapan kanonis secara otomatis ditolak. Kapabilitas tersebut disimpan sebagai entri DENY eksplisit.
           </p>
         </div>
       )}
@@ -279,7 +300,7 @@ function RoleEditor({ role }: { role: Role }) {
         <div className="p-4 space-y-8">
           {sortedResources.length === 0 && (
             <div className="p-8 text-center text-muted-foreground">
-              No permissions assigned to this role.
+               Tidak ada izin yang ditetapkan untuk peran ini.
             </div>
           )}
           {sortedResources.map(resource => (
@@ -300,7 +321,7 @@ function RoleEditor({ role }: { role: Role }) {
                           {perm._actionLabel}
                           {!isEditing && (
                             <Badge variant={perm.effect === 'ALLOW' ? 'default' : 'destructive'} className="h-5 text-[10px] px-1.5 py-0">
-                              {perm.effect}
+                               {displayLabel(perm.effect)}
                             </Badge>
                           )}
                         </div>
@@ -320,8 +341,8 @@ function RoleEditor({ role }: { role: Role }) {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="ALLOW" data-testid={`select-effect-ALLOW-${perm.permissionId}`}>ALLOW</SelectItem>
-                            <SelectItem value="DENY" data-testid={`select-effect-DENY-${perm.permissionId}`}>DENY</SelectItem>
+                             <SelectItem value="ALLOW" data-testid={`select-effect-ALLOW-${perm.permissionId}`}>Izinkan</SelectItem>
+                             <SelectItem value="DENY" data-testid={`select-effect-DENY-${perm.permissionId}`}>Tolak</SelectItem>
                           </SelectContent>
                         </Select>
                         
@@ -335,23 +356,23 @@ function RoleEditor({ role }: { role: Role }) {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="PLATFORM">PLATFORM</SelectItem>
-                            <SelectItem value="ORGANIZATION">ORGANIZATION</SelectItem>
-                            <SelectItem value="PORTFOLIO">PORTFOLIO</SelectItem>
-                            <SelectItem value="FACILITY">FACILITY</SelectItem>
-                            <SelectItem value="BUILDING">BUILDING</SelectItem>
-                            <SelectItem value="SPACE">SPACE</SelectItem>
-                            <SelectItem value="ASSET">ASSET</SelectItem>
-                            <SelectItem value="ASSIGNED">ASSIGNED</SelectItem>
-                            <SelectItem value="TEAM">TEAM</SelectItem>
-                            <SelectItem value="VENDOR_ASSIGNMENT">VENDOR_ASSIGNMENT</SelectItem>
-                            <SelectItem value="OWNED_REQUEST">OWNED_REQUEST</SelectItem>
+                             <SelectItem value="PLATFORM">Platform</SelectItem>
+                             <SelectItem value="ORGANIZATION">Organisasi</SelectItem>
+                             <SelectItem value="PORTFOLIO">Portofolio</SelectItem>
+                             <SelectItem value="FACILITY">Fasilitas</SelectItem>
+                             <SelectItem value="BUILDING">Gedung</SelectItem>
+                             <SelectItem value="SPACE">Ruang</SelectItem>
+                             <SelectItem value="ASSET">Aset</SelectItem>
+                             <SelectItem value="ASSIGNED">Ditugaskan</SelectItem>
+                             <SelectItem value="TEAM">Tim</SelectItem>
+                             <SelectItem value="VENDOR_ASSIGNMENT">Penugasan Vendor</SelectItem>
+                             <SelectItem value="OWNED_REQUEST">Permintaan Milik</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                     ) : (
                       <Badge variant="outline" className="text-xs font-mono ml-auto opacity-70">
-                        {perm.defaultScopeType}
+                         {displayLabel(perm.defaultScopeType)}
                       </Badge>
                     )}
                   </div>

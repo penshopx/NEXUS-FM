@@ -85,6 +85,31 @@ const bindingStatusOptions = [
   'EXPIRED',
 ] as const satisfies readonly UserRoleBindingStatus[];
 
+const displayLabel = (value: string) => value
+  .split('_')
+  .map((part) => ({
+    PLATFORM: 'Platform',
+    ADMIN: 'Administrator',
+    FACILITY: 'Fasilitas',
+    MANAGER: 'Manajer',
+    SUPERVISOR: 'Supervisor',
+    INSPECTOR: 'Inspektur',
+    MAINTENANCE: 'Teknisi Pemeliharaan',
+    TECHNICIAN: 'Teknisi',
+    WAREHOUSE: 'Gudang',
+    VENDOR: 'Vendor',
+    ACTIVE: 'Aktif',
+    SUSPENDED: 'Ditangguhkan',
+    EXPIRED: 'Kedaluwarsa',
+    ORGANIZATION: 'Organisasi',
+    BUILDING: 'Gedung',
+    SPACE: 'Ruang',
+    ASSET: 'Aset',
+    TEAM: 'Tim',
+    ASSIGNMENT: 'Penugasan',
+  }[part] ?? part.toLowerCase()))
+  .join(' ');
+
 export function BindingsTab({ canManage }: { canManage: boolean }) {
   const [urlSearchParams, setUrlSearchParams] = useSearchParams();
   const urlState = parseMemberReviewUrlState(urlSearchParams);
@@ -212,19 +237,19 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
     <div className="space-y-6">
       <div className="p-6 border border-border rounded-lg bg-card shadow-sm">
         <div className="space-y-2">
-          <label className="text-sm font-medium" htmlFor="member-search">Find a member</label>
+           <label className="text-sm font-medium" htmlFor="member-search">Cari anggota</label>
           <form onSubmit={handleSearch} className="space-y-3">
             <div className="flex flex-wrap gap-2">
               <Input
                 id="member-search"
-                placeholder="Search by name or email"
+                 placeholder="Cari berdasarkan nama atau email"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 className="min-w-48 flex-1"
                 data-testid="input-target-user"
               />
               <Button type="submit" disabled={searchInput.trim().length < 2 || search.isFetching} data-testid="button-search-user">
-                <Search className="size-4 mr-2" /> {search.isFetching ? 'Searching...' : 'Search'}
+                 <Search className="size-4 mr-2" /> {search.isFetching ? 'Mencari...' : 'Cari'}
               </Button>
               {hasActiveMemberSearch && (
                 <Button
@@ -233,14 +258,14 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
                   onClick={handleClearSearch}
                   data-testid="button-clear-member-search"
                 >
-                  <X className="size-4 mr-2" /> Clear search
+                   <X className="size-4 mr-2" /> Hapus pencarian
                 </Button>
               )}
             </div>
             {isPlatformAdmin && (
               <div>
                 <label className="text-sm font-medium" htmlFor="member-organization-filter">
-                  Organization <span className="font-normal text-muted-foreground">(optional)</span>
+                   Organisasi <span className="font-normal text-muted-foreground">(opsional)</span>
                 </label>
                 <div className="mt-1 flex gap-2">
                   <Popover open={organizationPickerOpen} onOpenChange={setOrganizationPickerOpen}>
@@ -258,14 +283,14 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
                           <span className="truncate">
                             {selectedOrganization.name} <span className="text-muted-foreground">({selectedOrganization.slug})</span>
                           </span>
-                        ) : 'All organizations'}
+                         ) : 'Semua organisasi'}
                         <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
                       <Command shouldFilter={false}>
                         <CommandInput
-                          placeholder="Search by name or slug"
+                           placeholder="Cari berdasarkan nama atau slug"
                           value={organizationQuery}
                           onValueChange={setOrganizationQuery}
                           data-testid="input-member-organization"
@@ -273,13 +298,13 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
                         <CommandList>
                           {organizationQuery.trim().length < 2 ? (
                             <div className="py-6 text-center text-sm text-muted-foreground">
-                              Enter at least 2 characters.
+                               Masukkan setidaknya 2 karakter.
                             </div>
                           ) : organizationSearch.isFetching ? (
-                            <div className="py-6 text-center text-sm text-muted-foreground">Searching...</div>
+                             <div className="py-6 text-center text-sm text-muted-foreground">Mencari...</div>
                           ) : (
                             <>
-                              <CommandEmpty>No organizations found.</CommandEmpty>
+                               <CommandEmpty>Organisasi tidak ditemukan.</CommandEmpty>
                               <CommandGroup>
                                 {organizationSearch.data?.map((organization) => (
                                   <CommandItem
@@ -324,13 +349,13 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
             )}
           </form>
           <p className="text-xs text-muted-foreground">
-            Results include active members in the organizations you are allowed to administer.
+             Hasil mencakup anggota aktif di organisasi yang boleh Anda kelola.
           </p>
         </div>
 
         {search.isError && (
           <div className="mt-4 p-3 rounded border border-destructive/30 bg-destructive/10 text-sm text-destructive">
-            Member search failed. Check your organization access and try again.
+             Pencarian anggota gagal. Periksa akses organisasi Anda dan coba lagi.
           </div>
         )}
 
@@ -341,7 +366,7 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
             role="status"
           >
             <p>
-              This saved member selection is no longer available. Clear it to continue searching.
+               Pilihan anggota tersimpan ini tidak lagi tersedia. Hapus pilihan untuk melanjutkan pencarian.
             </p>
             <Button
               type="button"
@@ -350,7 +375,7 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
               onClick={handleClearUnavailableMember}
               data-testid="button-clear-unavailable-member"
             >
-              Clear selection
+               Hapus pilihan
             </Button>
           </div>
         )}
@@ -405,15 +430,15 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
               </div>
             ) : (
               <div className="p-8 text-center text-sm text-muted-foreground">
-                No active members matched “{submittedQuery}”.
+                 Tidak ada anggota aktif yang cocok dengan “{submittedQuery}”.
               </div>
             )}
             {search.data && search.data.total > 0 && (
               <div className="p-3 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm">
                 <div className="text-muted-foreground" data-testid="member-search-page-summary">
-                  Page {search.data.page} of {totalPages} · {search.data.total} results
+                   Halaman {search.data.page} dari {totalPages} · {search.data.total} hasil
                     {urlOrganization && (
-                      <> · Organization <strong className="font-medium text-foreground">{urlOrganization.name}</strong>{' '}
+                         <> · Organisasi <strong className="font-medium text-foreground">{urlOrganization.name}</strong>{' '}
                         <span>({urlOrganization.slug})</span>
                      </>
                    )}
@@ -427,7 +452,7 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
                     disabled={search.isFetching || page <= 1}
                     data-testid="button-member-previous-page"
                   >
-                    <ChevronLeft className="size-4 mr-1" /> Previous
+                     <ChevronLeft className="size-4 mr-1" /> Sebelumnya
                   </Button>
                   <Button
                     type="button"
@@ -437,7 +462,7 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
                     disabled={search.isFetching || page >= totalPages}
                     data-testid="button-member-next-page"
                   >
-                    Next <ChevronRight className="size-4 ml-1" />
+                     Berikutnya <ChevronRight className="size-4 ml-1" />
                   </Button>
                 </div>
               </div>
@@ -570,7 +595,7 @@ function BindingsManager({ userId, member, canManage }: {
     <div className="border border-border rounded-lg bg-card overflow-hidden">
       <div className="p-4 border-b border-border bg-muted/20 flex justify-between items-center">
         <div>
-          <h3 className="font-semibold">Role Bindings for {member.displayName}</h3>
+           <h3 className="font-semibold">Penetapan Peran untuk {member.displayName}</h3>
           <div className="mt-1 text-xs text-muted-foreground">
             {member.email} · {member.organizationName} ·{' '}
             <code data-testid={`display-userid-${userId}`}>{userId}</code>
@@ -585,11 +610,11 @@ function BindingsManager({ userId, member, canManage }: {
             disabled={isExporting}
             data-testid="button-export-bindings"
           >
-            <Download className="size-4 mr-2" /> {isExporting ? 'Exporting...' : 'Export CSV'}
+             <Download className="size-4 mr-2" /> {isExporting ? 'Mengekspor...' : 'Ekspor CSV'}
           </Button>
           {canManage && (
             <Button size="sm" onClick={() => setIsCreateOpen(true)} disabled={!activeOrgId} data-testid="button-new-binding">
-              <UserPlus className="size-4 mr-2" /> New Binding
+               <UserPlus className="size-4 mr-2" /> Penetapan Baru
             </Button>
           )}
         </div>
@@ -598,7 +623,7 @@ function BindingsManager({ userId, member, canManage }: {
       {canManage && !activeOrgId && (
         <div className="p-4 bg-destructive/10 text-destructive text-sm flex items-center gap-2">
           <AlertTriangle className="size-4" />
-          You must have an active organization selected to manage bindings.
+           Anda harus memilih organisasi aktif untuk mengelola penetapan.
         </div>
       )}
 
@@ -611,12 +636,12 @@ function BindingsManager({ userId, member, canManage }: {
               setBindingPage(1);
             }}>
               <SelectTrigger id="binding-role-filter" data-testid="select-binding-role-filter">
-                <SelectValue placeholder="All roles" />
+                 <SelectValue placeholder="Semua peran" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ALL">All roles</SelectItem>
+                 <SelectItem value="ALL">Semua peran</SelectItem>
                 {canonicalRoleOptions.map((role) => (
-                  <SelectItem key={role} value={role}>{role.replaceAll('_', ' ')}</SelectItem>
+                   <SelectItem key={role} value={role}>{displayLabel(role)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -628,12 +653,12 @@ function BindingsManager({ userId, member, canManage }: {
               setBindingPage(1);
             }}>
               <SelectTrigger id="binding-status-filter" data-testid="select-binding-status-filter">
-                <SelectValue placeholder="All statuses" />
+                 <SelectValue placeholder="Semua status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ALL">All statuses</SelectItem>
+                 <SelectItem value="ALL">Semua status</SelectItem>
                 {bindingStatusOptions.map((status) => (
-                  <SelectItem key={status} value={status}>{status}</SelectItem>
+                   <SelectItem key={status} value={status}>{displayLabel(status)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -649,7 +674,7 @@ function BindingsManager({ userId, member, canManage }: {
               }}
               data-testid="button-clear-binding-filters"
             >
-              Clear filters
+               Hapus filter
             </Button>
           )}
         </div>
@@ -662,11 +687,11 @@ function BindingsManager({ userId, member, canManage }: {
           </div>
           {hasActiveFilters ? (
             <>
-              <p className="font-medium text-foreground">No bindings match these filters.</p>
-              <p className="mt-1 text-sm">Try another role or status, or clear the filters.</p>
+               <p className="font-medium text-foreground">Tidak ada penetapan yang cocok dengan filter ini.</p>
+               <p className="mt-1 text-sm">Coba peran atau status lain, atau hapus filter.</p>
             </>
           ) : (
-            <p>No role bindings found for this user.</p>
+             <p>Tidak ada penetapan peran untuk pengguna ini.</p>
           )}
         </div>
       ) : (
@@ -686,7 +711,7 @@ function BindingsManager({ userId, member, canManage }: {
       {bindings && bindings.total > 0 && (
         <div className="p-3 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm">
           <div className="text-muted-foreground" data-testid="binding-page-summary">
-            Page {bindings.page} of {bindingTotalPages} · {bindings.total} results
+             Halaman {bindings.page} dari {bindingTotalPages} · {bindings.total} hasil
           </div>
           <div className="flex gap-2">
             <Button
@@ -697,7 +722,7 @@ function BindingsManager({ userId, member, canManage }: {
               disabled={bindingPage <= 1}
               data-testid="button-binding-previous-page"
             >
-              <ChevronLeft className="size-4 mr-1" /> Previous
+               <ChevronLeft className="size-4 mr-1" /> Sebelumnya
             </Button>
             <Button
               type="button"
@@ -707,7 +732,7 @@ function BindingsManager({ userId, member, canManage }: {
               disabled={bindingPage >= bindingTotalPages}
               data-testid="button-binding-next-page"
             >
-              Next <ChevronRight className="size-4 ml-1" />
+               Berikutnya <ChevronRight className="size-4 ml-1" />
             </Button>
           </div>
         </div>
@@ -747,17 +772,17 @@ function BindingRow({ binding, userId, canManage, onEdit }: {
   const isSuspended = binding.status === 'SUSPENDED';
   const bindingName = `${binding.roleCode} binding`;
   const statusDescription = isExpired
-    ? `${bindingName} is expired and read-only. Suspension, expiry editing, and permanent revocation are unavailable.`
+       ? `${bindingName} kedaluwarsa dan hanya dapat dibaca. Penangguhan, pengeditan masa berlaku, dan pencabutan permanen tidak tersedia.`
     : isSuspended
-      ? `${bindingName} is suspended. It can be reactivated, edited, or permanently revoked.`
-      : `${bindingName} is active. It can be suspended, edited, or permanently revoked.`;
+       ? `${bindingName} ditangguhkan. Dapat diaktifkan kembali, diedit, atau dicabut permanen.`
+       : `${bindingName} aktif. Dapat ditangguhkan, diedit, atau dicabut permanen.`;
   const scopeTargetLabel = binding.scopeTargetStatus === 'RESOLVED'
     ? binding.scopeTargetName
     : binding.scopeTargetStatus === 'MISSING'
       ? binding.scopeTargetName
         ? `${binding.scopeTargetName} (historical)`
-        : 'Missing or historical target'
-      : 'No named target';
+         : 'Target hilang atau historis'
+       : 'Tidak ada target bernama';
 
   const revokeMutation = useRevokeUserRoleBinding();
   const updateMutation = useUpdateUserRoleBinding();
@@ -767,15 +792,15 @@ function BindingRow({ binding, userId, canManage, onEdit }: {
   const handleRevoke = () => {
     revokeMutation.mutate({ userId, bindingId: binding.id }, {
       onSuccess: () => {
-        toast({ title: 'Binding revoked' });
+         toast({ title: 'Penetapan dicabut' });
         queryClient.invalidateQueries({ queryKey: getGetUserRoleBindingsQueryKey(userId) });
         queryClient.invalidateQueries({ queryKey: getGetAuthorizationAuditLogsQueryKey() });
       },
       onError: (error: any) => {
         const errData = error.data as { error?: string };
         toast({ 
-          title: 'Failed to revoke binding', 
-          description: errData?.error || 'Unknown error',
+           title: 'Gagal mencabut penetapan',
+           description: errData?.error || 'Kesalahan tidak diketahui',
           variant: 'destructive'
         });
       }
@@ -790,15 +815,15 @@ function BindingRow({ binding, userId, canManage, onEdit }: {
       data: { status: newStatus }
     }, {
       onSuccess: () => {
-        toast({ title: `Binding ${newStatus.toLowerCase()}` });
+         toast({ title: `Penetapan ${newStatus === 'ACTIVE' ? 'diaktifkan' : 'ditangguhkan'}` });
         queryClient.invalidateQueries({ queryKey: getGetUserRoleBindingsQueryKey(userId) });
         queryClient.invalidateQueries({ queryKey: getGetAuthorizationAuditLogsQueryKey() });
       },
       onError: (error: any) => {
         const errData = error.data as { error?: string };
         toast({ 
-          title: `Failed to ${isSuspended ? 'reactivate' : 'suspend'} binding`, 
-          description: errData?.error || 'Unknown error',
+           title: `Gagal ${isSuspended ? 'mengaktifkan kembali' : 'menangguhkan'} penetapan`,
+           description: errData?.error || 'Kesalahan tidak diketahui',
           variant: 'destructive'
         });
       }
@@ -819,7 +844,7 @@ function BindingRow({ binding, userId, canManage, onEdit }: {
             className="text-[10px] h-5"
             data-testid={`display-status-${binding.id}`}
           >
-            {binding.status}
+             {displayLabel(binding.status)}
           </Badge>
           <span id={`binding-status-description-${binding.id}`} className="sr-only">
             {statusDescription}
@@ -827,22 +852,22 @@ function BindingRow({ binding, userId, canManage, onEdit }: {
         </div>
         <div className="text-sm">
           <span className="font-medium" data-testid={`display-scopename-${binding.id}`}>
-            {binding.scopeType}: {scopeTargetLabel}
+             {displayLabel(binding.scopeType)}: {scopeTargetLabel}
           </span>
         </div>
         <div className="text-xs font-mono text-muted-foreground flex gap-3 flex-wrap">
-          <span data-testid={`display-roleid-${binding.id}`}>Role ID: {binding.roleId}</span>
+           <span data-testid={`display-roleid-${binding.id}`}>ID Peran: {binding.roleId}</span>
           <span data-testid={`display-scope-${binding.id}`}>
-            Scope ID: {binding.scopeId ?? 'None'}
+             ID Cakupan: {binding.scopeId ?? 'Tidak ada'}
           </span>
-          <span data-testid={`display-org-${binding.id}`}>Org: {binding.organizationId}</span>
+           <span data-testid={`display-org-${binding.id}`}>Organisasi: {binding.organizationId}</span>
         </div>
         {(binding.startsAt || binding.endsAt) && (
           <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
             <Calendar className="size-3" />
-            {binding.startsAt ? new Date(binding.startsAt).toLocaleDateString() : 'Always'} 
+             {binding.startsAt ? new Date(binding.startsAt).toLocaleDateString() : 'Selalu'}
             {' → '} 
-            {binding.endsAt ? new Date(binding.endsAt).toLocaleDateString() : 'Forever'}
+             {binding.endsAt ? new Date(binding.endsAt).toLocaleDateString() : 'Selamanya'}
           </div>
         )}
       </div>
@@ -853,9 +878,9 @@ function BindingRow({ binding, userId, canManage, onEdit }: {
           size="sm" 
           onClick={handleToggleSuspend}
           disabled={isExpired || updateMutation.isPending}
-          aria-label={`${isSuspended ? 'Reactivate' : 'Suspend'} ${bindingName}`}
+           aria-label={`${isSuspended ? 'Aktifkan kembali' : 'Tangguhkan'} ${bindingName}`}
           aria-describedby={isExpired ? `binding-status-description-${binding.id}` : undefined}
-          title={isSuspended ? "Reactivate" : "Suspend"}
+           title={isSuspended ? "Aktifkan kembali" : "Tangguhkan"}
           data-testid={`button-toggle-suspend-${binding.id}`}
         >
           {isSuspended ? <Play className="size-4" /> : <Pause className="size-4" />}
@@ -865,9 +890,9 @@ function BindingRow({ binding, userId, canManage, onEdit }: {
           size="sm" 
           onClick={onEdit}
           disabled={isExpired}
-          aria-label={`Edit expiry and scope for ${bindingName}`}
+           aria-label={`Edit masa berlaku dan cakupan ${bindingName}`}
           aria-describedby={isExpired ? `binding-status-description-${binding.id}` : undefined}
-          title="Edit Expiry/Scope"
+           title="Edit Masa Berlaku/Cakupan"
           data-testid={`button-edit-binding-${binding.id}`}
         >
           <Edit2 className="size-4" />
@@ -878,9 +903,9 @@ function BindingRow({ binding, userId, canManage, onEdit }: {
               variant="destructive" 
               size="sm" 
               disabled={isExpired || revokeMutation.isPending}
-              aria-label={`Permanently revoke ${bindingName}`}
+               aria-label={`Cabut permanen ${bindingName}`}
               aria-describedby={isExpired ? `binding-status-description-${binding.id}` : undefined}
-              title="Revoke Permanently"
+               title="Cabut Permanen"
               data-testid={`button-revoke-binding-${binding.id}`}
             >
               <Trash2 className="size-4" />
@@ -888,20 +913,20 @@ function BindingRow({ binding, userId, canManage, onEdit }: {
           </AlertDialogTrigger>
           <AlertDialogContent data-testid={`revoke-dialog-${binding.id}`}>
             <AlertDialogHeader>
-              <AlertDialogTitle>Revoke Binding Permanently?</AlertDialogTitle>
+             <AlertDialogTitle>Cabut Penetapan Secara Permanen?</AlertDialogTitle>
               <AlertDialogDescription>
-                This action cannot be undone. Revoking this binding will permanently remove it from the user's access profile.
+                 Tindakan ini tidak dapat dibatalkan. Pencabutan penetapan akan menghapusnya secara permanen dari profil akses pengguna.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel aria-label={`Cancel permanent revocation of ${bindingName}`}>Cancel</AlertDialogCancel>
+             <AlertDialogCancel aria-label={`Batalkan pencabutan permanen ${bindingName}`}>Batal</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleRevoke}
-                aria-label={`Confirm permanent revocation of ${bindingName}`}
+                 aria-label={`Konfirmasi pencabutan permanen ${bindingName}`}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 data-testid="button-confirm-revoke"
               >
-                Revoke permanently
+                 Cabut permanen
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -912,7 +937,7 @@ function BindingRow({ binding, userId, canManage, onEdit }: {
 }
 
 const createSchema = z.object({
-  roleId: z.string().min(1, 'Role is required'),
+  roleId: z.string().min(1, 'Peran wajib diisi'),
   scopeType: z.nativeEnum(ScopeType),
   scopeId: z.string().optional(),
   endsAt: z.string().optional()
@@ -922,7 +947,7 @@ const createSchema = z.object({
   }
   return true;
 }, {
-  message: "Scope ID is required for non-organization scopes",
+   message: "ID cakupan wajib diisi untuk cakupan non-organisasi",
   path: ["scopeId"]
 });
 
@@ -991,11 +1016,11 @@ export function ScopeTargetPicker({
         <Input
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          placeholder="Enter the stable target ID"
+           placeholder="Masukkan ID target stabil"
           data-testid={testId}
         />
         <p className="text-xs text-muted-foreground">
-          A named directory is not available for this scope type. Enter its stable ID.
+           Direktori bernama tidak tersedia untuk tipe cakupan ini. Masukkan ID stabilnya.
         </p>
       </div>
     );
@@ -1007,11 +1032,11 @@ export function ScopeTargetPicker({
       {historicalTarget && (
         <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm">
           <div className="font-medium">
-            {currentTarget?.name ? `${currentTarget.name} (historical)` : 'Missing or historical target'}
+             {currentTarget?.name ? `${currentTarget.name} (historis)` : 'Target hilang atau historis'}
           </div>
           <div className="mt-0.5 font-mono text-xs text-muted-foreground">{value}</div>
           <div className="mt-1 text-xs text-muted-foreground">
-            This saved target remains visible, but choose a current target before changing the scope.
+             Target tersimpan ini tetap terlihat, tetapi pilih target saat ini sebelum mengubah cakupan.
           </div>
         </div>
       )}
@@ -1027,7 +1052,7 @@ export function ScopeTargetPicker({
           >
             <span className="min-w-0 text-left">
               <span className="block truncate">
-                {selectedTarget?.name ?? (historicalTarget ? 'Choose a current target' : `Select ${scopeType.toLowerCase()}`)}
+                 {selectedTarget?.name ?? (historicalTarget ? 'Pilih target saat ini' : `Pilih ${scopeType.toLowerCase()}`)}
               </span>
               {selectedTarget && (selectedTarget.code || selectedTarget.parentPath.length > 0) && (
                 <span className="block truncate text-xs text-muted-foreground">
@@ -1041,16 +1066,16 @@ export function ScopeTargetPicker({
         <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
           <Command shouldFilter={false}>
             <CommandInput
-              placeholder={`Search ${scopeType.toLowerCase()}s by name or code`}
+               placeholder={`Cari ${scopeType.toLowerCase()} berdasarkan nama atau kode`}
               value={query}
               onValueChange={setQuery}
             />
             <CommandList>
               {search.isFetching ? (
-                <div className="py-6 text-center text-sm text-muted-foreground">Searching...</div>
+                 <div className="py-6 text-center text-sm text-muted-foreground">Mencari...</div>
               ) : (
                 <>
-                  <CommandEmpty>No current targets found.</CommandEmpty>
+                   <CommandEmpty>Target saat ini tidak ditemukan.</CommandEmpty>
                   <CommandGroup>
                     {search.data?.map((target) => (
                       <CommandItem
@@ -1121,7 +1146,7 @@ function CreateBindingDialog({ userId, orgId, organizationName, roles, open, onO
       }
     }, {
       onSuccess: () => {
-        toast({ title: 'Binding created successfully' });
+         toast({ title: 'Penetapan berhasil dibuat' });
         queryClient.invalidateQueries({ queryKey: getGetUserRoleBindingsQueryKey(userId) });
         queryClient.invalidateQueries({ queryKey: getGetAuthorizationAuditLogsQueryKey() });
         onOpenChange(false);
@@ -1130,8 +1155,8 @@ function CreateBindingDialog({ userId, orgId, organizationName, roles, open, onO
       onError: (error: any) => {
         const errData = error.data as { error?: string };
         toast({ 
-          title: 'Failed to create binding', 
-          description: errData?.error || 'Unknown error',
+           title: 'Gagal membuat penetapan',
+           description: errData?.error || 'Kesalahan tidak diketahui',
           variant: 'destructive'
         });
       }
@@ -1142,9 +1167,9 @@ function CreateBindingDialog({ userId, orgId, organizationName, roles, open, onO
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create Role Binding</DialogTitle>
+           <DialogTitle>Buat Penetapan Peran</DialogTitle>
           <DialogDescription>
-            Grant a role to user <code className="text-xs bg-muted px-1 py-0.5">{userId}</code>
+             Berikan peran kepada pengguna <code className="text-xs bg-muted px-1 py-0.5">{userId}</code>
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -1154,11 +1179,11 @@ function CreateBindingDialog({ userId, orgId, organizationName, roles, open, onO
               name="roleId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Role</FormLabel>
+                   <FormLabel>Peran</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger data-testid="select-role">
-                        <SelectValue placeholder="Select a role" />
+                       <SelectValue placeholder="Pilih peran" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -1178,7 +1203,7 @@ function CreateBindingDialog({ userId, orgId, organizationName, roles, open, onO
                 name="scopeType"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Scope Type</FormLabel>
+                     <FormLabel>Tipe Cakupan</FormLabel>
                     <Select
                       onValueChange={(value) => {
                         field.onChange(value);
@@ -1206,7 +1231,7 @@ function CreateBindingDialog({ userId, orgId, organizationName, roles, open, onO
                 name="scopeId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Scope Target</FormLabel>
+                     <FormLabel>Target Cakupan</FormLabel>
                     <FormControl>
                       <ScopeTargetPicker
                         organizationId={orgId}
@@ -1228,7 +1253,7 @@ function CreateBindingDialog({ userId, orgId, organizationName, roles, open, onO
               name="endsAt"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Expiry Date (Optional)</FormLabel>
+                 <FormLabel>Tanggal Kedaluwarsa (Opsional)</FormLabel>
                   <FormControl>
                     <Input type="date" {...field} data-testid="input-endsat" />
                   </FormControl>
@@ -1239,7 +1264,7 @@ function CreateBindingDialog({ userId, orgId, organizationName, roles, open, onO
 
             <DialogFooter>
               <Button type="submit" disabled={createMutation.isPending} data-testid="button-create-binding">
-                {createMutation.isPending ? 'Creating...' : 'Create Binding'}
+                 {createMutation.isPending ? 'Membuat...' : 'Buat Penetapan'}
               </Button>
             </DialogFooter>
           </form>
@@ -1259,7 +1284,7 @@ const editSchema = z.object({
   }
   return true;
 }, {
-  message: "Scope ID is required for non-organization scopes",
+   message: "ID cakupan wajib diisi untuk cakupan non-organisasi",
   path: ["scopeId"]
 });
 
@@ -1298,7 +1323,7 @@ function EditBindingDialog({ userId, binding, organizationName, open, onOpenChan
       }
     }, {
       onSuccess: () => {
-        toast({ title: 'Binding updated successfully' });
+         toast({ title: 'Penetapan berhasil diperbarui' });
         queryClient.invalidateQueries({ queryKey: getGetUserRoleBindingsQueryKey(userId) });
         queryClient.invalidateQueries({ queryKey: getGetAuthorizationAuditLogsQueryKey() });
         onOpenChange(false);
@@ -1306,8 +1331,8 @@ function EditBindingDialog({ userId, binding, organizationName, open, onOpenChan
       onError: (error: any) => {
         const errData = error.data as { error?: string };
         toast({ 
-          title: 'Failed to update binding', 
-          description: errData?.error || 'Unknown error',
+           title: 'Gagal memperbarui penetapan',
+           description: errData?.error || 'Kesalahan tidak diketahui',
           variant: 'destructive'
         });
       }
@@ -1338,7 +1363,7 @@ function EditBindingDialog({ userId, binding, organizationName, open, onOpenChan
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent>
         <DialogHeader>
-          <DialogTitle>Edit Role Binding</DialogTitle>
+           <DialogTitle>Edit Penetapan Peran</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -1348,7 +1373,7 @@ function EditBindingDialog({ userId, binding, organizationName, open, onOpenChan
                 name="scopeType"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Scope Type</FormLabel>
+                     <FormLabel>Tipe Cakupan</FormLabel>
                     <Select
                       onValueChange={(value) => {
                         field.onChange(value);
@@ -1377,7 +1402,7 @@ function EditBindingDialog({ userId, binding, organizationName, open, onOpenChan
                 name="scopeId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Scope Target</FormLabel>
+                     <FormLabel>Target Cakupan</FormLabel>
                     <FormControl>
                       <ScopeTargetPicker
                         organizationId={binding.organizationId}
@@ -1404,7 +1429,7 @@ function EditBindingDialog({ userId, binding, organizationName, open, onOpenChan
               name="endsAt"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Expiry Date (Optional)</FormLabel>
+                 <FormLabel>Tanggal Kedaluwarsa (Opsional)</FormLabel>
                   <FormControl>
                     <Input type="date" {...field} data-testid="input-edit-endsat" />
                   </FormControl>
@@ -1415,7 +1440,7 @@ function EditBindingDialog({ userId, binding, organizationName, open, onOpenChan
 
             <DialogFooter>
               <Button type="submit" disabled={updateMutation.isPending} data-testid="button-save-binding">
-                {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
+                 {updateMutation.isPending ? 'Menyimpan...' : 'Simpan Perubahan'}
               </Button>
             </DialogFooter>
           </form>
@@ -1430,26 +1455,26 @@ function EditBindingDialog({ userId, binding, organizationName, open, onOpenChan
       >
         <AlertDialogContent data-testid="broader-scope-confirmation">
           <AlertDialogHeader>
-            <AlertDialogTitle>Broaden this binding's access?</AlertDialogTitle>
+           <AlertDialogTitle>Perluas akses penetapan ini?</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-3">
-                <p>This scope change can grant access to more resources.</p>
+                 <p>Perubahan cakupan ini dapat memberikan akses ke lebih banyak sumber daya.</p>
                 <dl className="grid gap-2 rounded-md border bg-muted/30 p-3 text-sm">
                   <div>
-                    <dt className="font-medium text-foreground">Current scope</dt>
+                     <dt className="font-medium text-foreground">Cakupan saat ini</dt>
                     <dd data-testid="broader-scope-current">{currentScopeDescription}</dd>
                   </div>
                   <div>
-                    <dt className="font-medium text-foreground">New scope</dt>
+                     <dt className="font-medium text-foreground">Cakupan baru</dt>
                     <dd data-testid="broader-scope-new">{broaderScopeDescription}</dd>
                   </div>
                 </dl>
-                <p>Confirm that this wider access is intended before saving.</p>
+                 <p>Konfirmasikan bahwa akses yang lebih luas ini memang dimaksudkan sebelum menyimpan.</p>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={updateMutation.isPending}>Keep editing</AlertDialogCancel>
+             <AlertDialogCancel disabled={updateMutation.isPending}>Lanjutkan mengedit</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 if (pendingBroaderScope) saveBinding(pendingBroaderScope);
@@ -1457,7 +1482,7 @@ function EditBindingDialog({ userId, binding, organizationName, open, onOpenChan
               disabled={updateMutation.isPending}
               data-testid="button-confirm-broader-scope"
             >
-              {updateMutation.isPending ? 'Saving...' : 'Confirm wider access'}
+               {updateMutation.isPending ? 'Menyimpan...' : 'Konfirmasi akses lebih luas'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

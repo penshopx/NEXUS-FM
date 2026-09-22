@@ -126,12 +126,12 @@ export function SpaceDetailPage() {
   const handleCreateSystem = (values: RegistryInput,) => {
     createSystem.mutate({ id: spaceId, data: values }, {
       onSuccess: () => {
-        toast({ title: 'System created successfully' });
+         toast({ title: 'Sistem berhasil dibuat' });
         setIsCreateSystemOpen(false);
         queryClient.invalidateQueries({ queryKey: [`/api/spaces/${spaceId}/systems`] });
       },
       onError: (err) => {
-        toast({ title: 'Failed to create system', description: getSafeMutationMessage(err), variant: 'destructive' });
+         toast({ title: 'Gagal membuat sistem', description: getSafeMutationMessage(err), variant: 'destructive' });
       }
     });
   };
@@ -140,12 +140,12 @@ export function SpaceDetailPage() {
     if (!editingSystem) return;
     updateSystem.mutate({ id: editingSystem.id, data: values }, {
       onSuccess: () => {
-        toast({ title: 'System updated successfully' });
+         toast({ title: 'Sistem berhasil diperbarui' });
         setEditingSystem(null);
         queryClient.invalidateQueries({ queryKey: [`/api/spaces/${spaceId}/systems`] });
       },
       onError: (err) => {
-        toast({ title: 'Failed to update system', description: getSafeMutationMessage(err), variant: 'destructive' });
+         toast({ title: 'Gagal memperbarui sistem', description: getSafeMutationMessage(err), variant: 'destructive' });
       }
     });
   };
@@ -154,12 +154,12 @@ export function SpaceDetailPage() {
     if (!deletingSystem) return;
     deleteSystem.mutate({ id: deletingSystem.id }, {
       onSuccess: () => {
-        toast({ title: 'System deleted successfully' });
+         toast({ title: 'Sistem berhasil dihapus' });
         setDeletingSystem(null);
         queryClient.invalidateQueries({ queryKey: [`/api/spaces/${spaceId}/systems`] });
       },
       onError: (err) => {
-        toast({ title: 'Failed to delete system', description: getSafeMutationMessage(err), variant: 'destructive' });
+         toast({ title: 'Gagal menghapus sistem', description: getSafeMutationMessage(err), variant: 'destructive' });
       }
     });
   };
@@ -168,12 +168,12 @@ export function SpaceDetailPage() {
   const handleCreateAsset = (values: RegistryInput,) => {
     createAsset.mutate({ id: spaceId, data: { ...values, spaceId } }, {
       onSuccess: () => {
-        toast({ title: 'Asset created successfully' });
+         toast({ title: 'Aset berhasil dibuat' });
         setIsCreateAssetOpen(false);
         queryClient.invalidateQueries({ queryKey: [`/api/spaces/${spaceId}/assets`] });
       },
       onError: (err) => {
-        toast({ title: 'Failed to create asset', description: getSafeMutationMessage(err), variant: 'destructive' });
+         toast({ title: 'Gagal membuat aset', description: getSafeMutationMessage(err), variant: 'destructive' });
       }
     });
   };
@@ -182,12 +182,12 @@ export function SpaceDetailPage() {
     if (!editingAsset) return;
     updateAsset.mutate({ id: editingAsset.id, data: values }, {
       onSuccess: () => {
-        toast({ title: 'Asset updated successfully' });
+         toast({ title: 'Aset berhasil diperbarui' });
         setEditingAsset(null);
         queryClient.invalidateQueries({ queryKey: [`/api/spaces/${spaceId}/assets`] });
       },
       onError: (err) => {
-        toast({ title: 'Failed to update asset', description: getSafeMutationMessage(err), variant: 'destructive' });
+         toast({ title: 'Gagal memperbarui aset', description: getSafeMutationMessage(err), variant: 'destructive' });
       }
     });
   };
@@ -196,12 +196,12 @@ export function SpaceDetailPage() {
     if (!deletingAsset) return;
     deleteAsset.mutate({ id: deletingAsset.id }, {
       onSuccess: () => {
-        toast({ title: 'Asset deleted successfully' });
+         toast({ title: 'Aset berhasil dihapus' });
         setDeletingAsset(null);
         queryClient.invalidateQueries({ queryKey: [`/api/spaces/${spaceId}/assets`] });
       },
       onError: (err) => {
-        toast({ title: 'Failed to delete asset', description: getSafeMutationMessage(err), variant: 'destructive' });
+         toast({ title: 'Gagal menghapus aset', description: getSafeMutationMessage(err), variant: 'destructive' });
       }
     });
   };
@@ -211,14 +211,14 @@ export function SpaceDetailPage() {
   }
   
   if (spaceError || !space) {
-    return <ApiErrorState error={spaceError || { status: 404 }} title="Space Not Found" goBackHref="/app/facilities" />;
+    return <ApiErrorState error={spaceError || { status: 404 }} title="Ruang Tidak Ditemukan" goBackHref="/app/facilities" />;
   }
   
   return (
     <div className="space-y-6 max-w-6xl mx-auto animate-in fade-in duration-500">
       <Breadcrumbs 
         items={[
-          { label: 'Facilities', href: '/app/facilities' },
+           { label: 'Fasilitas', href: '/app/facilities' },
           ...(facility ? [{ label: facility.name, href: `/app/facilities/${facility.id}` }] : []),
           ...(building ? [{ label: building.name, href: `/app/buildings/${building.id}` }] : []),
           { label: space.name }
@@ -228,11 +228,11 @@ export function SpaceDetailPage() {
       <div className="bg-card border border-border rounded-lg p-6 mb-8">
         <h1 className="text-3xl font-bold tracking-tight mb-2">{space.name}</h1>
         <div className="flex items-center gap-4 text-sm font-mono text-muted-foreground">
-          {space.code && <span>Code: {space.code}</span>}
+           {space.code && <span>Kode: {space.code}</span>}
           <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${
             space.status === 'ACTIVE' ? 'bg-primary/10 text-primary border-primary/20' : 'bg-muted border-border'
           }`}>
-            {space.status}
+            {space.status === 'ACTIVE' ? 'Aktif' : 'Tidak aktif'}
           </span>
         </div>
         {space.description && <p className="mt-4 text-muted-foreground max-w-3xl">{space.description}</p>}
@@ -245,24 +245,24 @@ export function SpaceDetailPage() {
             className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 pb-3 font-mono"
             data-testid="tab-systems"
           >
-            Systems
+             Sistem
           </TabsTrigger>
           <TabsTrigger 
             value="assets" 
             className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-0 pb-3 font-mono"
             data-testid="tab-assets"
           >
-            Standalone Assets
+             Aset Mandiri
           </TabsTrigger>
         </TabsList>
         
         <TabsContent value="systems" className="m-0 focus-visible:outline-none">
           {systemsError ? (
-            <ApiErrorState error={systemsError} title="Failed to Load Systems" />
+             <ApiErrorState error={systemsError} title="Gagal Memuat Sistem" />
           ) : (
             <RegistryList
-              title="Systems"
-              description="Manage operational systems within this space."
+               title="Sistem"
+               description="Kelola sistem operasional di dalam ruang ini."
               items={allSystems}
               isLoading={systemsLoading}
               searchQuery={systemPagination.search}
@@ -284,11 +284,11 @@ export function SpaceDetailPage() {
         
         <TabsContent value="assets" className="m-0 focus-visible:outline-none">
           {assetsError ? (
-            <ApiErrorState error={assetsError} title="Failed to Load Assets" />
+             <ApiErrorState error={assetsError} title="Gagal Memuat Aset" />
           ) : (
             <RegistryList
-              title="Assets"
-              description="Manage independent assets directly assigned to this space."
+               title="Aset"
+               description="Kelola aset mandiri yang ditetapkan langsung ke ruang ini."
               items={allAssets}
               isLoading={assetsLoading}
               searchQuery={assetPagination.search}
@@ -312,24 +312,24 @@ export function SpaceDetailPage() {
       {/* System Dialogs */}
       <Dialog open={isCreateSystemOpen} onOpenChange={setIsCreateSystemOpen}>
         <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader><DialogTitle>Create System</DialogTitle></DialogHeader>
+           <DialogHeader><DialogTitle>Buat Sistem</DialogTitle></DialogHeader>
           <RegistryForm onSubmit={handleCreateSystem} isPending={createSystem.isPending} onCancel={() => setIsCreateSystemOpen(false)} />
         </DialogContent>
       </Dialog>
       
       <Dialog open={!!editingSystem} onOpenChange={(open) => !open && setEditingSystem(null)}>
         <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader><DialogTitle>Edit System</DialogTitle></DialogHeader>
+           <DialogHeader><DialogTitle>Edit Sistem</DialogTitle></DialogHeader>
           {editingSystem && <RegistryForm defaultValues={editingSystem} onSubmit={handleUpdateSystem} isPending={updateSystem.isPending} onCancel={() => setEditingSystem(null)} />}
         </DialogContent>
       </Dialog>
       
       <AlertDialog open={!!deletingSystem} onOpenChange={(open) => !open && setDeletingSystem(null)}>
         <AlertDialogContent>
-          <AlertDialogHeader><AlertDialogTitle>Delete System?</AlertDialogTitle></AlertDialogHeader>
+           <AlertDialogHeader><AlertDialogTitle>Hapus Sistem?</AlertDialogTitle></AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteSystem.isPending} data-testid="dialog-delete-cancel">Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={(e) => { e.preventDefault(); handleDeleteSystem(); }} disabled={deleteSystem.isPending} className="bg-destructive text-destructive-foreground" data-testid="dialog-delete-confirm">Delete</AlertDialogAction>
+             <AlertDialogCancel disabled={deleteSystem.isPending} data-testid="dialog-delete-cancel">Batal</AlertDialogCancel>
+             <AlertDialogAction onClick={(e) => { e.preventDefault(); handleDeleteSystem(); }} disabled={deleteSystem.isPending} className="bg-destructive text-destructive-foreground" data-testid="dialog-delete-confirm">Hapus</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -337,24 +337,24 @@ export function SpaceDetailPage() {
       {/* Asset Dialogs */}
       <Dialog open={isCreateAssetOpen} onOpenChange={setIsCreateAssetOpen}>
         <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader><DialogTitle>Create Asset</DialogTitle></DialogHeader>
+           <DialogHeader><DialogTitle>Buat Aset</DialogTitle></DialogHeader>
           <RegistryForm onSubmit={handleCreateAsset} isPending={createAsset.isPending} onCancel={() => setIsCreateAssetOpen(false)} />
         </DialogContent>
       </Dialog>
       
       <Dialog open={!!editingAsset} onOpenChange={(open) => !open && setEditingAsset(null)}>
         <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader><DialogTitle>Edit Asset</DialogTitle></DialogHeader>
+           <DialogHeader><DialogTitle>Edit Aset</DialogTitle></DialogHeader>
           {editingAsset && <RegistryForm defaultValues={editingAsset} onSubmit={handleUpdateAsset} isPending={updateAsset.isPending} onCancel={() => setEditingAsset(null)} />}
         </DialogContent>
       </Dialog>
       
       <AlertDialog open={!!deletingAsset} onOpenChange={(open) => !open && setDeletingAsset(null)}>
         <AlertDialogContent>
-          <AlertDialogHeader><AlertDialogTitle>Delete Asset?</AlertDialogTitle></AlertDialogHeader>
+           <AlertDialogHeader><AlertDialogTitle>Hapus Aset?</AlertDialogTitle></AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteAsset.isPending} data-testid="dialog-delete-cancel">Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={(e) => { e.preventDefault(); handleDeleteAsset(); }} disabled={deleteAsset.isPending} className="bg-destructive text-destructive-foreground" data-testid="dialog-delete-confirm">Delete</AlertDialogAction>
+             <AlertDialogCancel disabled={deleteAsset.isPending} data-testid="dialog-delete-cancel">Batal</AlertDialogCancel>
+             <AlertDialogAction onClick={(e) => { e.preventDefault(); handleDeleteAsset(); }} disabled={deleteAsset.isPending} className="bg-destructive text-destructive-foreground" data-testid="dialog-delete-confirm">Hapus</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
