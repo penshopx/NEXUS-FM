@@ -15,6 +15,9 @@ const server = vi.hoisted(() => ({
   },
   scope: [],
   sessionGate: null as Promise<void> | null,
+  sessionResponses: [] as Promise<{
+    activeOrganization: { organization: { id: string; name: string } } | null;
+  }>[],
 }));
 
 vi.mock('@clerk/react', () => ({
@@ -48,6 +51,7 @@ vi.mock('@workspace/api-client-react', async () => {
     }),
   };
 });
+
 
 import {
   getGetMyPermissionsQueryOptions,
@@ -100,6 +104,16 @@ function renderAffectedSession() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   });
+  const fetchQuery = client.fetchQuery.bind(client);
+  vi.spyOn(client, 'fetchQuery').mockImplementation(((options) => {
+    if (
+      JSON.stringify(options.queryKey) === JSON.stringify(getGetSessionQueryOptions().queryKey)
+    ) {
+      const response = server.sessionResponses.shift();
+      if (response) return response;
+    }
+    return fetchQuery(options);
+  }) as typeof client.fetchQuery);
   client.setQueryData(getGetSessionQueryOptions().queryKey, server.session);
   client.setQueryData(getGetMyPermissionsQueryOptions().queryKey, server.permissions);
 
@@ -110,6 +124,7 @@ function renderAffectedSession() {
       </AuthStateSync>
     </QueryClientProvider>,
   );
+  return client;
 }
 
 function holdSessionRefresh() {
@@ -121,6 +136,17 @@ function holdSessionRefresh() {
     server.sessionGate = null;
     release();
   };
+}
+
+function queueSessionRefresh(
+  session: { activeOrganization: { organization: { id: string; name: string } } | null },
+) {
+  let release!: () => void;
+  const response = new Promise<typeof session>((resolve) => {
+    release = () => resolve(session);
+  });
+  server.sessionResponses.push(response);
+  return release;
 }
 
 describe('revoked-session browser synchronization', () => {
@@ -137,6 +163,7 @@ describe('revoked-session browser synchronization', () => {
     };
     server.scope = [];
     server.sessionGate = null;
+    server.sessionResponses = [];
     FakeEventSource.latest = null;
     vi.stubGlobal('EventSource', FakeEventSource);
   });
@@ -187,5 +214,42 @@ describe('revoked-session browser synchronization', () => {
 
     expect(await screen.findByText('No active organization membership')).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Manage role bindings' })).not.toBeInTheDocument();
+  });
+
+  it('keeps the newest permissions when an older access refresh resolves last', async () => {
+    const client = renderAffectedSession();
+
+    expect(await screen.findByRole('button', { name: 'Manage role bindings' })).toBeVisible();
+    await waitFor(() => expect(FakeEventSource.latest).not.toBeNull());
+
+    const releaseOlderSession = queueSessionRefresh(server.session);
+    server.revision = 'revision-2';
+    act(() => FakeEventSource.latest?.emit('access-revision'));
+    await waitFor(() => expect(server.sessionResponses).toHaveLength(0));
+
+    const releaseNewestSession = queueSessionRefresh({ activeOrganization: null });
+    server.revision = 'revision-3';
+    server.permissions = { organizationId: 'org-1', permissions: [] };
+    act(() => FakeEventSource.latest?.emit('access-revision'));
+    await waitFor(() => expect(server.sessionResponses).toHaveLength(0));
+
+    expect(screen.getByTestId('organization-context-sync')).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Manage role bindings' })).not.toBeInTheDocument();
+
+    await act(async () => releaseNewestSession());
+
+    expect(await screen.findByText('No active organization membership')).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Manage role bindings' })).not.toBeInTheDocument();
+
+    await act(async () => {
+      releaseOlderSession();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(screen.getByText('No active organization membership')).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Manage role bindings' })).not.toBeInTheDocument();
+    expect(client.getQueryData(getGetSessionQueryOptions().queryKey)).toEqual({
+      activeOrganization: null,
+    });
   });
 });
