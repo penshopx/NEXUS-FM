@@ -1,30 +1,8 @@
 import type { ScopeType } from '@workspace/api-client-react';
-
-const hierarchicalScopeBreadth: Partial<Record<ScopeType, number>> = {
-  PLATFORM: 0,
-  ORGANIZATION: 1,
-  PORTFOLIO: 2,
-  FACILITY: 3,
-  BUILDING: 4,
-  SPACE: 5,
-  ASSET: 6,
-};
+import { doesAuthorizationScopeBroaden } from '@workspace/api-zod';
 
 export function doesBindingScopeBroaden(currentScope: ScopeType, nextScope: ScopeType) {
-  if (currentScope === nextScope) return false;
-
-  const currentBreadth = hierarchicalScopeBreadth[currentScope];
-  const nextBreadth = hierarchicalScopeBreadth[nextScope];
-
-  if (currentBreadth !== undefined && nextBreadth !== undefined) {
-    return nextBreadth < currentBreadth;
-  }
-
-  if (currentBreadth !== undefined && nextBreadth === undefined) {
-    return currentBreadth > hierarchicalScopeBreadth.PORTFOLIO!;
-  }
-
-  return true;
+  return doesAuthorizationScopeBroaden(currentScope, nextScope);
 }
 
 export function describeBindingScope(

@@ -1,7 +1,24 @@
 import { describe, expect, it } from 'vitest';
+import { AUTHORIZATION_SCOPE_DEFINITIONS } from '@workspace/api-zod';
 import { describeBindingScope, doesBindingScopeBroaden } from './binding-scope-change';
 
 describe('doesBindingScopeBroaden', () => {
+  it('covers every stable API scope ID from one shared definition', () => {
+    expect(Object.keys(AUTHORIZATION_SCOPE_DEFINITIONS)).toEqual([
+      'PLATFORM',
+      'ORGANIZATION',
+      'PORTFOLIO',
+      'FACILITY',
+      'BUILDING',
+      'SPACE',
+      'ASSET',
+      'ASSIGNED',
+      'TEAM',
+      'VENDOR_ASSIGNMENT',
+      'OWNED_REQUEST',
+    ]);
+  });
+
   it.each([
     ['SPACE', 'FACILITY'],
     ['ASSET', 'SPACE'],

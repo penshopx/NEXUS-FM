@@ -15,6 +15,7 @@ import {
   scopeTypeValues,
 } from "@workspace/db";
 import { canonicalPermissions } from "./authorization-catalog";
+import { isBindingScopeCompatible as isSharedBindingScopeCompatible } from "@workspace/api-zod";
 
 export const AUTHORIZATION_REASON_CODES = [
   "ALLOWED", "UNAUTHENTICATED", "USER_INACTIVE", "ORGANIZATION_MISMATCH",
@@ -154,7 +155,6 @@ const objectBindingScopes = new Set([
   "FACILITY", "BUILDING", "SPACE", "ASSET", "ASSIGNED", "TEAM",
   "VENDOR_ASSIGNMENT", "OWNED_REQUEST",
 ]);
-const hierarchicalScopes = ["FACILITY", "BUILDING", "SPACE", "ASSET"];
 
 export type RoleBindingState = {
   scopeType: string;
@@ -221,13 +221,11 @@ export function validateRoleBindingState(input: {
 }
 
 export function isBindingScopeCompatible(defaultScope: string, bindingScope: string) {
-  if (bindingScope === "PLATFORM") return defaultScope === "PLATFORM";
-  if (defaultScope === "PLATFORM") return false;
-  if (defaultScope === "ORGANIZATION") return true;
-  const defaultIndex = hierarchicalScopes.indexOf(defaultScope);
-  const bindingIndex = hierarchicalScopes.indexOf(bindingScope);
-  if (defaultIndex >= 0) return bindingIndex >= defaultIndex;
-  return defaultScope === bindingScope;
+  if (!scopeTypeValues.includes(defaultScope as never) ||
+      !scopeTypeValues.includes(bindingScope as never)) {
+    return false;
+  }
+  return isSharedBindingScopeCompatible(defaultScope as typeof scopeTypeValues[number], bindingScope as typeof scopeTypeValues[number]);
 }
 
 function redactAuditState(value: unknown): unknown {

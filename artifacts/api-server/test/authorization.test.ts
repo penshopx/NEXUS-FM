@@ -32,6 +32,7 @@ import {
   assertOrganizationScope,
   AuthorizationError,
   isSelfRoleEscalation,
+  isBindingScopeCompatible,
   listUserPermissions,
   authorizationProbeAvailable,
   canCrossOrganizationFoundation,
@@ -41,6 +42,18 @@ import {
   resolveVendorAssignmentWorkScope,
   validateRoleBindingState,
 } from "../src/services/authorization.ts";
+
+test("binding compatibility uses shared scope semantics without broadening existing rules", () => {
+  assert.equal(isBindingScopeCompatible("ORGANIZATION", "ASSET"), true);
+  assert.equal(isBindingScopeCompatible("FACILITY", "FACILITY"), true);
+  assert.equal(isBindingScopeCompatible("FACILITY", "ASSET"), true);
+  assert.equal(isBindingScopeCompatible("ASSET", "FACILITY"), false);
+  assert.equal(isBindingScopeCompatible("PORTFOLIO", "FACILITY"), false);
+  assert.equal(isBindingScopeCompatible("PORTFOLIO", "PORTFOLIO"), true);
+  assert.equal(isBindingScopeCompatible("TEAM", "TEAM"), true);
+  assert.equal(isBindingScopeCompatible("TEAM", "SPACE"), false);
+  assert.equal(isBindingScopeCompatible("UNKNOWN", "SPACE"), false);
+});
 import {
   canonicalPermissions,
   roleCapabilityRows,

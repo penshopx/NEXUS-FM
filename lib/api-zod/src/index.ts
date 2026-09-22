@@ -1,4 +1,5 @@
 export * from "./generated/api";
+export * from "./authorization-scopes";
 // Path/query operations with the same operationId produce a runtime path
 // parameter schema in generated/api and a query type in generated/types.
 // Re-export the remaining generated types explicitly to avoid the five
