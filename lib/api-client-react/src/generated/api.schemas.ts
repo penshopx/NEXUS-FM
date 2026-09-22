@@ -483,6 +483,9 @@ export interface UserRoleBinding {
   scopeType: ScopeType;
   scopeId?: string | null;
   scopeTargetName: string | null;
+  /** @nullable */
+  scopeTargetCode: string | null;
+  scopeTargetParentPath: string[];
   scopeTargetStatus: UserRoleBindingScopeTargetStatus;
   status: UserRoleBindingStatus;
   startsAt?: string | null;

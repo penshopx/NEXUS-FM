@@ -960,6 +960,25 @@ function BindingRow({ binding, userId, canManage, onEdit }: {
              {displayLabel(binding.scopeType)}: {scopeTargetLabel}
           </span>
         </div>
+        {binding.scopeTargetStatus !== 'NOT_APPLICABLE' && (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+            {binding.scopeTargetCode && (
+              <span data-testid={`display-scopecode-${binding.id}`}>
+                Kode: <span className="font-mono text-foreground">{binding.scopeTargetCode}</span>
+              </span>
+            )}
+            {binding.scopeTargetParentPath.length > 0 && (
+              <span data-testid={`display-scopehierarchy-${binding.id}`}>
+                Hierarki: {binding.scopeTargetParentPath.join(' › ')}
+              </span>
+            )}
+            {binding.scopeTargetStatus === 'MISSING' && (
+              <span className="text-amber-700 dark:text-amber-400" data-testid={`display-scopehistorical-${binding.id}`}>
+                Target historis atau tidak lagi tersedia
+              </span>
+            )}
+          </div>
+        )}
         <div className="text-xs font-mono text-muted-foreground flex gap-3 flex-wrap">
            <span data-testid={`display-roleid-${binding.id}`}>ID Peran: {binding.roleId}</span>
           <span data-testid={`display-scope-${binding.id}`}>

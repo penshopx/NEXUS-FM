@@ -1285,6 +1285,8 @@ test("authorization routes run through a real HTTP app with injected currentUser
     });
     assert.equal(namedScopeBinding.response.status, 201, JSON.stringify(namedScopeBinding.body));
     assert.equal((namedScopeBinding.body as { scopeTargetName: string }).scopeTargetName, "North Campus");
+    assert.equal((namedScopeBinding.body as { scopeTargetCode: string }).scopeTargetCode, namedFacility.code);
+    assert.deepEqual((namedScopeBinding.body as { scopeTargetParentPath: string[] }).scopeTargetParentPath, []);
     assert.equal((namedScopeBinding.body as { scopeTargetStatus: string }).scopeTargetStatus, "RESOLVED");
     const scopeTargetSearch = await request(
       `/role-binding-scope-targets?scopeType=FACILITY&organizationId=${target.organizationId}&query=North`,
@@ -1315,6 +1317,24 @@ test("authorization routes run through a real HTTP app with injected currentUser
         parentPath: string[];
       }>).map(({ id, code, parentPath }) => ({ id, code, parentPath })),
       [{ id: duplicateBuilding.id, code: duplicateBuilding.code, parentPath: ["North Campus"] }],
+    );
+    const buildingScopeBinding = await request(`/users/${target.userId}/role-bindings`, {
+      method: "POST",
+      body: JSON.stringify({
+        organizationId: target.organizationId,
+        roleId: manager.roleRegistryId,
+        scopeType: "BUILDING",
+        scopeId: duplicateBuilding.id,
+      }),
+    });
+    assert.equal(buildingScopeBinding.response.status, 201, JSON.stringify(buildingScopeBinding.body));
+    assert.equal(
+      (buildingScopeBinding.body as { scopeTargetCode: string }).scopeTargetCode,
+      duplicateBuilding.code,
+    );
+    assert.deepEqual(
+      (buildingScopeBinding.body as { scopeTargetParentPath: string[] }).scopeTargetParentPath,
+      ["North Campus"],
     );
     const buildingParentSearch = await request(
       `/role-binding-scope-targets?scopeType=BUILDING&organizationId=${target.organizationId}&query=North%20Campus`,
@@ -1428,6 +1448,8 @@ test("authorization routes run through a real HTTP app with injected currentUser
         organizationId: string;
         scopeId: string | null;
         scopeTargetName: string | null;
+        scopeTargetCode: string | null;
+        scopeTargetParentPath: string[];
         scopeTargetStatus: string;
       }>;
       page: number;
@@ -1446,6 +1468,14 @@ test("authorization routes run through a real HTTP app with injected currentUser
     assert.ok(listedBindings
       .some((row) => row.scopeId === namedFacility.id &&
         row.scopeTargetName === "North Campus" &&
+        row.scopeTargetCode === namedFacility.code &&
+        row.scopeTargetParentPath.length === 0 &&
+        row.scopeTargetStatus === "RESOLVED"));
+    assert.ok(listedBindings
+      .some((row) => row.scopeId === duplicateBuilding.id &&
+        row.scopeTargetName === "Shared Plant" &&
+        row.scopeTargetCode === duplicateBuilding.code &&
+        row.scopeTargetParentPath.join(" > ") === "North Campus" &&
         row.scopeTargetStatus === "RESOLVED"));
     assert.ok(listedBindings
       .some((row) => row.scopeId === missingScopeId &&
@@ -1454,6 +1484,7 @@ test("authorization routes run through a real HTTP app with injected currentUser
     assert.ok(listedBindings
       .some((row) => row.scopeId === inactiveFacility.id &&
         row.scopeTargetName === "Retired Campus" &&
+        row.scopeTargetCode === inactiveFacility.code &&
         row.scopeTargetStatus === "MISSING"));
     assert.ok(listedBindings
       .some((row) => row.scopeId === inactiveTeam.id &&
@@ -1516,7 +1547,7 @@ test("authorization routes run through a real HTTP app with injected currentUser
     const exportedLines = exportedCsv.trim().split("\n");
     assert.equal(
       exportedLines[0],
-      '"member_id","member_name","member_email","organization_id","organization_name","role","status","scope_type","scope_id","scope_name","scope_target_status","starts_at","ends_at"',
+      '"member_id","member_name","member_email","organization_id","organization_name","role","status","scope_type","scope_id","scope_name","scope_code","scope_parent_hierarchy","scope_target_status","starts_at","ends_at"',
     );
     assert.ok(exportedLines.length > 1);
     assert.ok(exportedLines.slice(1).every((line) =>

@@ -63,6 +63,8 @@ type BindingScope = {
 
 type ScopeTarget = {
   scopeTargetName: string | null;
+  scopeTargetCode: string | null;
+  scopeTargetParentPath: string[];
   scopeTargetStatus: "RESOLVED" | "MISSING" | "NOT_APPLICABLE";
 };
 
@@ -136,24 +138,108 @@ async function resolveBindingScopeTargets(
     for (const organization of organizations) organizationNames.set(organization.id, organization.name);
   }
 
-  const registryTargets = new Map<string, { name: string; status: string }>();
+  const registryTargets = new Map<string, {
+    name: string;
+    code: string | null;
+    parentPath: string[];
+    status: string;
+  }>();
   await Promise.all(Object.entries(registryTables).map(async ([scopeType, table]) => {
     const ids = [...new Set(rows
       .filter((row) => row.scopeType === scopeType && row.scopeId)
       .map((row) => row.scopeId!))];
     if (!ids.length || !organizationIds.length) return;
-    const targets = await database.select({
-      id: table.id,
-      organizationId: table.organizationId,
-      name: table.name,
-      status: table.status,
-    }).from(table).where(and(
+    const targetFilters = and(
       inArray(table.id, ids),
       inArray(table.organizationId, organizationIds),
-    ));
+    );
+    let targets: Array<{
+      id: string;
+      organizationId: string;
+      name: string;
+      code: string | null;
+      status: string;
+      parentPath: string[];
+    }>;
+    if (scopeType === "BUILDING") {
+      const results = await database.select({
+        id: buildingsTable.id,
+        organizationId: buildingsTable.organizationId,
+        name: buildingsTable.name,
+        code: buildingsTable.code,
+        status: buildingsTable.status,
+        facilityName: facilitiesTable.name,
+      }).from(buildingsTable).innerJoin(facilitiesTable, and(
+        eq(buildingsTable.facilityId, facilitiesTable.id),
+        eq(buildingsTable.organizationId, facilitiesTable.organizationId),
+      )).where(targetFilters);
+      targets = results.map(({ facilityName, ...target }) => ({ ...target, parentPath: [facilityName] }));
+    } else if (scopeType === "SPACE") {
+      const results = await database.select({
+        id: spacesTable.id,
+        organizationId: spacesTable.organizationId,
+        name: spacesTable.name,
+        code: spacesTable.code,
+        status: spacesTable.status,
+        facilityName: facilitiesTable.name,
+        buildingName: buildingsTable.name,
+      }).from(spacesTable)
+        .innerJoin(buildingsTable, and(
+          eq(spacesTable.buildingId, buildingsTable.id),
+          eq(spacesTable.organizationId, buildingsTable.organizationId),
+        ))
+        .innerJoin(facilitiesTable, and(
+          eq(spacesTable.facilityId, facilitiesTable.id),
+          eq(spacesTable.organizationId, facilitiesTable.organizationId),
+        ))
+        .where(targetFilters);
+      targets = results.map(({ facilityName, buildingName, ...target }) => ({
+        ...target,
+        parentPath: [facilityName, buildingName],
+      }));
+    } else if (scopeType === "ASSET") {
+      const results = await database.select({
+        id: assetsTable.id,
+        organizationId: assetsTable.organizationId,
+        name: assetsTable.name,
+        code: assetsTable.code,
+        status: assetsTable.status,
+        facilityName: facilitiesTable.name,
+        buildingName: buildingsTable.name,
+        spaceName: spacesTable.name,
+      }).from(assetsTable)
+        .innerJoin(spacesTable, and(
+          eq(assetsTable.spaceId, spacesTable.id),
+          eq(assetsTable.organizationId, spacesTable.organizationId),
+        ))
+        .innerJoin(buildingsTable, and(
+          eq(assetsTable.buildingId, buildingsTable.id),
+          eq(assetsTable.organizationId, buildingsTable.organizationId),
+        ))
+        .innerJoin(facilitiesTable, and(
+          eq(assetsTable.facilityId, facilitiesTable.id),
+          eq(assetsTable.organizationId, facilitiesTable.organizationId),
+        ))
+        .where(targetFilters);
+      targets = results.map(({ facilityName, buildingName, spaceName, ...target }) => ({
+        ...target,
+        parentPath: [facilityName, buildingName, spaceName],
+      }));
+    } else {
+      const results = await database.select({
+        id: table.id,
+        organizationId: table.organizationId,
+        name: table.name,
+        code: table.code,
+        status: table.status,
+      }).from(table).where(targetFilters);
+      targets = results.map((target) => ({ ...target, parentPath: [] }));
+    }
     for (const target of targets) {
       registryTargets.set(`${scopeType}:${target.organizationId}:${target.id}`, {
         name: target.name,
+        code: target.code,
+        parentPath: target.parentPath,
         status: target.status,
       });
     }
@@ -161,26 +247,58 @@ async function resolveBindingScopeTargets(
 
   return rows.map((row) => {
     if (row.scopeType === "PLATFORM") {
-      return { scopeTargetName: "Platform", scopeTargetStatus: "RESOLVED" };
+      return {
+        scopeTargetName: "Platform",
+        scopeTargetCode: null,
+        scopeTargetParentPath: [],
+        scopeTargetStatus: "RESOLVED",
+      };
     }
     if (row.scopeType === "ORGANIZATION") {
       const name = organizationNames.get(row.organizationId);
       return name
-        ? { scopeTargetName: name, scopeTargetStatus: "RESOLVED" }
-        : { scopeTargetName: null, scopeTargetStatus: "MISSING" };
+        ? {
+            scopeTargetName: name,
+            scopeTargetCode: null,
+            scopeTargetParentPath: [],
+            scopeTargetStatus: "RESOLVED",
+          }
+        : {
+            scopeTargetName: null,
+            scopeTargetCode: null,
+            scopeTargetParentPath: [],
+            scopeTargetStatus: "MISSING",
+          };
     }
     if (row.scopeType in registryTables && row.scopeId) {
       const target = registryTargets.get(`${row.scopeType}:${row.organizationId}:${row.scopeId}`);
       return target
         ? {
             scopeTargetName: target.name,
+            scopeTargetCode: target.code,
+            scopeTargetParentPath: target.parentPath,
             scopeTargetStatus: target.status === "ACTIVE" ? "RESOLVED" : "MISSING",
           }
-        : { scopeTargetName: null, scopeTargetStatus: "MISSING" };
+        : {
+            scopeTargetName: null,
+            scopeTargetCode: null,
+            scopeTargetParentPath: [],
+            scopeTargetStatus: "MISSING",
+          };
     }
     return row.scopeId
-      ? { scopeTargetName: null, scopeTargetStatus: "MISSING" }
-      : { scopeTargetName: null, scopeTargetStatus: "NOT_APPLICABLE" };
+      ? {
+          scopeTargetName: null,
+          scopeTargetCode: null,
+          scopeTargetParentPath: [],
+          scopeTargetStatus: "MISSING",
+        }
+      : {
+          scopeTargetName: null,
+          scopeTargetCode: null,
+          scopeTargetParentPath: [],
+          scopeTargetStatus: "NOT_APPLICABLE",
+        };
   });
 }
 
@@ -865,6 +983,8 @@ router.get("/users/:userId/role-bindings/export", async (req, res): Promise<void
     "scope_type",
     "scope_id",
     "scope_name",
+    "scope_code",
+    "scope_parent_hierarchy",
     "scope_target_status",
     "starts_at",
     "ends_at",
@@ -947,6 +1067,8 @@ router.get("/users/:userId/role-bindings/export", async (req, res): Promise<void
             row.scopeType,
             row.scopeId,
             scopeTarget.scopeTargetName,
+            scopeTarget.scopeTargetCode,
+            scopeTarget.scopeTargetParentPath.join(" > "),
             scopeTarget.scopeTargetStatus,
             row.startsAt,
             row.endsAt,

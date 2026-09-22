@@ -1612,7 +1612,7 @@ components:
         code: {type: string, minLength: 1, maxLength: 100}
     UserRoleBinding:
       type: object
-      required: [id, userId, organizationId, roleId, roleCode, version, scopeType, scopeTargetName, scopeTargetStatus, status]
+      required: [id, userId, organizationId, roleId, roleCode, version, scopeType, scopeTargetName, scopeTargetCode, scopeTargetParentPath, scopeTargetStatus, status]
       properties:
         id: {type: string, format: uuid}
         userId: {type: string, format: uuid}
@@ -1623,6 +1623,10 @@ components:
         scopeType: {$ref: "#/components/schemas/ScopeType"}
         scopeId: {type: string, format: uuid, nullable: true}
         scopeTargetName: {type: string, nullable: true}
+        scopeTargetCode: {type: ["string", "null"]}
+        scopeTargetParentPath:
+          type: array
+          items: {type: string}
         scopeTargetStatus:
           type: string
           enum: [RESOLVED, MISSING, NOT_APPLICABLE]
