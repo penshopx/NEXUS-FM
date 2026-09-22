@@ -463,6 +463,7 @@ describe('facility portfolio import browser regressions', () => {
       workflow_stage: 'validation',
       attempt_number: 1,
       is_retry: false,
+      validation_failure_reason: 'invalid_csv',
     });
 
     await selectCsv(user, 'facility_name\nCorrected HQ');
@@ -476,7 +477,94 @@ describe('facility portfolio import browser regressions', () => {
       attempt_number: 2,
       is_retry: true,
       report_downloaded: true,
+      validation_failure_reason: 'invalid_csv',
     });
+    expect(JSON.stringify(analytics.track.mock.calls)).not.toContain('portfolio.csv');
+    expect(JSON.stringify(analytics.track.mock.calls)).not.toContain(report);
+  });
+
+  it('keeps the latest bounded validation category only while the import dialog is open', async () => {
+    const user = userEvent.setup();
+    let validationCount = 0;
+    api.validateImport.mockReturnValue(idleMutation(
+      vi.fn((_variables: unknown, options: MutationOptions<unknown>) => {
+        validationCount += 1;
+        if (validationCount === 1) {
+          options.onError?.({ status: 403, data: 'Private permission details' });
+          return;
+        }
+        options.onSuccess?.({
+          total: 1,
+          facilities: 1,
+          buildings: 0,
+          spaces: 0,
+          systems: 0,
+          assets: 0,
+          facilityGroups: [],
+        });
+      }),
+    ));
+    renderPage();
+
+    await openImportDialog(user);
+    await selectCsv(user);
+    await user.click(screen.getByTestId('button-submit-portfolio-import'));
+    expect(await screen.findByTestId('text-import-failure')).toBeVisible();
+    await user.click(screen.getByTestId('button-cancel-portfolio-import'));
+
+    await openImportDialog(user);
+    await selectCsv(user, 'facility_name\nSecond attempt');
+    await user.click(screen.getByTestId('button-submit-portfolio-import'));
+    expect(await screen.findByTestId('alert-import-preview')).toBeVisible();
+
+    expect(analytics.track).toHaveBeenLastCalledWith('portfolio_import', {
+      stage: 'validation_success',
+      workflow_stage: 'review',
+      record_count: 1,
+      facility_count: 1,
+      attempt_number: 1,
+      is_retry: false,
+      report_downloaded: false,
+    });
+    expect(JSON.stringify(analytics.track.mock.calls)).not.toContain('Private permission details');
+  });
+
+  it('does not let analytics failures interrupt validation report downloads or recovery', async () => {
+    const user = userEvent.setup();
+    const report = 'row,error\n2,private validation detail';
+    let validationCount = 0;
+    analytics.track.mockImplementation(() => {
+      throw new Error('analytics unavailable');
+    });
+    api.validateImport.mockReturnValue(idleMutation(
+      vi.fn((_variables: unknown, options: MutationOptions<unknown>) => {
+        validationCount += 1;
+        if (validationCount === 1) {
+          options.onError?.({ status: 400, data: report });
+          return;
+        }
+        options.onSuccess?.({
+          total: 1,
+          facilities: 1,
+          buildings: 0,
+          spaces: 0,
+          systems: 0,
+          assets: 0,
+          facilityGroups: [],
+        });
+      }),
+    ));
+    renderPage();
+
+    await openImportDialog(user);
+    await selectCsv(user);
+    await user.click(screen.getByTestId('button-submit-portfolio-import'));
+    await user.click(await screen.findByTestId('button-download-validation-report'));
+    expect(HTMLAnchorElement.prototype.click).toHaveBeenCalledOnce();
+
+    await selectCsv(user, 'facility_name\nCorrected HQ');
+    await user.click(screen.getByTestId('button-submit-portfolio-import'));
+    expect(await screen.findByTestId('alert-import-preview')).toBeVisible();
   });
 
   it.each([

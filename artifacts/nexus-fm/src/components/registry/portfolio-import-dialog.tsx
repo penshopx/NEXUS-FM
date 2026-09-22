@@ -305,6 +305,8 @@ function validationFailureReason(error: unknown) {
   return 'request_failed';
 }
 
+type ValidationFailureReason = ReturnType<typeof validationFailureReason>;
+
 function commitFailureReason(error: unknown) {
   const status = getErrorStatus(error);
   if (status === 400 || status === 413 || status === 422) return 'validation_error';
@@ -347,6 +349,7 @@ export function PortfolioImportDialog({
   const inputRef = useRef<HTMLInputElement>(null);
   const validationAttemptRef = useRef(0);
   const reportDownloadedRef = useRef(false);
+  const latestValidationFailureReasonRef = useRef<ValidationFailureReason | null>(null);
   const previewFilterUsedRef = useRef(false);
   const previewFilterClearCountRef = useRef(0);
   const [file, setFile] = useState<File | null>(null);
@@ -361,6 +364,7 @@ export function PortfolioImportDialog({
   const reset = () => {
     validationAttemptRef.current = 0;
     reportDownloadedRef.current = false;
+    latestValidationFailureReasonRef.current = null;
     previewFilterUsedRef.current = false;
     previewFilterClearCountRef.current = 0;
     setFile(null);
@@ -410,6 +414,7 @@ export function PortfolioImportDialog({
     const isRetry = attemptNumber > 1;
 
     if (file.size > MAX_IMPORT_BYTES) {
+      latestValidationFailureReasonRef.current = 'file_too_large';
       setFailure({ message: 'CSV ini lebih besar dari batas unggah 2 MB. Bagi menjadi beberapa file yang lebih kecil lalu coba lagi.' });
       trackEvent('portfolio_import', {
         stage: 'validation_failure',
@@ -437,14 +442,19 @@ export function PortfolioImportDialog({
             attempt_number: attemptNumber,
             is_retry: isRetry,
             report_downloaded: reportDownloadedRef.current,
+            ...(latestValidationFailureReasonRef.current
+              ? { validation_failure_reason: latestValidationFailureReasonRef.current }
+              : {}),
           });
         },
         onError: (error) => {
+          const reason = validationFailureReason(error);
+          latestValidationFailureReasonRef.current = reason;
           setFailure(describeImportFailure(error));
           trackEvent('portfolio_import', {
             stage: 'validation_failure',
             workflow_stage: 'validation',
-            reason: validationFailureReason(error),
+            reason,
             attempt_number: attemptNumber,
             is_retry: isRetry,
             report_available: Boolean(getErrorReport(error)),
@@ -519,6 +529,9 @@ export function PortfolioImportDialog({
       workflow_stage: 'validation',
       attempt_number: Math.max(validationAttemptRef.current, 1),
       is_retry: validationAttemptRef.current > 1,
+      ...(latestValidationFailureReasonRef.current
+        ? { validation_failure_reason: latestValidationFailureReasonRef.current }
+        : {}),
     });
   };
 
