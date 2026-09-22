@@ -7,7 +7,8 @@
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "typecheck:libs": "tsc --build --force",
     "typecheck": "pnpm run typecheck:libs && NEXUS_FM_API_CLIENT_DECLARATIONS_READY=1 pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
-    "test:nexus-typecheck-declarations": "pnpm --filter @workspace/api-client-react run test:nexus-typecheck-declarations"
+    "test:nexus-typecheck-declarations": "pnpm --filter @workspace/api-client-react run test:nexus-typecheck-declarations && pnpm run test:workspace-typecheck-declarations",
+    "test:workspace-typecheck-declarations": "node ./lib/api-client-react/scripts/test-workspace-typecheck-declarations.mjs"
   },
   "private": true,
   "dependencies": {
