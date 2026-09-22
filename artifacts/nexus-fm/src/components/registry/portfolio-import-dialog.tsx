@@ -44,6 +44,51 @@ type HierarchyRecord = {
   depth: number;
 };
 
+type SearchProjection = {
+  value: string;
+  starts: number[];
+  ends: number[];
+};
+
+function projectPreviewSearchValue(value: string): SearchProjection {
+  const projection: SearchProjection = { value: '', starts: [], ends: [] };
+  const segments: Array<{ value: string; start: number; end: number }> = [];
+
+  for (let index = 0; index < value.length;) {
+    const codePoint = value.codePointAt(index);
+    if (codePoint === undefined) break;
+    const character = String.fromCodePoint(codePoint);
+    const end = index + character.length;
+
+    if (/^\p{M}$/u.test(character) && segments.length > 0) {
+      const previous = segments[segments.length - 1];
+      previous.value += character;
+      previous.end = end;
+    } else {
+      segments.push({ value: character, start: index, end });
+    }
+    index = end;
+  }
+
+  for (const segment of segments) {
+    const searchableSegment = segment.value
+      .toLocaleLowerCase()
+      .normalize('NFD')
+      .replace(/\p{M}/gu, '');
+    projection.value += searchableSegment;
+    for (let index = 0; index < searchableSegment.length; index += 1) {
+      projection.starts.push(segment.start);
+      projection.ends.push(segment.end);
+    }
+  }
+
+  return projection;
+}
+
+function normalizePreviewSearchValue(value: string) {
+  return projectPreviewSearchValue(value.trim()).value;
+}
+
 function includesPreviewQuery(
   item: {
     name: string;
@@ -54,35 +99,40 @@ function includesPreviewQuery(
   query: string,
 ) {
   return [item.name, item.code, item.clientRef, item.kind]
-    .some((value) => value?.toLowerCase().includes(query));
+    .some((value) => value && projectPreviewSearchValue(value).value.includes(query));
 }
 
 function HighlightedPreviewText({ value, query }: {
   value: string;
   query: string;
 }) {
-  const normalizedQuery = query.trim().toLowerCase();
+  const normalizedQuery = normalizePreviewSearchValue(query);
   if (!normalizedQuery) return value;
 
   const parts: ReactNode[] = [];
-  const normalizedValue = value.toLowerCase();
+  const projection = projectPreviewSearchValue(value);
   let cursor = 0;
-  let matchIndex = normalizedValue.indexOf(normalizedQuery);
+  let searchCursor = 0;
+  let matchIndex = projection.value.indexOf(normalizedQuery);
 
   while (matchIndex !== -1) {
-    if (matchIndex > cursor) parts.push(value.slice(cursor, matchIndex));
-    const matchEnd = matchIndex + normalizedQuery.length;
+    const matchStart = projection.starts[matchIndex];
+    const projectedMatchEnd = matchIndex + normalizedQuery.length - 1;
+    const matchEnd = projection.ends[projectedMatchEnd];
+    if (matchStart === undefined || matchEnd === undefined) break;
+    if (matchStart > cursor) parts.push(value.slice(cursor, matchStart));
     parts.push(
       <mark
-        key={`${matchIndex}-${matchEnd}`}
+        key={`${matchStart}-${matchEnd}`}
         className="rounded-sm bg-primary/15 px-0.5 font-semibold text-inherit underline decoration-2 underline-offset-2"
         data-testid="highlight-import-preview-match"
       >
-        {value.slice(matchIndex, matchEnd)}
+        {value.slice(matchStart, matchEnd)}
       </mark>,
     );
     cursor = matchEnd;
-    matchIndex = normalizedValue.indexOf(normalizedQuery, cursor);
+    searchCursor = matchIndex + normalizedQuery.length;
+    matchIndex = projection.value.indexOf(normalizedQuery, searchCursor);
   }
 
   if (cursor === 0) return value;
@@ -133,7 +183,7 @@ function FacilityPreviewGroup({ facility, index, filter }: {
   const [open, setOpen] = useState(false);
   const [visibleCount, setVisibleCount] = useState(PREVIEW_PAGE_SIZE);
   const hierarchy = flattenFacilityHierarchy(facility);
-  const normalizedFilter = filter.trim().toLowerCase();
+  const normalizedFilter = normalizePreviewSearchValue(filter);
   const facilityMatches = normalizedFilter.length > 0 && includesPreviewQuery({
     name: facility.name,
     code: facility.code,
@@ -544,7 +594,7 @@ export function PortfolioImportDialog({
     });
   };
 
-  const normalizedPreviewFilter = previewFilter.trim().toLowerCase();
+  const normalizedPreviewFilter = normalizePreviewSearchValue(previewFilter);
   const visibleFacilityGroups = preview?.facilityGroups
     .map((facility, index) => ({ facility, index }))
     .filter(({ facility }) => (

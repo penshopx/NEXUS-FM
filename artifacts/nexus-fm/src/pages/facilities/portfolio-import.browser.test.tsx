@@ -372,6 +372,68 @@ describe('facility portfolio import browser regressions', () => {
     expect(screen.queryByTestId('dialog-portfolio-import')).not.toBeInTheDocument();
   });
 
+  it('matches unaccented and locale-cased preview searches while highlighting visible characters', async () => {
+    const user = userEvent.setup();
+    api.validateImport.mockReturnValue(idleMutation(
+      vi.fn((_variables: unknown, options: MutationOptions<unknown>) => {
+        options.onSuccess?.({
+          total: 3,
+          facilities: 1,
+          newFacilities: 1,
+          existingFacilities: 0,
+          buildings: 0,
+          spaces: 0,
+          systems: 0,
+          assets: 2,
+          facilityGroups: [{
+            facilityStatus: 'NEW_FACILITY',
+            name: 'São Paulo Merkezi',
+            clientRef: 'facility-sao',
+            id: null,
+            counts: { buildings: 0, spaces: 0, systems: 0, assets: 2 },
+            records: [{
+              row: 2,
+              kind: 'ASSET',
+              name: 'İstanbul Pompası',
+              clientRef: 'asset-istanbul',
+              parentRef: 'facility-sao',
+              status: 'ACTIVE',
+            }, {
+              row: 3,
+              kind: 'ASSET',
+              name: 'Cafe\u0301 Sensor',
+              clientRef: 'asset-cafe',
+              parentRef: 'facility-sao',
+              status: 'ACTIVE',
+            }],
+          }],
+        });
+      }),
+    ));
+    renderPage();
+
+    await openImportDialog(user);
+    await selectCsv(user);
+    await user.click(screen.getByTestId('button-submit-portfolio-import'));
+
+    const previewFilter = await screen.findByTestId('input-filter-import-preview');
+    await user.type(previewFilter, 'sao');
+    expect(screen.getByText('São', { selector: 'mark' })).toBeVisible();
+    expect(screen.queryByTestId('list-import-facility-records-0')).not.toBeInTheDocument();
+    expect(screen.getByText(/2 turunannya tetap diciutkan/i)).toBeVisible();
+
+    await user.clear(previewFilter);
+    await user.type(previewFilter, 'istanbul');
+    expect(screen.getByText('İstanbul', { selector: 'mark' })).toBeVisible();
+    expect(screen.queryByText('Cafe\u0301 Sensor')).not.toBeInTheDocument();
+
+    await user.clear(previewFilter);
+    await user.type(previewFilter, 'cafe');
+    expect(screen.getByText('Cafe\u0301', { selector: 'mark' })).toBeVisible();
+    expect(screen.queryByText('İstanbul Pompası')).not.toBeInTheDocument();
+    expect(screen.getByText('1 kecocokan')).toBeVisible();
+  });
+
   it('has no serious or critical accessibility violations on the registry and its dialogs', async () => {
     const user = userEvent.setup();
     api.listFacilities.mockReturnValue({
