@@ -345,6 +345,8 @@ export function PortfolioImportDialog({
   const inputRef = useRef<HTMLInputElement>(null);
   const validationAttemptRef = useRef(0);
   const reportDownloadedRef = useRef(false);
+  const previewFilterUsedRef = useRef(false);
+  const previewFilterClearCountRef = useRef(0);
   const [file, setFile] = useState<File | null>(null);
   const [failure, setFailure] = useState<ImportFailure | null>(null);
   const [isDownloadingTemplate, setIsDownloadingTemplate] = useState(false);
@@ -356,6 +358,8 @@ export function PortfolioImportDialog({
   const reset = () => {
     validationAttemptRef.current = 0;
     reportDownloadedRef.current = false;
+    previewFilterUsedRef.current = false;
+    previewFilterClearCountRef.current = 0;
     setFile(null);
     setFailure(null);
     setPreview(null);
@@ -454,6 +458,9 @@ export function PortfolioImportDialog({
           stage: 'commit_success',
           workflow_stage: 'commit',
           record_count: boundedCount(result.imported),
+          preview_filter_used: previewFilterUsedRef.current,
+          preview_filter_active: previewFilter.trim().length > 0,
+          preview_filter_clear_count: boundedCount(previewFilterClearCountRef.current),
         });
         onImported(result.imported);
         handleOpenChange(false, false);
@@ -470,6 +477,32 @@ export function PortfolioImportDialog({
         setFailure(describeImportFailure(error));
       },
     });
+  };
+
+  const handlePreviewFilterChange = (nextFilter: string) => {
+    const wasActive = previewFilter.trim().length > 0;
+    const isActive = nextFilter.trim().length > 0;
+
+    setPreviewFilter(nextFilter);
+    if (!preview) return;
+
+    if (!wasActive && isActive) {
+      previewFilterUsedRef.current = true;
+      trackEvent('portfolio_import_preview_filter', {
+        action: 'applied',
+        workflow_stage: 'review',
+        record_count: boundedCount(preview.total),
+        facility_count: boundedCount(preview.facilities),
+      });
+    } else if (wasActive && !isActive) {
+      previewFilterClearCountRef.current += 1;
+      trackEvent('portfolio_import_preview_filter', {
+        action: 'cleared',
+        workflow_stage: 'review',
+        record_count: boundedCount(preview.total),
+        facility_count: boundedCount(preview.facilities),
+      });
+    }
   };
 
   const handleValidationReportDownload = () => {
@@ -566,7 +599,7 @@ export function PortfolioImportDialog({
                     <Input
                       type="search"
                       value={previewFilter}
-                      onChange={(event) => setPreviewFilter(event.target.value)}
+                      onChange={(event) => handlePreviewFilterChange(event.target.value)}
                       placeholder="Filter berdasarkan nama, kode, referensi, atau jenis"
                       aria-label="Filter hierarki yang direncanakan"
                       className="pl-9 pr-9"
@@ -578,7 +611,7 @@ export function PortfolioImportDialog({
                         variant="ghost"
                         size="icon"
                         className="absolute right-0.5 top-0.5 size-8"
-                        onClick={() => setPreviewFilter('')}
+                        onClick={() => handlePreviewFilterChange('')}
                         aria-label="Hapus filter pratinjau"
                         data-testid="button-clear-import-preview-filter"
                       >

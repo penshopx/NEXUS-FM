@@ -198,6 +198,12 @@ describe('facility portfolio import browser regressions', () => {
 
     const previewFilter = screen.getByTestId('input-filter-import-preview');
     await user.type(previewFilter, 'asset');
+    expect(analytics.track).toHaveBeenCalledWith('portfolio_import_preview_filter', {
+      action: 'applied',
+      workflow_stage: 'review',
+      record_count: 8,
+      facility_count: 2,
+    });
     expect(screen.getByText('North Campus')).toBeVisible();
     expect(screen.queryByText('South Campus')).not.toBeInTheDocument();
     expect(screen.getByText('Air Handler')).toBeVisible();
@@ -208,6 +214,12 @@ describe('facility portfolio import browser regressions', () => {
     expect(screen.getByTestId('highlight-import-preview-match')).toHaveClass('underline', 'font-semibold');
 
     await user.clear(previewFilter);
+    expect(analytics.track).toHaveBeenCalledWith('portfolio_import_preview_filter', {
+      action: 'cleared',
+      workflow_stage: 'review',
+      record_count: 8,
+      facility_count: 2,
+    });
     await user.type(previewFilter, 'handler');
     expect(screen.getByTestId('highlight-import-preview-match')).toHaveTextContent('Handler');
 
@@ -261,11 +273,70 @@ describe('facility portfolio import browser regressions', () => {
       stage: 'commit_success',
       workflow_stage: 'commit',
       record_count: 5,
+      preview_filter_used: true,
+      preview_filter_active: false,
+      preview_filter_clear_count: 5,
     });
+    expect(JSON.stringify(analytics.track.mock.calls)).not.toMatch(
+      /asset-a|bldg-a|north campus|handler/i,
+    );
     expect(analytics.track).not.toHaveBeenCalledWith(
       'portfolio_import',
       expect.objectContaining({ stage: 'cancelled' }),
     );
+  });
+
+  it('keeps preview filtering and import available when analytics throws', async () => {
+    const user = userEvent.setup();
+    analytics.track.mockImplementation(() => {
+      throw new Error('analytics unavailable');
+    });
+    const validate = vi.fn((_variables: unknown, options: MutationOptions<unknown>) => {
+      options.onSuccess?.({
+        total: 2,
+        facilities: 1,
+        buildings: 0,
+        spaces: 0,
+        systems: 0,
+        assets: 1,
+        facilityGroups: [{
+          facilityStatus: 'NEW_FACILITY',
+          name: 'Private Facility Name',
+          clientRef: 'private-facility-ref',
+          id: null,
+          counts: { buildings: 0, spaces: 0, systems: 0, assets: 1 },
+          records: [{
+            row: 2,
+            kind: 'ASSET',
+            name: 'Private Asset Name',
+            clientRef: 'private-asset-ref',
+            parentRef: 'private-facility-ref',
+            status: 'ACTIVE',
+          }],
+        }],
+      });
+    });
+    const commit = vi.fn((_variables: unknown, options: MutationOptions<{ imported: number }>) => {
+      options.onSuccess?.({ imported: 2 });
+    });
+    api.validateImport.mockReturnValue(idleMutation(validate));
+    api.importPortfolio.mockReturnValue(idleMutation(commit));
+    renderPage();
+
+    await user.click(screen.getByTestId('button-import-registry'));
+    expect(screen.getByTestId('dialog-portfolio-import')).toBeVisible();
+    await selectCsv(user, 'private CSV content');
+    await user.click(screen.getByTestId('button-submit-portfolio-import'));
+
+    const previewFilter = await screen.findByTestId('input-filter-import-preview');
+    await user.type(previewFilter, 'Private Asset Name');
+    expect(screen.getByText('Private Asset Name')).toBeVisible();
+    await user.click(screen.getByTestId('button-clear-import-preview-filter'));
+    expect(previewFilter).toHaveValue('');
+
+    await user.click(screen.getByTestId('button-submit-portfolio-import'));
+    expect(commit).toHaveBeenCalledOnce();
+    expect(screen.queryByTestId('dialog-portfolio-import')).not.toBeInTheDocument();
   });
 
   it('has no serious or critical accessibility violations on the registry and its dialogs', async () => {
