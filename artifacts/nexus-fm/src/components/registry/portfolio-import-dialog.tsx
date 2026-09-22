@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { CheckCircle2, ChevronDown, ChevronRight, Download, FileWarning, Search, Upload, X } from 'lucide-react';
 import {
   downloadFacilityPortfolioImportTemplate,
@@ -53,6 +53,39 @@ function includesPreviewQuery(
 ) {
   return [item.name, item.code, item.clientRef, item.kind]
     .some((value) => value?.toLowerCase().includes(query));
+}
+
+function HighlightedPreviewText({ value, query }: {
+  value: string;
+  query: string;
+}) {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!normalizedQuery) return value;
+
+  const parts: ReactNode[] = [];
+  const normalizedValue = value.toLowerCase();
+  let cursor = 0;
+  let matchIndex = normalizedValue.indexOf(normalizedQuery);
+
+  while (matchIndex !== -1) {
+    if (matchIndex > cursor) parts.push(value.slice(cursor, matchIndex));
+    const matchEnd = matchIndex + normalizedQuery.length;
+    parts.push(
+      <mark
+        key={`${matchIndex}-${matchEnd}`}
+        className="rounded-sm bg-primary/15 px-0.5 font-semibold text-inherit underline decoration-2 underline-offset-2"
+        data-testid="highlight-import-preview-match"
+      >
+        {value.slice(matchIndex, matchEnd)}
+      </mark>,
+    );
+    cursor = matchEnd;
+    matchIndex = normalizedValue.indexOf(normalizedQuery, cursor);
+  }
+
+  if (cursor === 0) return value;
+  if (cursor < value.length) parts.push(value.slice(cursor));
+  return parts;
 }
 
 function flattenFacilityHierarchy(facility: PortfolioImportFacilityGroup): HierarchyRecord[] {
@@ -133,7 +166,12 @@ function FacilityPreviewGroup({ facility, index, filter }: {
             : <ChevronRight className="mt-0.5 size-4 shrink-0" aria-hidden="true" />}
           <span className="min-w-0 flex-1">
             <span className="flex flex-wrap items-center gap-2">
-              <span className="truncate text-sm font-medium">{facility.name}</span>
+              <span className="truncate text-sm font-medium">
+                <HighlightedPreviewText value={facility.name} query={normalizedFilter} />
+              </span>
+              <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-muted-foreground">
+                <HighlightedPreviewText value="FACILITY" query={normalizedFilter} />
+              </span>
               <span
                 className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-muted-foreground"
                 data-testid={`status-import-facility-${index}`}
@@ -145,8 +183,14 @@ function FacilityPreviewGroup({ facility, index, filter }: {
               className="block truncate font-mono text-xs text-muted-foreground"
               data-testid={`identifier-import-facility-${index}`}
             >
-               {isExistingFacility ? `ID registry: ${facility.id}` : `ref CSV: ${facility.clientRef}`}
-               {facility.code ? ` · kode: ${facility.code}` : ''}
+               {isExistingFacility ? 'ID registry: ' : 'ref CSV: '}
+               <HighlightedPreviewText
+                 value={isExistingFacility ? (facility.id ?? facility.clientRef) : facility.clientRef}
+                 query={normalizedFilter}
+               />
+               {facility.code ? (
+                 <> · kode: <HighlightedPreviewText value={facility.code} query={normalizedFilter} /></>
+               ) : null}
             </span>
           </span>
           <span className="shrink-0 text-xs text-muted-foreground">
@@ -182,17 +226,21 @@ function FacilityPreviewGroup({ facility, index, filter }: {
                     data-testid={`row-import-preview-${record.row}`}
                   >
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <span className="font-medium">{record.name}</span>
+                      <span className="font-medium">
+                        <HighlightedPreviewText value={record.name} query={normalizedFilter} />
+                      </span>
                       <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-muted-foreground">
-                        {record.kind}
+                        <HighlightedPreviewText value={record.kind} query={normalizedFilter} />
                       </span>
                       {record.status === 'INACTIVE' && (
                         <span className="text-[10px] font-medium text-muted-foreground">TIDAK AKTIF</span>
                       )}
                     </div>
                     <div className="mt-1 break-all font-mono text-[11px] text-muted-foreground">
-                      ref: {record.clientRef}
-                      {record.code ? ` · code: ${record.code}` : ''}
+                       ref: <HighlightedPreviewText value={record.clientRef} query={normalizedFilter} />
+                       {record.code ? (
+                         <> · code: <HighlightedPreviewText value={record.code} query={normalizedFilter} /></>
+                       ) : null}
                       {record.parentRef ? ` · parent: ${record.parentRef}` : ''}
                       {record.systemRef ? ` · system: ${record.systemRef}` : ''}
                       {record.id ? ` · id: ${record.id}` : ''}

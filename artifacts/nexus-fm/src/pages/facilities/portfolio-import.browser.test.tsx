@@ -203,6 +203,27 @@ describe('facility portfolio import browser regressions', () => {
     expect(screen.getByText('Air Handler')).toBeVisible();
     expect(screen.queryByText('Main Building')).not.toBeInTheDocument();
     expect(screen.getByText('1 match')).toBeVisible();
+    expect(screen.getByTestId('highlight-import-preview-match')).toHaveTextContent('ASSET');
+    expect(screen.getByTestId('highlight-import-preview-match').tagName).toBe('MARK');
+    expect(screen.getByTestId('highlight-import-preview-match')).toHaveClass('underline', 'font-semibold');
+
+    await user.clear(previewFilter);
+    await user.type(previewFilter, 'handler');
+    expect(screen.getByTestId('highlight-import-preview-match')).toHaveTextContent('Handler');
+
+    await user.clear(previewFilter);
+    await user.type(previewFilter, 'asset-a');
+    expect(screen.getByTestId('highlight-import-preview-match')).toHaveTextContent('asset-a');
+
+    await user.clear(previewFilter);
+    await user.type(previewFilter, 'bldg-a');
+    expect(screen.getByTestId('highlight-import-preview-match')).toHaveTextContent('BLDG-A');
+
+    await user.clear(previewFilter);
+    await user.type(previewFilter, 'north campus');
+    expect(screen.getByTestId('highlight-import-preview-match')).toHaveTextContent('North Campus');
+    expect(screen.queryByTestId('list-import-facility-records-0')).not.toBeInTheDocument();
+    expect(screen.getByText(/turunannya tetap diciutkan/i)).toBeVisible();
 
     await user.clear(previewFilter);
     expect(screen.getByText('North Campus')).toBeVisible();
