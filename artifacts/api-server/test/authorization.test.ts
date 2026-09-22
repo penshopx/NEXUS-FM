@@ -53,6 +53,7 @@ import {
   ensureFoundationUser,
   getAppSession,
 } from "../src/services/foundation.ts";
+import { createAccessRevisionBus } from "../src/services/access-revisions.ts";
 import { createAuthorizationRouter } from "../src/routes/authorization.ts";
 import { createFacilitiesRouter, waitForCsvDrain } from "../src/routes/facilities.ts";
 import {
@@ -147,6 +148,31 @@ test("canonical seven roles are unchanged and catalog is idempotent", async () =
   const rolePermissions = await db.select().from(rolePermissionsTable);
   assert.ok(rolePermissions.length >= roleCapabilityRows.length);
   assert.ok(canonicalPermissions.includes("WORK_ORDER.VERIFY"));
+});
+
+test("access revision events fan out between API instances through PostgreSQL", async () => {
+  const firstInstance = createAccessRevisionBus(pool);
+  const secondInstance = createAccessRevisionBus(pool);
+  const event = {
+    userId: randomUUID(),
+    organizationId: randomUUID(),
+    reason: "MEMBERSHIP_CHANGED" as const,
+  };
+  const received = new Promise<typeof event>((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error("Cross-instance access revision timed out")), 2_000);
+    void secondInstance.subscribe(event.userId, event.organizationId, (delivered) => {
+      clearTimeout(timeout);
+      resolve(delivered);
+    }).then(async () => {
+      await firstInstance.publish(event);
+    }).catch(reject);
+  });
+
+  try {
+    assert.deepEqual(await received, event);
+  } finally {
+    await Promise.all([firstInstance.close(), secondInstance.close()]);
+  }
 });
 
 test("portfolio CSV parser requires exact headers and preserves stable references", () => {

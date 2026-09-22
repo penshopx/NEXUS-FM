@@ -422,9 +422,8 @@ router.put("/roles/:roleId/permissions", async (req, res): Promise<void> => {
     userId: userRoleBindingsTable.userId,
     organizationId: userRoleBindingsTable.organizationId,
   }).from(userRoleBindingsTable).where(eq(userRoleBindingsTable.roleId, req.params.roleId));
-  for (const binding of affectedBindings) {
-    publishAccessRevision({ ...binding, reason: "ROLE_PERMISSIONS_CHANGED" });
-  }
+  await Promise.all(affectedBindings.map((binding) =>
+    publishAccessRevision({ ...binding, reason: "ROLE_PERMISSIONS_CHANGED" })));
   res.set("ETag", updatedRole!.policyVersion);
   res.json({ permissions: rows, policyVersion: updatedRole!.policyVersion });
 });
@@ -987,7 +986,7 @@ router.delete("/users/:userId/memberships/:organizationId", async (req, res): Pr
     return;
   }
 
-  publishAccessRevision({
+  await publishAccessRevision({
     userId: revoked.userId,
     organizationId: revoked.organizationId,
     reason: "MEMBERSHIP_CHANGED",
@@ -1106,7 +1105,7 @@ router.post("/users/:userId/role-bindings", async (req, res): Promise<void> => {
     return;
   }
   const [scopeTarget] = await resolveBindingScopeTargets([binding], database);
-  publishAccessRevision({
+  await publishAccessRevision({
     userId: binding.userId,
     organizationId: binding.organizationId,
     reason: "ROLE_BINDING_CHANGED",
@@ -1201,7 +1200,7 @@ router.patch("/users/:userId/role-bindings/:bindingId", async (req, res): Promis
     .from(rolesTable)
     .where(eq(rolesTable.id, after.roleId));
   const [scopeTarget] = await resolveBindingScopeTargets([after], database);
-  publishAccessRevision({
+  await publishAccessRevision({
     userId: after.userId,
     organizationId: after.organizationId,
     reason: "ROLE_BINDING_CHANGED",
@@ -1259,7 +1258,7 @@ router.delete("/users/:userId/role-bindings/:bindingId", async (req, res): Promi
     .from(rolesTable)
     .where(eq(rolesTable.id, after.roleId));
   const [scopeTarget] = await resolveBindingScopeTargets([after], database);
-  publishAccessRevision({
+  await publishAccessRevision({
     userId: after.userId,
     organizationId: after.organizationId,
     reason: "ROLE_BINDING_CHANGED",
@@ -1304,12 +1303,11 @@ router.get("/me/access-revision/events", async (req, res): Promise<void> => {
     Connection: "keep-alive",
     "X-Accel-Buffering": "no",
   });
-  res.flushHeaders();
-  res.write("retry: 3000\n\n");
-
-  const unsubscribe = subscribeToAccessRevisions(user.id, organizationId, (event) => {
+  const unsubscribe = await subscribeToAccessRevisions(user.id, organizationId, (event) => {
     res.write(`event: access-revision\ndata: ${JSON.stringify({ reason: event.reason })}\n\n`);
   });
+  res.flushHeaders();
+  res.write("retry: 3000\n\n");
   const heartbeat = setInterval(() => res.write(": heartbeat\n\n"), 20_000);
   req.on("close", () => {
     clearInterval(heartbeat);
