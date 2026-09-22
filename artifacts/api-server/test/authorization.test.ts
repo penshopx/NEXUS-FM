@@ -316,6 +316,8 @@ test("portfolio import preview summarizes the hierarchy without registry or audi
     assert.deepEqual(JSON.parse(responseBody), {
       total: 6,
       facilities: 1,
+      newFacilities: 1,
+      existingFacilities: 1,
       buildings: 2,
       spaces: 1,
       systems: 1,

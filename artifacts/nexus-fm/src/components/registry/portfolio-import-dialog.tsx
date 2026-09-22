@@ -611,6 +611,16 @@ export function PortfolioImportDialog({
               <AlertTitle>Tinjau perubahan sebelum mengimpor</AlertTitle>
               <AlertDescription>
                 <p className="mb-3">Validasi berhasil. Commit akan membuat {preview.total} catatan.</p>
+                <dl className="mb-2 grid grid-cols-2 gap-2" aria-label="Ringkasan asal fasilitas">
+                  <div className="rounded-md border bg-background p-2 text-center" data-testid="summary-import-new-facilities">
+                    <dt className="text-xs text-muted-foreground">Fasilitas baru</dt>
+                    <dd className="text-lg font-semibold">{preview.newFacilities}</dd>
+                  </div>
+                  <div className="rounded-md border bg-background p-2 text-center" data-testid="summary-import-existing-facilities">
+                    <dt className="text-xs text-muted-foreground">Fasilitas registry yang ada</dt>
+                    <dd className="text-lg font-semibold">{preview.existingFacilities}</dd>
+                  </div>
+                </dl>
                 <dl className="grid grid-cols-2 gap-2 sm:grid-cols-5">
                   {[
                     ['Facilities', preview.facilities],

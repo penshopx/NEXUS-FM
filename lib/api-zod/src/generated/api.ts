@@ -702,6 +702,10 @@ export const ImportFacilityPortfolioResponse = zod.object({
 
 export const validateFacilityPortfolioImportResponseFacilitiesMin = 0;
 
+export const validateFacilityPortfolioImportResponseNewFacilitiesMin = 0;
+
+export const validateFacilityPortfolioImportResponseExistingFacilitiesMin = 0;
+
 export const validateFacilityPortfolioImportResponseBuildingsMin = 0;
 
 export const validateFacilityPortfolioImportResponseSpacesMin = 0;
@@ -725,6 +729,8 @@ export const validateFacilityPortfolioImportResponseFacilityGroupsItemRecordsIte
 export const ValidateFacilityPortfolioImportResponse = zod.object({
   "total": zod.number().int().min(1),
   "facilities": zod.number().int().min(validateFacilityPortfolioImportResponseFacilitiesMin),
+  "newFacilities": zod.number().int().min(validateFacilityPortfolioImportResponseNewFacilitiesMin).describe('Number of facilities that commit will create.'),
+  "existingFacilities": zod.number().int().min(validateFacilityPortfolioImportResponseExistingFacilitiesMin).describe('Number of existing registry facilities that will receive imported descendants.'),
   "buildings": zod.number().int().min(validateFacilityPortfolioImportResponseBuildingsMin),
   "spaces": zod.number().int().min(validateFacilityPortfolioImportResponseSpacesMin),
   "systems": zod.number().int().min(validateFacilityPortfolioImportResponseSystemsMin),

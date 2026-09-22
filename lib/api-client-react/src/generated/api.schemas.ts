@@ -114,6 +114,16 @@ export interface PortfolioImportPreview {
   total: number;
   /** @minimum 0 */
   facilities: number;
+  /**
+     * Number of facilities that commit will create.
+     * @minimum 0
+     */
+  newFacilities: number;
+  /**
+     * Number of existing registry facilities that will receive imported descendants.
+     * @minimum 0
+     */
+  existingFacilities: number;
   /** @minimum 0 */
   buildings: number;
   /** @minimum 0 */

@@ -1211,10 +1211,18 @@ components:
     PortfolioImportPreview:
       type: object
       additionalProperties: false
-      required: [total, facilities, buildings, spaces, systems, assets, facilityGroups]
+      required: [total, facilities, newFacilities, existingFacilities, buildings, spaces, systems, assets, facilityGroups]
       properties:
         total: {type: integer, minimum: 1}
         facilities: {type: integer, minimum: 0}
+        newFacilities:
+          type: integer
+          minimum: 0
+          description: Number of facilities that commit will create.
+        existingFacilities:
+          type: integer
+          minimum: 0
+          description: Number of existing registry facilities that will receive imported descendants.
         buildings: {type: integer, minimum: 0}
         spaces: {type: integer, minimum: 0}
         systems: {type: integer, minimum: 0}

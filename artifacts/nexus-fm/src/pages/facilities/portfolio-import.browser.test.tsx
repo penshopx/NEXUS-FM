@@ -121,6 +121,8 @@ describe('facility portfolio import browser regressions', () => {
       options.onSuccess?.({
         total: 8,
         facilities: 2,
+        newFacilities: 1,
+        existingFacilities: 1,
         buildings: 3,
         spaces: 1,
         systems: 1,
@@ -176,6 +178,10 @@ describe('facility portfolio import browser regressions', () => {
     );
     expect(await screen.findByTestId('alert-import-preview')).toHaveTextContent(
       'Validasi berhasil. Commit akan membuat 8 catatan.',
+    );
+    expect(screen.getByTestId('summary-import-new-facilities')).toHaveTextContent('Fasilitas baru1');
+    expect(screen.getByTestId('summary-import-existing-facilities')).toHaveTextContent(
+      'Fasilitas registry yang ada1',
     );
     expect(analytics.track).toHaveBeenCalledWith('portfolio_import', {
       stage: 'validation_success',
@@ -320,6 +326,8 @@ describe('facility portfolio import browser regressions', () => {
       options.onSuccess?.({
         total: 2,
         facilities: 1,
+        newFacilities: 1,
+        existingFacilities: 0,
         buildings: 0,
         spaces: 0,
         systems: 0,

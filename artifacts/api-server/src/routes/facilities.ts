@@ -819,14 +819,17 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
           summary[record.kind] += 1;
         }
         if (!commit) {
+          const facilityGroups = [...previewGroups.values()];
           return {
             total: createdCount,
             facilities: summary.FACILITY,
+            newFacilities: facilityGroups.filter((group) => group.facilityStatus === "NEW_FACILITY").length,
+            existingFacilities: facilityGroups.filter((group) => group.facilityStatus === "EXISTING_FACILITY").length,
             buildings: summary.BUILDING,
             spaces: summary.SPACE,
             systems: summary.SYSTEM,
             assets: summary.ASSET,
-            facilityGroups: [...previewGroups.values()],
+            facilityGroups,
           };
         }
         const importId = randomUUID();
