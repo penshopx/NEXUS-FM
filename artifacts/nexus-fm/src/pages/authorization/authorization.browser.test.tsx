@@ -716,6 +716,51 @@ describe('authorization administration browser regressions', () => {
     );
   });
 
+  it.each([
+    {
+      analyticsState: 'no injected tracker',
+      configureAnalytics: () => {
+        delete window.umami;
+      },
+    },
+    {
+      analyticsState: 'a tracker that throws',
+      configureAnalytics: () => {
+        analytics.track.mockImplementation(() => {
+          throw new Error('analytics unavailable');
+        });
+      },
+    },
+  ])('clears every member-search state with $analyticsState', async ({ configureAnalytics }) => {
+    const user = userEvent.setup();
+    window.history.replaceState(
+      null,
+      '',
+      '/authorization?query=Target&organizationId=org-2&organizationName=Acme+Facilities&organizationSlug=acme-facilities&page=2',
+    );
+    api.searchMembers.mockReturnValue({
+      data: { items: [member], page: 2, limit: 20, total: 41 },
+      isFetching: false,
+      isError: false,
+    });
+    configureAnalytics();
+    renderPage();
+
+    await user.click(await screen.findByTestId('member-result-target-user-org-1'));
+    expect(screen.getByRole('heading', { name: /Target Admin/ })).toBeVisible();
+    expect(window.location.search).toContain('memberId=target-user');
+    expect(window.location.search).toContain('memberOrganizationId=org-1');
+
+    await user.click(screen.getByTestId('button-clear-member-search'));
+
+    expect(screen.getByTestId('input-target-user')).toHaveValue('');
+    expect(screen.getByTestId('button-member-organization')).not.toHaveTextContent('Acme Facilities');
+    expect(screen.queryByTestId('member-search-results')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /Target Admin/ })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('button-clear-member-search')).not.toBeInTheDocument();
+    expect(window.location.search).toBe('');
+  });
+
   it('renders the in-app 403 state when no administration permission is granted', async () => {
     api.myPermissions.mockReturnValue({
       data: { organizationId: 'org-1', permissions: [] },
