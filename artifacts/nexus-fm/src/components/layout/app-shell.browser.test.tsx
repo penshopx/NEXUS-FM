@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { Router } from 'wouter';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { expectNoHighImpactAccessibilityViolations } from '@/test/accessibility';
@@ -40,10 +41,16 @@ vi.mock('@workspace/api-client-react', async () => {
       isLoading: false,
     }),
     useListOrganizations: () => ({
-      data: [{
-        organization: { id: 'org-1', name: 'Nexus Operations' },
-        role: 'PLATFORM_ADMIN',
-      }],
+      data: [
+        {
+          organization: { id: 'org-1', name: 'Nexus Operations' },
+          role: 'PLATFORM_ADMIN',
+        },
+        {
+          organization: { id: 'org-2', name: 'Nexus Facilities' },
+          role: 'FACILITY_ADMIN',
+        },
+      ],
       isLoading: false,
     }),
     useSelectOrganization: () => ({
@@ -62,6 +69,7 @@ vi.mock('@workspace/api-client-react', async () => {
     }),
   };
 });
+
 
 function renderShell() {
   const client = new QueryClient({
@@ -127,6 +135,21 @@ describe('authenticated AppShell accessibility regressions', () => {
     const signOutButton = screen.getByRole('button', { name: 'Keluar' });
     expect(signOutButton).toHaveAttribute('aria-label', 'Keluar');
     expect(screen.getByRole('navigation', { name: 'Navigasi utama' })).toBeVisible();
+
+    await expectNoHighImpactAccessibilityViolations();
+  });
+
+  it('keeps organization options named and exposes their selection state in the expanded menu', async () => {
+    const user = userEvent.setup();
+    renderShell();
+
+    await user.click(screen.getByRole('button', {
+      name: 'Pilih organisasi, organisasi saat ini: Nexus Operations',
+    }));
+
+    expect(screen.getByRole('menu')).toBeVisible();
+    expect(screen.getByRole('menuitemradio', { name: 'Nexus Operations' })).toBeChecked();
+    expect(screen.getByRole('menuitemradio', { name: 'Nexus Facilities' })).not.toBeChecked();
 
     await expectNoHighImpactAccessibilityViolations();
   });

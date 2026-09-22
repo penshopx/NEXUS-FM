@@ -8,12 +8,13 @@ import {
   useSelectOrganization,
   useGetMyPermissions,
 } from '@workspace/api-client-react';
-import { Building2, LayoutDashboard, Shield, ChevronDown, Check, LogOut, KeyRound, MapPin } from 'lucide-react';
+import { Building2, LayoutDashboard, Shield, ChevronDown, LogOut, KeyRound, MapPin } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -100,19 +101,21 @@ export function AppShell({ children }: { children: ReactNode }) {
                     Organisasi yang Tersedia
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  {orgs?.map((orgAccess) => (
-                    <DropdownMenuItem
-                      key={orgAccess.organization.id}
-                      onClick={() => handleSelectOrg(orgAccess.organization.id)}
-                      disabled={selectOrg.isPending}
-                      className="flex items-center justify-between cursor-pointer"
-                    >
-                      <span className="truncate">{orgAccess.organization.name}</span>
-                      {session.activeOrganization?.organization.id === orgAccess.organization.id && (
-                        <Check className="size-4 text-primary" />
-                      )}
-                    </DropdownMenuItem>
-                  ))}
+                  <DropdownMenuRadioGroup
+                    value={session.activeOrganization?.organization.id}
+                    onValueChange={handleSelectOrg}
+                  >
+                    {orgs?.map((orgAccess) => (
+                      <DropdownMenuRadioItem
+                        key={orgAccess.organization.id}
+                        value={orgAccess.organization.id}
+                        disabled={selectOrg.isPending}
+                        className="cursor-pointer"
+                      >
+                        <span className="truncate">{orgAccess.organization.name}</span>
+                      </DropdownMenuRadioItem>
+                    ))}
+                  </DropdownMenuRadioGroup>
                   {orgs?.length === 0 && (
                     <div className="px-2 py-4 text-center text-xs text-muted-foreground">
                        Tidak ada organisasi yang tersedia.
