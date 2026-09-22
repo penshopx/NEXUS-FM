@@ -3,7 +3,7 @@ name: SKKNI building governance
 description: Product scope and role-modeling direction for NEXUS-FM.
 ---
 
-NEXUS-FM is primarily a governance system for the execution, operation, inspection, and maintenance of buildings, warehouses, and supporting infrastructure facilities. The confirmed market focus is asset/facility governance, not a general construction ERP or full warehouse inventory system. Its workforce model should accommodate construction job classifications, qualification levels, and competency references based on the supplied SKKNI list.
+The product is named **TATABANGUN**, with the descriptor **Sistem Tata Kelola Gedung, Gudang, dan Infrastruktur** and tagline **Kelola fasilitasnya. Pastikan kompetensinya. Buktikan kepatuhannya.** It is primarily a governance system for the execution, operation, inspection, and maintenance of buildings, warehouses, and supporting infrastructure facilities. The confirmed market focus is asset/facility governance, not a general construction ERP or full warehouse inventory system. Its workforce model should accommodate construction job classifications, qualification levels, and competency references based on the supplied SKKNI list.
 
 For construction-business context, support the general business nature, BUJKN/BUJKA business categories, and the BG building classification. BG001–BG009 identify building-construction subclassifications, each with small, medium, or large business qualification. Keep this business/project classification separate from personnel competencies and system access roles.
 
