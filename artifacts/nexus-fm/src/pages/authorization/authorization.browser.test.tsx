@@ -19,6 +19,7 @@ const api = vi.hoisted(() => ({
   revokeBinding: vi.fn<AuthorizationApiHookMock<'useRevokeUserRoleBinding'>>(),
   session: vi.fn<AuthorizationApiHookMock<'useGetSession'>>(),
   auditLogs: vi.fn<AuthorizationApiHookMock<'useGetAuthorizationAuditLogs'>>(),
+  exportBindings: vi.fn(),
 }));
 
 const analytics = vi.hoisted(() => ({
@@ -52,6 +53,7 @@ vi.mock('@workspace/api-client-react', () => ({
   useRevokeUserRoleBinding: api.revokeBinding,
   useGetSession: api.session,
   useGetAuthorizationAuditLogs: api.auditLogs,
+  exportUserRoleBindings: api.exportBindings,
   getGetRolePermissionsQueryKey: (id: string) => ['role-permissions', id],
   getGetAuthorizationAuditLogsQueryKey: () => ['audit-logs'],
   getGetMyPermissionsQueryKey: () => ['my-permissions'],
@@ -207,12 +209,23 @@ describe('authorization administration browser regressions', () => {
       data: { activeOrganization: { organization: { id: 'org-1' } } },
     });
     api.auditLogs.mockReturnValue({ data: [], isLoading: false });
+    api.exportBindings.mockResolvedValue('role,status\nPLATFORM_ADMIN,ACTIVE');
+    Object.defineProperty(URL, 'createObjectURL', {
+      configurable: true,
+      value: vi.fn(() => 'blob:access-review'),
+    });
+    Object.defineProperty(URL, 'revokeObjectURL', {
+      configurable: true,
+      value: vi.fn(),
+    });
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
   });
 
   afterEach(() => {
     cleanup();
     delete window.umami;
     window.history.replaceState(null, '', '/authorization');
+    vi.restoreAllMocks();
   });
 
   it('lets an authorized administrator open every permitted tab', async () => {
@@ -1358,6 +1371,94 @@ describe('authorization administration browser regressions', () => {
     expect(revoke).toHaveBeenCalledOnce();
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
     expect(trigger).toHaveFocus();
+  });
+
+  it('tracks a successful access-review export with boolean filter dimensions only', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await openBindingsForMember(user);
+    await user.click(screen.getByTestId('select-binding-role-filter'));
+    await user.click(await screen.findByRole('option', { name: 'Platform Administrator' }));
+    await user.click(screen.getByTestId('select-binding-status-filter'));
+    await user.click(await screen.findByRole('option', { name: 'Ditangguhkan' }));
+    analytics.track.mockClear();
+
+    await user.click(screen.getByTestId('button-export-bindings'));
+
+    await waitFor(() => expect(api.exportBindings).toHaveBeenCalledWith(member.userId, {
+      roleCode: 'PLATFORM_ADMIN',
+      status: 'SUSPENDED',
+    }));
+    expect(URL.createObjectURL).toHaveBeenCalledWith(expect.any(Blob));
+    expect(HTMLAnchorElement.prototype.click).toHaveBeenCalledOnce();
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:access-review');
+    expect(await screen.findByText('Access review exported')).toBeVisible();
+    expect(analytics.track).toHaveBeenCalledOnce();
+    expect(analytics.track).toHaveBeenCalledWith('access_review_export', {
+      outcome: 'success',
+      role_filter_active: true,
+      status_filter_active: true,
+    });
+
+    const payload = JSON.stringify(analytics.track.mock.calls);
+    for (const privateValue of [
+      member.userId,
+      member.displayName,
+      member.email,
+      'PLATFORM_ADMIN',
+      'SUSPENDED',
+    ]) {
+      expect(payload).not.toContain(privateValue);
+    }
+  });
+
+  it('tracks a failed access-review export without private values or server error text', async () => {
+    const user = userEvent.setup();
+    const serverError = 'Export denied for target@example.test and target-user';
+    api.exportBindings.mockRejectedValue({ data: { error: serverError } });
+    renderPage();
+    await openBindingsForMember(user);
+    analytics.track.mockClear();
+
+    await user.click(screen.getByTestId('button-export-bindings'));
+
+    expect(await screen.findByText('Failed to export access review')).toBeVisible();
+    expect(screen.getByText(serverError)).toBeVisible();
+    expect(analytics.track).toHaveBeenCalledOnce();
+    expect(analytics.track).toHaveBeenCalledWith('access_review_export', {
+      outcome: 'failure',
+      role_filter_active: false,
+      status_filter_active: false,
+    });
+
+    const payload = JSON.stringify(analytics.track.mock.calls);
+    for (const privateValue of [
+      member.userId,
+      member.displayName,
+      member.email,
+      role.code,
+      'ACTIVE',
+      serverError,
+    ]) {
+      expect(payload).not.toContain(privateValue);
+    }
+  });
+
+  it('completes and confirms an access-review download when analytics throws', async () => {
+    const user = userEvent.setup();
+    analytics.track.mockImplementation(() => {
+      throw new Error('analytics unavailable');
+    });
+    renderPage();
+    await openBindingsForMember(user);
+
+    await user.click(screen.getByTestId('button-export-bindings'));
+
+    await waitFor(() => expect(api.exportBindings).toHaveBeenCalledOnce());
+    expect(HTMLAnchorElement.prototype.click).toHaveBeenCalledOnce();
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:access-review');
+    expect(await screen.findByText('Access review exported')).toBeVisible();
+    expect(screen.getByTestId('button-export-bindings')).toBeEnabled();
   });
 
   it('keeps authorization audit details read-only', async () => {
