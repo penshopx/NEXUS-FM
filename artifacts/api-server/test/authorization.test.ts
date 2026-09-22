@@ -70,6 +70,7 @@ import {
 import { createAccessRevisionBus } from "../src/services/access-revisions.ts";
 import { createAuthorizationRouter } from "../src/routes/authorization.ts";
 import { createFacilitiesRouter, waitForCsvDrain } from "../src/routes/facilities.ts";
+import { createWorkOrderScopeGuard } from "../src/routes/work-order-scope.ts";
 import {
   authorizeRegistryObject,
   parsePortfolioImport,
@@ -880,6 +881,167 @@ test("work scope resolvers reject spoofed, inactive, deleted, and cross-organiza
     organizationsTable.id,
     [organizationA.id, organizationB.id],
   ));
+});
+
+test("work-order route guards reject unverified team and vendor scope before resource access", async () => {
+  const organizationA = (await db.insert(organizationsTable).values({
+    name: "Work Route A",
+    slug: `work-route-a-${randomUUID()}`,
+  }).returning())[0]!;
+  const organizationB = (await db.insert(organizationsTable).values({
+    name: "Work Route B",
+    slug: `work-route-b-${randomUUID()}`,
+  }).returning())[0]!;
+  const actor = await makeFixture("VENDOR", "VENDOR_ASSIGNMENT", randomUUID(), organizationA.id);
+  await db.insert(userContextsTable).values({
+    userId: actor.userId,
+    activeOrganizationId: organizationA.id,
+  }).onConflictDoUpdate({
+    target: userContextsTable.userId,
+    set: { activeOrganizationId: organizationA.id },
+  });
+  const [inactiveTeam] = await db.insert(teamsTable).values({
+    organizationId: organizationA.id,
+    name: "Inactive route team",
+    code: `INACTIVE-${randomUUID()}`,
+    status: "INACTIVE",
+  }).returning();
+  const [crossOrganizationTeam] = await db.insert(teamsTable).values({
+    organizationId: organizationB.id,
+    name: "Cross organization route team",
+    code: `CROSS-${randomUUID()}`,
+    status: "ACTIVE",
+  }).returning();
+  const [activeTeam] = await db.insert(teamsTable).values({
+    organizationId: organizationA.id,
+    name: "Active route team",
+    code: `ACTIVE-${randomUUID()}`,
+    status: "ACTIVE",
+  }).returning();
+  const [inactiveVendorAssignment] = await db.insert(vendorAssignmentsTable).values({
+    organizationId: organizationA.id,
+    name: "Inactive route vendor",
+    code: `INACTIVE-${randomUUID()}`,
+    status: "INACTIVE",
+  }).returning();
+  const [crossOrganizationVendorAssignment] = await db.insert(vendorAssignmentsTable).values({
+    organizationId: organizationB.id,
+    name: "Cross organization route vendor",
+    code: `CROSS-${randomUUID()}`,
+    status: "ACTIVE",
+  }).returning();
+  const [activeVendorAssignment] = await db.insert(vendorAssignmentsTable).values({
+    organizationId: organizationA.id,
+    name: "Active route vendor",
+    code: `ACTIVE-${randomUUID()}`,
+    status: "ACTIVE",
+  }).returning();
+  await db.insert(vendorAssignmentMembershipsTable).values([
+    {
+      organizationId: organizationA.id,
+      vendorAssignmentId: inactiveVendorAssignment!.id,
+      userId: actor.userId,
+      status: "ACTIVE",
+    },
+    {
+      organizationId: organizationA.id,
+      vendorAssignmentId: activeVendorAssignment!.id,
+      userId: actor.userId,
+      status: "ACTIVE",
+    },
+  ]);
+
+  let resourceReads = 0;
+  let resourceWrites = 0;
+  const app = express();
+  app.use(express.json());
+  const guardDependencies = {
+    currentUser: async () =>
+      (await db.select().from(usersTable).where(eq(usersTable.id, actor.userId)))[0] ?? null,
+  };
+  app.get(
+    "/work-orders/team/:teamId/:scopeVerified",
+    createWorkOrderScopeGuard("TEAM", "teamId", guardDependencies),
+    (_req, res) => {
+      resourceReads += 1;
+      res.json(res.locals.verifiedWorkOrderScope);
+    },
+  );
+  app.post(
+    "/work-orders/vendor/:vendorAssignmentId/:scopeVerified",
+    createWorkOrderScopeGuard("VENDOR_ASSIGNMENT", "vendorAssignmentId", guardDependencies),
+    (_req, res) => {
+      resourceWrites += 1;
+      res.status(201).json(res.locals.verifiedWorkOrderScope);
+    },
+  );
+  const server = createServer(app);
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  assert.ok(address && typeof address !== "string");
+  const base = `http://127.0.0.1:${address.port}`;
+
+  try {
+    const allowedTeam = await fetch(
+      `${base}/work-orders/team/${activeTeam!.id}/false`,
+    );
+    assert.equal(allowedTeam.status, 200);
+    assert.deepEqual(await allowedTeam.json(), {
+      organizationId: organizationA.id,
+      teamId: activeTeam!.id,
+      scopeVerified: true,
+    });
+    const allowedVendor = await fetch(
+      `${base}/work-orders/vendor/${activeVendorAssignment!.id}/false`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          scopeVerified: false,
+          organizationId: organizationB.id,
+          vendorUserId: randomUUID(),
+        }),
+      },
+    );
+    assert.equal(allowedVendor.status, 201);
+    assert.deepEqual(await allowedVendor.json(), {
+      organizationId: organizationA.id,
+      vendorAssignmentId: activeVendorAssignment!.id,
+      vendorUserId: actor.userId,
+      scopeVerified: true,
+    });
+    for (const teamId of [crossOrganizationTeam!.id, inactiveTeam!.id]) {
+      const response = await fetch(`${base}/work-orders/team/${teamId}/true`);
+      assert.equal(response.status, 404);
+    }
+    for (const vendorAssignmentId of [
+      crossOrganizationVendorAssignment!.id,
+      inactiveVendorAssignment!.id,
+    ]) {
+      const response = await fetch(
+        `${base}/work-orders/vendor/${vendorAssignmentId}/true`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            scopeVerified: true,
+            organizationId: actor.organizationId,
+            vendorUserId: actor.userId,
+          }),
+        },
+      );
+      assert.equal(response.status, 404);
+    }
+    assert.equal(resourceReads, 1);
+    assert.equal(resourceWrites, 1);
+  } finally {
+    await new Promise<void>((resolve, reject) =>
+      server.close((error) => error ? reject(error) : resolve()));
+    await db.delete(organizationsTable).where(inArray(
+      organizationsTable.id,
+      [organizationA.id, organizationB.id],
+    ));
+  }
 });
 
 test("platform administration is separated from operational access", async () => {
