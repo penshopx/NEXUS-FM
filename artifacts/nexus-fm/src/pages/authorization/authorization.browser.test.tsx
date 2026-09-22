@@ -1092,6 +1092,7 @@ describe('authorization administration browser regressions', () => {
       scopeId: null,
       scopeTargetName: member.organizationName,
       scopeTargetStatus: 'RESOLVED',
+      scopeTargetParentPath: [],
       status: 'ACTIVE',
       startsAt: null,
       endsAt: null,
@@ -1123,11 +1124,11 @@ describe('authorization administration browser regressions', () => {
     await openBindingsForMember(user);
 
     await user.click(screen.getByTestId('select-binding-role-filter'));
-    await user.click(await screen.findByRole('option', { name: 'PLATFORM ADMIN' }));
+    await user.click(await screen.findByRole('option', { name: 'Platform Administrator' }));
     await user.click(screen.getByTestId('select-binding-status-filter'));
-    await user.click(await screen.findByRole('option', { name: 'ACTIVE' }));
+    await user.click(await screen.findByRole('option', { name: 'Aktif' }));
 
-    expect(screen.getByTestId('binding-page-summary')).toHaveTextContent('Page 1 of 2 · 21 results');
+    expect(screen.getByTestId('binding-page-summary')).toHaveTextContent('Halaman 1 dari 2 · 21 hasil');
 
     await user.click(screen.getByTestId('button-binding-next-page'));
 
@@ -1143,7 +1144,23 @@ describe('authorization administration browser regressions', () => {
         expect.anything(),
       );
     });
-    expect(screen.getByTestId('binding-page-summary')).toHaveTextContent('Page 1 of 2 · 21 results');
+    await waitFor(() => {
+      expect(analytics.track).toHaveBeenCalledWith('binding_page_recovered', {
+        previous_page: 2,
+        recovered_page: 1,
+        role_filter: 'PLATFORM_ADMIN',
+        status_filter: 'ACTIVE',
+      });
+    });
+    expect(
+      analytics.track.mock.calls.filter(([event]) => event === 'binding_page_recovered'),
+    ).toHaveLength(1);
+    const recoveryCall = JSON.stringify(
+      analytics.track.mock.calls.find(([event]) => event === 'binding_page_recovered'),
+    );
+    expect(recoveryCall).not.toContain(member.userId);
+    expect(recoveryCall).not.toContain(member.organizationId);
+    expect(screen.getByTestId('binding-page-summary')).toHaveTextContent('Halaman 1 dari 2 · 21 hasil');
     expect(screen.getByTestId('button-binding-previous-page')).toBeDisabled();
     expect(screen.getByTestId('button-binding-next-page')).toBeEnabled();
   });

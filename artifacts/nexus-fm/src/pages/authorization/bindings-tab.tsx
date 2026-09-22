@@ -591,6 +591,7 @@ function BindingsManager({ userId, member, canManage }: {
   const [roleFilter, setRoleFilter] = useState<CanonicalRole | 'ALL'>('ALL');
   const [statusFilter, setStatusFilter] = useState<UserRoleBindingStatus | 'ALL'>('ALL');
   const [bindingPage, setBindingPage] = useState(1);
+  const trackedBindingPageRecovery = useRef<string | null>(null);
   const pendingFilterAnalytics = useRef<{
     event: 'binding_filters_applied' | 'binding_filters_cleared';
     roleFilter: CanonicalRole | 'ALL';
@@ -627,9 +628,25 @@ function BindingsManager({ userId, member, canManage }: {
 
   useEffect(() => {
     if (bindings && bindingPage > bindingTotalPages) {
+      const recoveryKey = `${bindingPage}:${bindingTotalPages}:${roleFilter}:${statusFilter}`;
+      if (trackedBindingPageRecovery.current !== recoveryKey) {
+        trackEvent('binding_page_recovered', {
+          previous_page: bindingPage,
+          recovered_page: bindingTotalPages,
+          role_filter: roleFilter,
+          status_filter: statusFilter,
+        });
+        trackedBindingPageRecovery.current = recoveryKey;
+      }
       setBindingPage(bindingTotalPages);
     }
-  }, [bindings, bindingPage, bindingTotalPages]);
+  }, [
+    bindings,
+    bindingPage,
+    bindingTotalPages,
+    roleFilter,
+    statusFilter,
+  ]);
 
   useEffect(() => {
     const pending = pendingFilterAnalytics.current;
