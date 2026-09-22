@@ -61,7 +61,7 @@ export function SystemDetailPage() {
   const { data: building } = useGetBuilding(buildingId || '', { query: { enabled: !!buildingId, queryKey: getGetBuildingQueryKey(buildingId || "") } });
   const { data: facility } = useGetFacility(facilityId || '', { query: { enabled: !!facilityId, queryKey: getGetFacilityQueryKey(facilityId || "") } });
   
-  const pagination = useRegistryCursorPagination();
+  const pagination = useRegistryCursorPagination({ resourceType: 'asset' });
   const limit = 10;
 
   const listParams = { q: pagination.registrySearch, cursor: pagination.cursor, limit };

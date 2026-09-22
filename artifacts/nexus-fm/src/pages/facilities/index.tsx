@@ -24,7 +24,7 @@ export function FacilitiesPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
-  const pagination = useRegistryCursorPagination();
+  const pagination = useRegistryCursorPagination({ resourceType: 'facility' });
   const limit = 10;
 
   const listParams = { q: pagination.registrySearch, cursor: pagination.cursor, limit };

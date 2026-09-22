@@ -47,7 +47,7 @@ export function FacilityDetailPage() {
     query: { enabled: !!facilityId, queryKey: getGetFacilityQueryKey(facilityId || "") }
   });
   
-  const pagination = useRegistryCursorPagination();
+  const pagination = useRegistryCursorPagination({ resourceType: 'building' });
   const limit = 10;
 
   const listParams = { q: pagination.registrySearch, cursor: pagination.cursor, limit };

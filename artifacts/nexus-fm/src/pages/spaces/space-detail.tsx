@@ -73,7 +73,10 @@ export function SpaceDetailPage() {
   const [activeTab, setActiveTab] = useState('systems');
   
   // Systems Data
-  const systemPagination = useRegistryCursorPagination({ prefix: 'systems-' });
+  const systemPagination = useRegistryCursorPagination({
+    prefix: 'systems-',
+    resourceType: 'system',
+  });
   const systemLimit = 10;
 
   const systemListParams = {
@@ -89,7 +92,10 @@ export function SpaceDetailPage() {
   const allSystems = (systemsData?.items || []) ;
     
   // Assets Data
-  const assetPagination = useRegistryCursorPagination({ prefix: 'assets-' });
+  const assetPagination = useRegistryCursorPagination({
+    prefix: 'assets-',
+    resourceType: 'asset',
+  });
   const assetLimit = 10;
 
   const assetListParams = {

@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'wouter';
 import { useDebounce } from '@/hooks/use-debounce';
+import { trackEvent } from '@/lib/analytics';
 import { registrySearchQuery } from '@/lib/registry-search';
 
 interface RegistryCursorPaginationOptions {
   prefix?: string;
+  resourceType: 'facility' | 'building' | 'space' | 'system' | 'asset';
 }
 
 interface CursorHistoryEntry {
@@ -13,6 +15,7 @@ interface CursorHistoryEntry {
 }
 
 type CursorHistory = Record<string, CursorHistoryEntry>;
+const REGISTRY_ANALYTICS_URL = '/app/registry';
 
 function readCursorHistory(key: string): CursorHistory {
   try {
@@ -38,7 +41,10 @@ function parsePage(value: string | null) {
   return Number.isSafeInteger(page) && page > 0 ? page : 1;
 }
 
-export function useRegistryCursorPagination({ prefix = '' }: RegistryCursorPaginationOptions = {}) {
+export function useRegistryCursorPagination({
+  prefix = '',
+  resourceType,
+}: RegistryCursorPaginationOptions) {
   const [urlSearchParams, setUrlSearchParams] = useSearchParams();
   const queryParam = `${prefix}q`;
   const cursorParam = `${prefix}cursor`;
@@ -68,6 +74,14 @@ export function useRegistryCursorPagination({ prefix = '' }: RegistryCursorPagin
     }
     if (effectiveInputQuery === urlQuery) return;
 
+    if (cursor) {
+      trackEvent('registry_search_reset', {
+        resource_type: resourceType,
+        page_depth: page,
+      }, {
+        url: REGISTRY_ANALYTICS_URL,
+      });
+    }
     committedQueryRef.current = effectiveInputQuery;
     setUrlSearchParams((current) => {
       const next = new URLSearchParams(current);
@@ -82,11 +96,20 @@ export function useRegistryCursorPagination({ prefix = '' }: RegistryCursorPagin
     effectiveInputQuery,
     pageParam,
     queryParam,
+    cursor,
+    page,
+    resourceType,
     setUrlSearchParams,
     urlQuery,
   ]);
 
   const goNext = (nextCursor: string) => {
+    trackEvent('registry_next_page', {
+      resource_type: resourceType,
+      page_depth: page + 1,
+    }, {
+      url: REGISTRY_ANALYTICS_URL,
+    });
     const history = readCursorHistory(historyKey);
     history[nextCursor] = {
       previousCursor: cursor ?? null,
@@ -104,6 +127,12 @@ export function useRegistryCursorPagination({ prefix = '' }: RegistryCursorPagin
 
   const goPrevious = () => {
     if (!previousEntry) return;
+    trackEvent('registry_previous_page', {
+      resource_type: resourceType,
+      page_depth: previousEntry.previousPage,
+    }, {
+      url: REGISTRY_ANALYTICS_URL,
+    });
     setUrlSearchParams((current) => {
       const next = new URLSearchParams(current);
       if (previousEntry.previousCursor) next.set(cursorParam, previousEntry.previousCursor);
