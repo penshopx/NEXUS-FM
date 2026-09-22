@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "tsc --build --force",
-    "typecheck": "tsc --build --force"
+    "typecheck": "tsc --build --force",
+    "test:nexus-typecheck-declarations": "node ./scripts/test-nexus-typecheck-declarations.mjs"
   },
   "exports": {
     ".": "./src/index.ts"
