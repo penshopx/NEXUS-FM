@@ -1101,7 +1101,7 @@ export const getSearchRoleBindingScopeTargetsUrl = (params: SearchRoleBindingSco
 }
 
 /**
- * Returns active targets in the requested organization. Platform administrators may search any organization; other administrators are restricted to their active organization.
+ * Returns active targets in the requested organization. Platform administrators may search any organization; other administrators are restricted to their active organization. For buildings, spaces, and assets, the query also matches names in the target's parent location path. Results remain limited by the requested limit.
  * @summary Search valid targets for a role binding scope
  */
 export const searchRoleBindingScopeTargets = async (params: SearchRoleBindingScopeTargetsParams, options?: Parameters<typeof customFetch>[1]): Promise<RoleBindingScopeTarget[]> => {

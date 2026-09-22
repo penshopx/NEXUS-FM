@@ -1316,6 +1316,73 @@ test("authorization routes run through a real HTTP app with injected currentUser
       }>).map(({ id, code, parentPath }) => ({ id, code, parentPath })),
       [{ id: duplicateBuilding.id, code: duplicateBuilding.code, parentPath: ["North Campus"] }],
     );
+    const buildingParentSearch = await request(
+      `/role-binding-scope-targets?scopeType=BUILDING&organizationId=${target.organizationId}&query=North%20Campus`,
+    );
+    assert.equal(buildingParentSearch.response.status, 200, JSON.stringify(buildingParentSearch.body));
+    assert.deepEqual(
+      (buildingParentSearch.body as Array<{ id: string }>).map(({ id }) => id),
+      [duplicateBuilding.id],
+    );
+    const [searchableSpace] = await db.insert(spacesTable).values({
+      organizationId: target.organizationId,
+      facilityId: namedFacility.id,
+      buildingId: duplicateBuilding.id,
+      name: "Utility Room",
+      code: `UTILITY-${randomUUID()}`,
+    }).returning();
+    const spaceParentSearch = await request(
+      `/role-binding-scope-targets?scopeType=SPACE&organizationId=${target.organizationId}&query=Shared%20Plant`,
+    );
+    assert.equal(spaceParentSearch.response.status, 200, JSON.stringify(spaceParentSearch.body));
+    assert.deepEqual(
+      (spaceParentSearch.body as Array<{ id: string }>).map(({ id }) => id),
+      [searchableSpace.id],
+    );
+    const [searchableSystem] = await db.insert(systemsTable).values({
+      organizationId: target.organizationId,
+      facilityId: namedFacility.id,
+      buildingId: duplicateBuilding.id,
+      spaceId: searchableSpace.id,
+      name: "Search Test System",
+    }).returning();
+    const [searchableAsset] = await db.insert(assetsTable).values({
+      organizationId: target.organizationId,
+      facilityId: namedFacility.id,
+      buildingId: duplicateBuilding.id,
+      spaceId: searchableSpace.id,
+      systemId: searchableSystem.id,
+      name: "Pump 01",
+      code: `PUMP-${randomUUID()}`,
+    }).returning();
+    const assetParentSearch = await request(
+      `/role-binding-scope-targets?scopeType=ASSET&organizationId=${target.organizationId}&query=Utility%20Room`,
+    );
+    assert.equal(assetParentSearch.response.status, 200, JSON.stringify(assetParentSearch.body));
+    assert.deepEqual(
+      (assetParentSearch.body as Array<{ id: string }>).map(({ id }) => id),
+      [searchableAsset.id],
+    );
+    const [foreignFacility] = await db.insert(facilitiesTable).values({
+      organizationId: manager.organizationId,
+      name: "North Campus",
+      code: `FOREIGN-NORTH-${randomUUID()}`,
+    }).returning();
+    const [foreignBuilding] = await db.insert(buildingsTable).values({
+      organizationId: manager.organizationId,
+      facilityId: foreignFacility.id,
+      name: "Foreign Plant",
+      code: `FOREIGN-PLANT-${randomUUID()}`,
+    }).returning();
+    const isolatedParentSearch = await request(
+      `/role-binding-scope-targets?scopeType=BUILDING&organizationId=${target.organizationId}&query=North%20Campus`,
+    );
+    assert.equal(isolatedParentSearch.response.status, 200, JSON.stringify(isolatedParentSearch.body));
+    assert.deepEqual(
+      (isolatedParentSearch.body as Array<{ id: string }>).map(({ id }) => id),
+      [duplicateBuilding.id],
+    );
+    assert.ok(!(isolatedParentSearch.body as Array<{ id: string }>).some(({ id }) => id === foreignBuilding.id));
     const missingScopeId = randomUUID();
     const missingScopeBinding = await request(`/users/${target.userId}/role-bindings`, {
       method: "POST",

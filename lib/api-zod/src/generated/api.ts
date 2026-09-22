@@ -291,7 +291,7 @@ export const SearchPlatformOrganizationsResponse = zod.array(SearchPlatformOrgan
 
 
 /**
- * Returns active targets in the requested organization. Platform administrators may search any organization; other administrators are restricted to their active organization.
+ * Returns active targets in the requested organization. Platform administrators may search any organization; other administrators are restricted to their active organization. For buildings, spaces, and assets, the query also matches names in the target's parent location path. Results remain limited by the requested limit.
  * @summary Search valid targets for a role binding scope
  */
 export const searchRoleBindingScopeTargetsQueryQueryMax = 100;
@@ -304,7 +304,7 @@ export const searchRoleBindingScopeTargetsQueryLimitMax = 50;
 export const SearchRoleBindingScopeTargetsQueryParams = zod.object({
   "scopeType": zod.enum(['PLATFORM', 'ORGANIZATION', 'PORTFOLIO', 'FACILITY', 'BUILDING', 'SPACE', 'ASSET', 'ASSIGNED', 'TEAM', 'VENDOR_ASSIGNMENT', 'OWNED_REQUEST']),
   "organizationId": zod.coerce.string().uuid(),
-  "query": zod.coerce.string().max(searchRoleBindingScopeTargetsQueryQueryMax).optional(),
+  "query": zod.coerce.string().max(searchRoleBindingScopeTargetsQueryQueryMax).optional().describe('Matches the target name or code. Building, space, and asset searches also match parent facility, building, and space names.'),
   "limit": zod.coerce.number().int().min(1).max(searchRoleBindingScopeTargetsQueryLimitMax).default(searchRoleBindingScopeTargetsQueryLimitDefault)
 })
 

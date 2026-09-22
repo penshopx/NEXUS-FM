@@ -11,6 +11,7 @@ export type SearchRoleBindingScopeTargetsParams = {
 scopeType: ScopeType;
 organizationId: string;
 /**
+ * Matches the target name or code. Building, space, and asset searches also match parent facility, building, and space names.
  * @maxLength 100
  */
 query?: string;

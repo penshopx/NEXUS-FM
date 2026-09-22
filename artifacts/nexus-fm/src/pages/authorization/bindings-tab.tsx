@@ -1067,6 +1067,8 @@ const namedScopeTypes = new Set<ScopeType>([
   'VENDOR_ASSIGNMENT',
 ]);
 
+const parentSearchableScopeTypes = new Set<ScopeType>(['BUILDING', 'SPACE', 'ASSET']);
+
 export function ScopeTargetPicker({
   organizationId,
   organizationName,
@@ -1092,6 +1094,7 @@ export function ScopeTargetPicker({
       : null,
   );
   const params = { scopeType, organizationId, query: query || undefined, limit: 20 };
+  const canSearchParentLocations = parentSearchableScopeTypes.has(scopeType);
   const search = useSearchRoleBindingScopeTargets(params, {
     query: {
       enabled: open && namedScopeTypes.has(scopeType),
@@ -1171,10 +1174,17 @@ export function ScopeTargetPicker({
         <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
           <Command shouldFilter={false}>
             <CommandInput
-               placeholder={`Cari ${scopeType.toLowerCase()} berdasarkan nama atau kode`}
+               placeholder={canSearchParentLocations
+                 ? `Cari ${scopeType.toLowerCase()}, kode, atau lokasi induk`
+                 : `Cari ${scopeType.toLowerCase()} berdasarkan nama atau kode`}
               value={query}
               onValueChange={setQuery}
             />
+            {canSearchParentLocations && (
+              <p className="border-b px-3 pb-2 text-xs text-muted-foreground" data-testid={`${testId}-search-help`}>
+                Nama fasilitas, gedung, dan ruang induk juga dapat dicari.
+              </p>
+            )}
             <CommandList>
               {search.isFetching ? (
                  <div className="py-6 text-center text-sm text-muted-foreground">Mencari...</div>

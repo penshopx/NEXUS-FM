@@ -525,13 +525,14 @@ router.get("/role-binding-scope-targets", async (req, res): Promise<void> => {
     return;
   }
   const query = parsed.data.query?.trim() ?? "";
+  const queryPattern = `%${query}%`;
   const filters = [
     eq(table.organizationId, parsed.data.organizationId),
     eq(table.status, "ACTIVE"),
   ];
-  if (query) {
-    filters.push(or(ilike(table.name, `%${query}%`), ilike(table.code, `%${query}%`))!);
-  }
+  const targetMatchesQuery = query
+    ? or(ilike(table.name, queryPattern), ilike(table.code, queryPattern))
+    : undefined;
   const baseSelection = {
     id: table.id,
     name: table.name,
@@ -547,6 +548,9 @@ router.get("/role-binding-scope-targets", async (req, res): Promise<void> => {
   }>;
 
   if (scopeType === "BUILDING") {
+    if (targetMatchesQuery) {
+      filters.push(or(targetMatchesQuery, ilike(facilitiesTable.name, queryPattern))!);
+    }
     const results = await database.select({
       ...baseSelection,
       facilityName: facilitiesTable.name,
@@ -560,6 +564,13 @@ router.get("/role-binding-scope-targets", async (req, res): Promise<void> => {
       .limit(parsed.data.limit);
     rows = results.map(({ facilityName, ...row }) => ({ ...row, parentPath: [facilityName] }));
   } else if (scopeType === "SPACE") {
+    if (targetMatchesQuery) {
+      filters.push(or(
+        targetMatchesQuery,
+        ilike(facilitiesTable.name, queryPattern),
+        ilike(buildingsTable.name, queryPattern),
+      )!);
+    }
     const results = await database.select({
       ...baseSelection,
       facilityName: facilitiesTable.name,
@@ -581,6 +592,14 @@ router.get("/role-binding-scope-targets", async (req, res): Promise<void> => {
       parentPath: [facilityName, buildingName],
     }));
   } else if (scopeType === "ASSET") {
+    if (targetMatchesQuery) {
+      filters.push(or(
+        targetMatchesQuery,
+        ilike(facilitiesTable.name, queryPattern),
+        ilike(buildingsTable.name, queryPattern),
+        ilike(spacesTable.name, queryPattern),
+      )!);
+    }
     const results = await database.select({
       ...baseSelection,
       facilityName: facilitiesTable.name,
@@ -607,6 +626,9 @@ router.get("/role-binding-scope-targets", async (req, res): Promise<void> => {
       parentPath: [facilityName, buildingName, spaceName],
     }));
   } else {
+    if (targetMatchesQuery) {
+      filters.push(targetMatchesQuery);
+    }
     const results = await database.select(baseSelection).from(table)
       .where(and(...filters))
       .orderBy(asc(table.name), asc(table.id))

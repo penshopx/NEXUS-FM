@@ -315,7 +315,9 @@ paths:
       description: >-
         Returns active targets in the requested organization. Platform
         administrators may search any organization; other administrators are
-        restricted to their active organization.
+        restricted to their active organization. For buildings, spaces, and
+        assets, the query also matches names in the target's parent location
+        path. Results remain limited by the requested limit.
       parameters:
         - name: scopeType
           in: query
@@ -328,6 +330,9 @@ paths:
         - name: query
           in: query
           required: false
+          description: >-
+            Matches the target name or code. Building, space, and asset
+            searches also match parent facility, building, and space names.
           schema: {type: string, maxLength: 100}
         - name: limit
           in: query
