@@ -1,0 +1,71 @@
+1	Gedung	Ahli Perencana Beton Pracetak Untuk Struktur Bangunan Gedung	Ahli Muda Perencana Beton Pracetak Untuk Struktur Bangunan Gedung	Ahli	7	SKKNI 336-2013	https://skkni-api.kemnaker.go.id/v1/public/documents/9fea81f9-7b56-400a-9307-d313fa012178/download
+2	Ahli Rekayasa Konstruksi Bangunan Gedung	Ahli Madya Rekayasa Konstruksi Bangunan Gedung	Ahli	8	SKKNI 106-2015	https://skkni-api.kemnaker.go.id/v1/public/documents/3b1e86e3-72b0-47ec-a067-64826c6e5f5e/download
+Ahli Rekayasa Konstruksi Bangunan Gedung	9	SKKNI 106-2015	https://skkni-api.kemnaker.go.id/v1/public/documents/3b1e86e3-72b0-47ec-a067-64826c6e5f5e/download
+3	Ahli Penilai Kelaikan Bangunan Gedung (Aspek Arsitektur dan Tata Ruang Luar)	Ahli Penilai Kelaikan Bangunan Gedung (Aspek Arsitektur dan Tata Ruang Luar)	Ahli	9	SKKNI 113-2015	https://skkni-api.kemnaker.go.id/v1/public/documents/07d2470a-8da9-4948-a561-3d1bfbbc7d03/download
+4	Manajer Pengelolaan Bangunan Gedung	Manajer Pengelolaan Bangunan Gedung	Ahli	7	SKKNI 115-2015	https://skkni-api.kemnaker.go.id/v1/public/documents/a61b7a00-97ed-463e-82ca-5105d9ae4e10/download
+5	Ahli Pemeriksa Kelaikan Fungsi Struktur Bangunan Gedung	Ahli Pemeriksa Kelaikan Fungsi Struktur Bangunan Gedung	Ahli	9	SKKNI 193-2013	https://skkni-api.kemnaker.go.id/v1/public/documents/42d6a0b3-058d-450e-a044-38b73a727519/download
+6	Ahli Penilai Bangunan Hijau	Ahli Muda Penilai Bangunan Hijau	Ahli	7	SKKNI 2-2023	https://skkni-api.kemnaker.go.id/v1/public/documents/cd4cffa3-10be-4752-a353-a3e70c0b40d9/download
+Ahli Madya Penilai Bangunan Hijau	8	SKKNI 2-2023	https://skkni-api.kemnaker.go.id/v1/public/documents/cd4cffa3-10be-4752-a353-a3e70c0b40d9/download
+Ahli Penilai Bangunan Hijau	9	SKKNI 2-2023	https://skkni-api.kemnaker.go.id/v1/public/documents/cd4cffa3-10be-4752-a353-a3e70c0b40d9/download
+7	Ahli Bangunan Gedung Hijau	Ahli Muda Bangunan Gedung Hijau	Ahli	7	SKKNI 2-2023	https://skkni-api.kemnaker.go.id/v1/public/documents/cd4cffa3-10be-4752-a353-a3e70c0b40d9/download
+Ahli Madya Bangunan Gedung Hijau	8	SKKNI 2-2023	https://skkni-api.kemnaker.go.id/v1/public/documents/cd4cffa3-10be-4752-a353-a3e70c0b40d9/download
+Ahli Utama Bangunan Gedung Hijau	9	SKKNI 2-2023	https://skkni-api.kemnaker.go.id/v1/public/documents/cd4cffa3-10be-4752-a353-a3e70c0b40d9/download
+8	Ahli Penilai Kegagalan Bangunan Gedung	Ahli Madya Penilai Kegagalan Bangunan Gedung	Ahli	8	SKKNI 58-2022	https://skkni-api.kemnaker.go.id/v1/public/documents/c62ab9ca-f685-417f-817f-4deef08f8a55/download
+Ahli Penilai Kegagalan Bangunan Gedung	9	SKKNI 58-2022	https://skkni-api.kemnaker.go.id/v1/public/documents/c62ab9ca-f685-417f-817f-4deef08f8a55/download
+9	Ahli Teknik Bangunan Gedung	Ahli Muda Teknik Bangunan Gedung	Ahli	7	SKKNI 192-2016	https://skkni-api.kemnaker.go.id/v1/public/documents/839a6f48-7b1a-4c43-8cc3-3016559e8f19/download
+Ahli Madya Teknik Bangunan Gedung	8	SKKNI 192-2016	https://skkni-api.kemnaker.go.id/v1/public/documents/839a6f48-7b1a-4c43-8cc3-3016559e8f19/download
+Ahli Teknik Bangunan Gedung	9	SKKNI 192-2016	https://skkni-api.kemnaker.go.id/v1/public/documents/839a6f48-7b1a-4c43-8cc3-3016559e8f19/download
+10	Ahli Teknik Bangunan Gedung (Freshgraduate)	Ahli Teknik Bangunan Gedung (Freshgraduate)	Ahli	7	SKKNI 192-2016	https://skkni-api.kemnaker.go.id/v1/public/documents/839a6f48-7b1a-4c43-8cc3-3016559e8f19/download
+11	Ahli Perawatan Bangunan Gedung	Ahli Muda Perawatan Bangunan Gedung	Ahli	7	SKKNI 255-2019	https://skkni-api.kemnaker.go.id/v1/public/documents/903e05ec-3a81-4f24-ba29-f2cfe42dc5eb/download
+Ahli Madya Perawatan Bangunan Gedung	8	SKKNI 255-2019	https://skkni-api.kemnaker.go.id/v1/public/documents/903e05ec-3a81-4f24-ba29-f2cfe42dc5eb/download
+Ahli Perawatan Bangunan Gedung	9	SKKNI 255-2019	https://skkni-api.kemnaker.go.id/v1/public/documents/903e05ec-3a81-4f24-ba29-f2cfe42dc5eb/download
+12	Manajer Lapangan Pelaksanaan Pekerjaan Gedung	Manajer Lapangan Pelaksanaan Pekerjaan Gedung	Teknisi/Analis	6	SKKNI 108-2015	https://skkni-api.kemnaker.go.id/v1/public/documents/105cb1dc-ff91-4c33-a3d6-2adc31e0af62/download
+13	Kepala Pengelola Lingkungan Bangunan Gedung	Kepala Pengelola Lingkungan Bangunan Gedung	Teknisi/Analis	6	SKKNI 046-2015	https://skkni-api.kemnaker.go.id/v1/public/documents/96608239-bef5-4b23-82b8-7f397f070433/download
+14	Tukang Pasang Water Proofing	Tukang Pasang Water Proofing Level 1	Operator	1	SKKNI 377-2013	https://skkni-api.kemnaker.go.id/v1/public/documents/fe0e2064-a563-4a00-8d24-e76876fb92c2/download
+Tukang Pasang Water Proofing	2	SKKNI 377-2013	https://skkni-api.kemnaker.go.id/v1/public/documents/fe0e2064-a563-4a00-8d24-e76876fb92c2/download
+15	Tukang Pasang Rangka Atap Baja Ringan	Tukang Pasang Rangka Atap Baja Ringan	Operator	1	SKKNI 184-2016	https://skkni-api.kemnaker.go.id/v1/public/documents/482cb118-74f1-4d75-9416-2ed47ff659c3/download
+16	Tukang Pasang Bata	Tukang Pasang Bata	Operator	1	SKKNI 317–2016	https://skkni-api.kemnaker.go.id/v1/public/documents/d27bb2ed-d3a3-4780-b61b-f0256f5208fa/download
+Tukang Pasang Bata Level 2	2	SKKNI 317–2016	https://skkni-api.kemnaker.go.id/v1/public/documents/d27bb2ed-d3a3-4780-b61b-f0256f5208fa/download
+17	Tukang Bangunan Gedung	Tukang Bangunan Gedung Level 1	Operator	1	SKKNI 31–2014	https://skkni-api.kemnaker.go.id/v1/public/documents/dcce8736-e1db-471b-9558-1b8b260d09ad/download
+Tukang Bangunan Gedung	2	SKKNI 31–2014	https://skkni-api.kemnaker.go.id/v1/public/documents/dcce8736-e1db-471b-9558-1b8b260d09ad/download
+18	Tukang Plester Bangunan Gedung	Tukang Plester Bangunan Gedung	Operator	1	SKKNI 307–2016	https://skkni-api.kemnaker.go.id/v1/public/documents/35c5d8c7-4424-419b-adec-0fe8ee9cd1fb/download
+Tukang Plester Bangunan Gedung Level 2	2	SKKNI 307–2016	https://skkni-api.kemnaker.go.id/v1/public/documents/35c5d8c7-4424-419b-adec-0fe8ee9cd1fb/download
+19	Tukang Pasang Ubin	Tukang Pasang Ubin	Operator	1	SKKNI 309–2016	https://skkni-api.kemnaker.go.id/v1/public/documents/2436dc0b-9c87-45fa-9a4b-388a92c00b06/download
+Tukang Pasang Ubin Level 2	2	SKKNI 309–2016	https://skkni-api.kemnaker.go.id/v1/public/documents/2436dc0b-9c87-45fa-9a4b-388a92c00b06/download
+20	Tukang Kayu Konstruksi	Tukang Kayu Konstruksi Level 1	Operator	1	SKKNI 085–2015	https://skkni-api.kemnaker.go.id/v1/public/documents/5345225b-3087-40da-b7a3-84c5b7e6809f/download
+Tukang Kayu Konstruksi	2	SKKNI 085–2015	https://skkni-api.kemnaker.go.id/v1/public/documents/5345225b-3087-40da-b7a3-84c5b7e6809f/download
+21	Tukang Cat Bangunan Gedung	Tukang Cat Bangunan Gedung	Operator	1	SKKNI 310–2016	https://skkni-api.kemnaker.go.id/v1/public/documents/24e98f71-7d04-4e0c-9a3f-247c9c1af6ac/download
+Tukang Cat Bangunan Gedung Level 2	2	SKKNI 310–2016	https://skkni-api.kemnaker.go.id/v1/public/documents/24e98f71-7d04-4e0c-9a3f-247c9c1af6ac/download
+22	Supervisor Perawatan Gedung Bertingkat	Supervisor Perawatan Gedung Bertingkat Muda	Teknisi/Analis	4	SKEMA LPJK/Akan disusun SKKNI/ SKK Khusus	-
+Supervisor Perawatan Gedung Bertingkat Madya	5	SKEMA LPJK/Akan disusun SKKNI/ SKK Khusus	-
+Supervisor Perawatan Gedung Bertingkat Utama	6	SKEMA LPJK/Akan disusun SKKNI/ SKK Khusus	-
+23	Pelaksana Lapangan Pekerjaan Gedung	Pelaksana Lapangan Pekerjaan Gedung Level 2	Operator	2	SKKNI 193-2021	https://skkni-api.kemnaker.go.id/v1/public/documents/2b3b8dde-ec66-4ccf-8651-41a44d201f79/download
+Pelaksana Lapangan Pekerjaan Gedung Level 3	3	SKKNI 193-2021	https://skkni-api.kemnaker.go.id/v1/public/documents/2b3b8dde-ec66-4ccf-8651-41a44d201f79/download
+Pelaksana Lapangan Pekerjaan Gedung Muda	Teknisi/Analis	4	SKKNI 193-2021	https://skkni-api.kemnaker.go.id/v1/public/documents/2b3b8dde-ec66-4ccf-8651-41a44d201f79/download
+Pelaksana Lapangan Pekerjaan Gedung Madya	5	SKKNI 193-2021	https://skkni-api.kemnaker.go.id/v1/public/documents/2b3b8dde-ec66-4ccf-8651-41a44d201f79/download
+24	Pengawas Pekerjaan Struktur Bangunan Gedung	Pengawas Pekerjaan Struktur Bangunan Gedung	Teknisi/Analis	4	SKKNI 340–2013	https://skkni-api.kemnaker.go.id/v1/public/documents/ae3d28de-a931-4afb-bc3e-2d141607e14c/download
+Pengawas Pekerjaan Struktur Bangunan Gedung Madya	5	SKKNI 340–2013	https://skkni-api.kemnaker.go.id/v1/public/documents/ae3d28de-a931-4afb-bc3e-2d141607e14c/download
+Pengawas Pekerjaan Struktur Bangunan Gedung Utama	6	SKKNI 340–2013	https://skkni-api.kemnaker.go.id/v1/public/documents/ae3d28de-a931-4afb-bc3e-2d141607e14c/download
+25	Pelaksana Madya Perawatan Bangunan Gedung	Pelaksana Madya Perawatan Bangunan Gedung	Teknisi/Analis	5	SKK Khusus Kep Dirjen Pembinaan Pelatihan Vokasi dan Produktivitas Nomor 2/3266/LP.00.00/XI/2022-Reg SKKK 37-2022	https://simkompetensi.com//public/uploads/file_skkk/1672819454-3SKKKPelaksanaMadyaPerawatanBangunanGedung.pdf
+26	Pengawas Tukang Cat Bangunan	Pengawas Tukang Cat Bangunan	Operator	2	SKK Khusus Kep Dirjen Pembinaan Pelatihan Vokasi dan Produktivitas Nomor 2/3260/LP.00.00/XI/2022-Reg SKKK 31-2022	https://simkompetensi.com//public/uploads/file_skkk/1672819272-1SKKKPengawasTukangCatBangunan.pdf
+27	Teknisi Kaca	Teknisi Kaca	Teknisi/Analis	4	SKEMA LPJK/Akan disusun SKKNI/ SKK Khusus	-
+28	Juru Gambar Bangunan Gedung	Juru Gambar Bangunan Gedung Level 2	Operator	2	SKKNI 033-2021	https://skkni-api.kemnaker.go.id/v1/public/documents/648fb0b6-41e5-4586-baf1-2b46216c8ca3/download
+Juru Gambar Bangunan Gedung Level 3	3	SKKNI 033-2021	https://skkni-api.kemnaker.go.id/v1/public/documents/648fb0b6-41e5-4586-baf1-2b46216c8ca3/download
+Juru Gambar Bangunan Gedung	Teknisi/Analis	4	SKKNI 033-2021	https://skkni-api.kemnaker.go.id/v1/public/documents/648fb0b6-41e5-4586-baf1-2b46216c8ca3/download
+29	Tukang Pekerjaan Baja	Tukang Pekerjaan Baja Level 1	Operator	1	SKEMA LPJK/Akan disusun SKKNI/ SKK Khusus	-
+Tukang Pekerjaan Baja Level 2	2	SKEMA LPJK/Akan disusun SKKNI/ SKK Khusus	-
+30	Mandor Konstruksi	Mandor Konstruksi Level 2	Operator	2	SKK Khusus Kep Dirjen Pembinaan Pelatihan Vokasi dan Produktivitas Nomor 2/3261/LP.00.00/XI/2022-Reg SKKK 32-2022	https://simkompetensi.com//public/uploads/file_skkk/1672819378-2SKKKMandorKonstruksi.pdf
+Mandor Konstruksi Level 3	3	SKK Khusus Kep Dirjen Pembinaan Pelatihan Vokasi dan Produktivitas Nomor 2/3261/LP.00.00/XI/2022-Reg SKKK 32-2022	https://simkompetensi.com//public/uploads/file_skkk/1672819378-2SKKKMandorKonstruksi.pdf
+31	Mandor Pemasangan Rangka Dinding dan Lantai Baja Ringan	Mandor Pemasangan Rangka Dinding dan Lantai Baja Ringan Level 2	Operator	2	SKKNI 184–2016	https://skkni-api.kemnaker.go.id/v1/public/documents/482cb118-74f1-4d75-9416-2ed47ff659c3/download
+Mandor Pemasangan Rangka Dinding dan Lantai Baja Ringan	3	SKKNI 184–2016	https://skkni-api.kemnaker.go.id/v1/public/documents/482cb118-74f1-4d75-9416-2ed47ff659c3/download
+32	Perencana Struktur Bangunan RISHA	Perencana Struktur Bangunan RISHA	Teknisi/Analis	6	SKKNI 221-2018	https://skkni-api.kemnaker.go.id/v1/public/documents/c450d40d-a8d9-4a19-be0b-e5186c3a86c8/download
+33	Perakit Struktur Bangunan RISHA	Perakit Struktur Bangunan RISHA	Operator	3	SKKNI 221-2018	https://skkni-api.kemnaker.go.id/v1/public/documents/c450d40d-a8d9-4a19-be0b-e5186c3a86c8/download
+34	Pembuat Panel Struktur RISHA	Pembuat Panel Struktur RISHA	Operator	2	SKKNI 221-2018	https://skkni-api.kemnaker.go.id/v1/public/documents/c450d40d-a8d9-4a19-be0b-e5186c3a86c8/download
+35	Tukang Besi Beton	Tukang Besi Beton	Operator	1	SKKNI 319–2016	https://skkni-api.kemnaker.go.id/v1/public/documents/093debf2-0a12-456f-94cd-4f43213f63b5/download
+Tukang Besi Beton Level 2	2	SKKNI 319–2016	https://skkni-api.kemnaker.go.id/v1/public/documents/093debf2-0a12-456f-94cd-4f43213f63b5/download
+36	Pemasang Perancah Dan Acuan/Cetakan Beton	Pemasang Perancah Dan Acuan/Cetakan Beton	Operator	3	SKKNI 054-2015	https://skkni-api.kemnaker.go.id/v1/public/documents/05b7961c-36c1-4db1-847d-4bb567a6fe1d/download
+37	Mandor Tukang Pasang Beton Precast	Mandor Tukang Pasang Beton Precast Level 2	Operator	2	SKKNI 243–2009	https://skkni-api.kemnaker.go.id/v1/public/documents/418f4f9d-2474-4f3e-9835-f6d5784f7ce0/download
+Mandor Tukang Pasang Beton Precast	3	SKKNI 243–2009	https://skkni-api.kemnaker.go.id/v1/public/documents/418f4f9d-2474-4f3e-9835-f6d5784f7ce0/download
+38	Tukang Pasang/Aplikator/Instalatur Rangka Baja Ringan	Tukang Pasang/Aplikator/Instalatur Rangka Baja Ringan	Operator	1	SKKNI 184–2016	https://skkni-api.kemnaker.go.id/v1/public/documents/482cb118-74f1-4d75-9416-2ed47ff659c3/download
+39	Mandor Pemasangan (Installer) Rangka Atap Baja Ringan	Mandor Pemasangan (Installer) Rangka Atap Baja Ringan Level 2	Operator	2	SKKNI 184–2016	https://skkni-api.kemnaker.go.id/v1/public/documents/482cb118-74f1-4d75-9416-2ed47ff659c3/download
+Mandor Pemasangan (Installer) Rangka Atap Baja Ringan	3	SKKNI 184–2016	https://skkni-api.kemnaker.go.id/v1/public/documents/482cb118-74f1-4d75-9416-2ed47ff659c3/download

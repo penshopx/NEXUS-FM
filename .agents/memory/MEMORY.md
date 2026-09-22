@@ -13,3 +13,4 @@
 - [Concurrent index migrations](concurrent-index-migrations.md) — concurrent indexes use session locking, validity checks, and journal-after-success retry semantics.
 - [Managed-publish authorization compatibility](managed-publish-authorization-compatibility.md) — production authorization rows stay on legacy role enums until Publish supports the required data backfill.
 - [Managed production trigram indexes](managed-production-trigram-indexes.md) — do not declare pg_trgm indexes while Publish cannot provision the extension in production.
+- [SKKNI building governance](skkni-building-governance.md) — product scope centers on building and warehouse governance with competency-based construction roles.
