@@ -66,6 +66,42 @@ type ScopeTarget = {
   scopeTargetStatus: "RESOLVED" | "MISSING" | "NOT_APPLICABLE";
 };
 
+const MEMBER_ACCESS_EXPORT_BATCH_SIZE = 500;
+
+class MemberAccessExportAuthorizationError extends Error {}
+
+type DrainableResponse = {
+  destroyed: boolean;
+  once(event: "drain" | "close" | "error", listener: (...args: any[]) => void): unknown;
+  removeListener(event: "drain" | "close" | "error", listener: (...args: any[]) => void): unknown;
+};
+
+function waitForCsvDrain(response: DrainableResponse) {
+  return new Promise<void>((resolve, reject) => {
+    const cleanup = () => {
+      response.removeListener("drain", onDrain);
+      response.removeListener("close", onClose);
+      response.removeListener("error", onError);
+    };
+    const onDrain = () => {
+      cleanup();
+      resolve();
+    };
+    const onClose = () => {
+      cleanup();
+      reject(new Error("CSV export client disconnected"));
+    };
+    const onError = (error: unknown) => {
+      cleanup();
+      reject(error);
+    };
+    response.once("drain", onDrain);
+    response.once("close", onClose);
+    response.once("error", onError);
+    if (response.destroyed) onClose();
+  });
+}
+
 function escapeLikePattern(value: string): string {
   return value.replace(/[\\%_]/g, "\\$&");
 }
@@ -787,32 +823,12 @@ router.get("/users/:userId/role-bindings/export", async (req, res): Promise<void
     return;
   }
 
-  const filters = [eq(userRoleBindingsTable.userId, req.params.userId)];
+  const baseFilters = [eq(userRoleBindingsTable.userId, req.params.userId)];
   if (admin.scopeType !== "PLATFORM") {
-    filters.push(eq(userRoleBindingsTable.organizationId, admin.organizationId!));
+    baseFilters.push(eq(userRoleBindingsTable.organizationId, admin.organizationId!));
   }
-  if (parsed.data.roleCode) filters.push(eq(rolesTable.code, parsed.data.roleCode));
-  if (parsed.data.status) filters.push(eq(userRoleBindingsTable.status, parsed.data.status));
-
-  const rows = await database.select({
-    memberId: usersTable.id,
-    memberName: usersTable.displayName,
-    memberEmail: usersTable.email,
-    organizationId: userRoleBindingsTable.organizationId,
-    organizationName: organizationsTable.name,
-    roleCode: rolesTable.code,
-    status: userRoleBindingsTable.status,
-    scopeType: userRoleBindingsTable.scopeType,
-    scopeId: userRoleBindingsTable.scopeId,
-    startsAt: userRoleBindingsTable.startsAt,
-    endsAt: userRoleBindingsTable.endsAt,
-  }).from(userRoleBindingsTable)
-    .innerJoin(usersTable, eq(userRoleBindingsTable.userId, usersTable.id))
-    .innerJoin(organizationsTable, eq(userRoleBindingsTable.organizationId, organizationsTable.id))
-    .innerJoin(rolesTable, eq(userRoleBindingsTable.roleId, rolesTable.id))
-    .where(and(...filters))
-    .orderBy(desc(userRoleBindingsTable.createdAt), desc(userRoleBindingsTable.id));
-  const scopeTargets = await resolveBindingScopeTargets(rows, database);
+  if (parsed.data.roleCode) baseFilters.push(eq(rolesTable.code, parsed.data.roleCode));
+  if (parsed.data.status) baseFilters.push(eq(userRoleBindingsTable.status, parsed.data.status));
   const header = [
     "member_id",
     "member_name",
@@ -828,30 +844,106 @@ router.get("/users/:userId/role-bindings/export", async (req, res): Promise<void
     "starts_at",
     "ends_at",
   ];
-  const csv = [
-    header.map(csvCell).join(","),
-    ...rows.map((row, index) => {
-      const scopeTarget = scopeTargets[index]!;
-      return [
-        row.memberId,
-        row.memberName,
-        row.memberEmail,
-        row.organizationId,
-        row.organizationName,
-        row.roleCode,
-        row.status,
-        row.scopeType,
-        row.scopeId,
-        scopeTarget.scopeTargetName,
-        scopeTarget.scopeTargetStatus,
-        row.startsAt,
-        row.endsAt,
-      ].map(csvCell).join(",");
-    }),
-  ].join("\n") + "\n";
-  res.type("text/csv")
-    .set("Content-Disposition", `attachment; filename="member-access-review-${req.params.userId}.csv"`)
-    .send(csv);
+  const write = async (chunk: string) => {
+    if (res.destroyed) throw new Error("CSV export client disconnected");
+    if (!res.write(chunk)) await waitForCsvDrain(res);
+  };
+  const recheckAccess = async () => {
+    const organizationId = await getActiveOrganizationId(admin.user.id, database);
+    if (admin.scopeType !== "PLATFORM" && organizationId !== admin.organizationId) {
+      throw new MemberAccessExportAuthorizationError();
+    }
+    const decision = await authorize({
+      actorUserId: admin.user.id,
+      organizationId,
+      permission: "USER.VIEW",
+      resourceType: "USER",
+      requestId: String(req.id),
+    });
+    if (!decision.allowed || (admin.scopeType === "PLATFORM" && decision.scopeType !== "PLATFORM")) {
+      throw new MemberAccessExportAuthorizationError();
+    }
+  };
+
+  try {
+    await database.transaction(async (snapshot: any) => {
+      let after: { createdAt: string; id: string } | undefined;
+      let headerWritten = false;
+      for (;;) {
+        await recheckAccess();
+        const filters = [...baseFilters];
+        if (after) {
+          filters.push(sql`(
+            ${userRoleBindingsTable.createdAt},
+            ${userRoleBindingsTable.id}
+          ) < (
+            ${after.createdAt}::timestamp with time zone,
+            ${after.id}::uuid
+          )`);
+        }
+        const rows = await snapshot.select({
+          id: userRoleBindingsTable.id,
+          createdAt: sql<string>`${userRoleBindingsTable.createdAt}::text`,
+          memberId: usersTable.id,
+          memberName: usersTable.displayName,
+          memberEmail: usersTable.email,
+          organizationId: userRoleBindingsTable.organizationId,
+          organizationName: organizationsTable.name,
+          roleCode: rolesTable.code,
+          status: userRoleBindingsTable.status,
+          scopeType: userRoleBindingsTable.scopeType,
+          scopeId: userRoleBindingsTable.scopeId,
+          startsAt: userRoleBindingsTable.startsAt,
+          endsAt: userRoleBindingsTable.endsAt,
+        }).from(userRoleBindingsTable)
+          .innerJoin(usersTable, eq(userRoleBindingsTable.userId, usersTable.id))
+          .innerJoin(organizationsTable, eq(userRoleBindingsTable.organizationId, organizationsTable.id))
+          .innerJoin(rolesTable, eq(userRoleBindingsTable.roleId, rolesTable.id))
+          .where(and(...filters))
+          .orderBy(desc(userRoleBindingsTable.createdAt), desc(userRoleBindingsTable.id))
+          .limit(MEMBER_ACCESS_EXPORT_BATCH_SIZE);
+        const scopeTargets = await resolveBindingScopeTargets(rows, snapshot);
+        if (!headerWritten) {
+          res.type("text/csv")
+            .set("Content-Disposition", `attachment; filename="member-access-review-${req.params.userId}.csv"`);
+          await write(`${header.map(csvCell).join(",")}\n`);
+          headerWritten = true;
+        }
+        for (const [index, row] of rows.entries()) {
+          const scopeTarget = scopeTargets[index]!;
+          await write(`${[
+            row.memberId,
+            row.memberName,
+            row.memberEmail,
+            row.organizationId,
+            row.organizationName,
+            row.roleCode,
+            row.status,
+            row.scopeType,
+            row.scopeId,
+            scopeTarget.scopeTargetName,
+            scopeTarget.scopeTargetStatus,
+            row.startsAt,
+            row.endsAt,
+          ].map(csvCell).join(",")}\n`);
+        }
+        if (rows.length < MEMBER_ACCESS_EXPORT_BATCH_SIZE) break;
+        const last = rows.at(-1)!;
+        after = { createdAt: last.createdAt, id: last.id };
+      }
+    }, { isolationLevel: "repeatable read", accessMode: "read only" });
+    res.end();
+  } catch (error) {
+    if (error instanceof MemberAccessExportAuthorizationError) {
+      if (!res.headersSent) {
+        res.status(403).json({ error: "Authorization denied", reasonCode: "NO_APPLICABLE_GRANT" });
+      } else {
+        res.destroy(error);
+      }
+      return;
+    }
+    throw error;
+  }
 });
 
 router.delete("/users/:userId/memberships/:organizationId", async (req, res): Promise<void> => {

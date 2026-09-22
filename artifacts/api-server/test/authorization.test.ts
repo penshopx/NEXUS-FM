@@ -5,7 +5,7 @@ import express from "express";
 import { createServer } from "node:http";
 import { setTimeout as delay } from "node:timers/promises";
 import { EventEmitter } from "node:events";
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import {
   authorizationAuditLogsTable,
   assetsTable,
@@ -2645,6 +2645,79 @@ test("registry export checks current authorization between snapshot batches", as
       RegistryExportAuthorizationError,
     );
   }, { isolationLevel: "repeatable read", accessMode: "read only" });
+});
+
+test("large member access exports are complete, ordered, filtered, and organization-scoped", async () => {
+  const actor = await makeFixture("FACILITY_MANAGER", "ORGANIZATION");
+  const foreign = await makeFixture("FACILITY_MANAGER", "ORGANIZATION");
+  await db.insert(userContextsTable).values({
+    userId: actor.userId,
+    activeOrganizationId: actor.organizationId,
+  }).onConflictDoUpdate({
+    target: userContextsTable.userId,
+    set: { activeOrganizationId: actor.organizationId },
+  });
+
+  const extraBindingCount = 1_005;
+  await db.insert(userRoleBindingsTable).values(Array.from({ length: extraBindingCount }, () => ({
+    userId: actor.userId,
+    organizationId: actor.organizationId,
+    roleId: actor.roleId,
+    scopeType: "BUILDING" as const,
+    scopeId: randomUUID(),
+    status: "ACTIVE" as const,
+    grantedBy: actor.userId,
+  })));
+  await db.insert(userRoleBindingsTable).values({
+    userId: actor.userId,
+    organizationId: foreign.organizationId,
+    roleId: actor.roleId,
+    scopeType: "ORGANIZATION",
+    status: "ACTIVE",
+    grantedBy: foreign.userId,
+  });
+
+  const app = express();
+  app.use(createAuthorizationRouter({
+    currentUser: async () => {
+      const [user] = await db.select().from(usersTable).where(eq(usersTable.id, actor.userId));
+      return user ?? null;
+    },
+  }));
+  const server = createServer(app);
+  await new Promise<void>((resolve) => server.listen(0, resolve));
+  try {
+    const address = server.address();
+    assert.ok(address && typeof address === "object");
+    const response = await fetch(
+      `http://127.0.0.1:${address.port}/users/${actor.userId}/role-bindings/export`
+      + "?roleCode=FACILITY_MANAGER&status=ACTIVE",
+    );
+    assert.equal(response.status, 200);
+    const lines = (await response.text()).trim().split("\n");
+    assert.equal(lines.length, extraBindingCount + 2);
+    assert.ok(lines.slice(1).every((line) =>
+      line.includes(`"${actor.organizationId}"`) &&
+      !line.includes(`"${foreign.organizationId}"`) &&
+      line.includes('"FACILITY_MANAGER"') &&
+      line.includes('"ACTIVE"')));
+
+    const expected = await db.select({ scopeId: userRoleBindingsTable.scopeId })
+      .from(userRoleBindingsTable)
+      .where(and(
+        eq(userRoleBindingsTable.userId, actor.userId),
+        eq(userRoleBindingsTable.organizationId, actor.organizationId),
+        eq(userRoleBindingsTable.status, "ACTIVE"),
+      ))
+      .orderBy(desc(userRoleBindingsTable.createdAt), desc(userRoleBindingsTable.id));
+    assert.deepEqual(
+      lines.slice(1).map((line) =>
+        [...line.matchAll(/"([0-9a-f-]{36})"/g)][2]?.[1] ?? ""),
+      expected.map((row) => row.scopeId ?? ""),
+    );
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+  }
 });
 
 test("mutation authorization linearizes against concurrent revocation and policy deny", async () => {
