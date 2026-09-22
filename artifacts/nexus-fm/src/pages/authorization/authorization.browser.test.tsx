@@ -596,6 +596,12 @@ describe('authorization administration browser regressions', () => {
 
   it('shows a generic notice for an unavailable bookmarked member and lets it be cleared', async () => {
     const user = userEvent.setup();
+    let memberSearchState = {
+      data: { items: [member], page: 1, limit: 20, total: 1 },
+      isFetching: false,
+      isError: false,
+    };
+    api.searchMembers.mockImplementation(() => memberSearchState);
     window.history.replaceState(
       null,
       '',
@@ -605,18 +611,43 @@ describe('authorization administration browser regressions', () => {
 
     expect(await screen.findByTestId('member-search-results')).toBeVisible();
     expect(screen.getByTestId('saved-member-unavailable')).toHaveTextContent(
-      'This saved member selection is no longer available.',
+      'Pilihan anggota tersimpan ini tidak lagi tersedia.',
     );
     expect(screen.getByTestId('saved-member-unavailable')).not.toHaveTextContent('unauthorized-user');
     expect(screen.getByTestId('saved-member-unavailable')).not.toHaveTextContent('org-secret');
     expect(screen.queryByText(/Role Bindings for/)).not.toBeInTheDocument();
     expect(api.bindings).not.toHaveBeenCalled();
+    await waitFor(() => expect(analytics.track).toHaveBeenCalledWith(
+      'saved_member_unavailable_shown',
+      undefined,
+    ));
+
+    memberSearchState = { ...memberSearchState, isFetching: true };
+    await user.type(screen.getByTestId('input-target-user'), ' loading');
+
+    expect(screen.queryByTestId('saved-member-unavailable')).not.toBeInTheDocument();
+    expect(analytics.track).toHaveBeenCalledTimes(1);
+
+    memberSearchState = { ...memberSearchState, isFetching: false };
+    await user.type(screen.getByTestId('input-target-user'), ' restored');
+
+    expect(screen.getByTestId('saved-member-unavailable')).toBeVisible();
+    expect(analytics.track).toHaveBeenCalledTimes(1);
 
     await user.click(screen.getByTestId('button-clear-unavailable-member'));
 
     expect(screen.queryByTestId('saved-member-unavailable')).not.toBeInTheDocument();
     expect(window.location.search).toBe('?query=Target');
     expect(screen.getByTestId('member-search-results')).toBeVisible();
+    expect(analytics.track).toHaveBeenNthCalledWith(
+      2,
+      'saved_member_unavailable_cleared',
+      undefined,
+    );
+    expect(analytics.track).toHaveBeenCalledTimes(2);
+    expect(JSON.stringify(analytics.track.mock.calls)).not.toContain('unauthorized-user');
+    expect(JSON.stringify(analytics.track.mock.calls)).not.toContain('org-secret');
+    expect(JSON.stringify(analytics.track.mock.calls)).not.toContain('Target');
   });
 
   it('restores selected members through browser back and forward navigation', async () => {

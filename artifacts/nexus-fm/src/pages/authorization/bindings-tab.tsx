@@ -125,6 +125,7 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
   const [organizationQuery, setOrganizationQuery] = useState('');
   const [selectedOrganization, setSelectedOrganization] = useState<PlatformOrganizationSearchResult | null>(urlOrganization);
   const [selectedMember, setSelectedMember] = useState<OrganizationMemberSearchResult | null>(null);
+  const trackedUnavailableSelection = useRef<string | null>(null);
   const memberSearchResetContext = useRef<{
     hadPagination: boolean;
     hadOrganizationFilter: boolean;
@@ -218,6 +219,31 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
     );
 
   useEffect(() => {
+    if (search.isFetching || search.isError || !search.data) {
+      return;
+    }
+
+    const selectionKey = hasSavedMemberSelection
+      ? `${selectedMemberId}:${selectedMemberOrganizationId}`
+      : null;
+
+    if (isSavedMemberUnavailable && trackedUnavailableSelection.current !== selectionKey) {
+      trackEvent('saved_member_unavailable_shown');
+      trackedUnavailableSelection.current = selectionKey;
+    } else if (!isSavedMemberUnavailable) {
+      trackedUnavailableSelection.current = null;
+    }
+  }, [
+    hasSavedMemberSelection,
+    isSavedMemberUnavailable,
+    search.data,
+    search.isError,
+    search.isFetching,
+    selectedMemberId,
+    selectedMemberOrganizationId,
+  ]);
+
+  useEffect(() => {
     setSearchInput(submittedQuery);
     setSelectedOrganization(urlOrganization);
   }, [
@@ -242,6 +268,8 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
   }, [search.data, selectedMemberId, selectedMemberOrganizationId]);
 
   const handleClearUnavailableMember = () => {
+    trackEvent('saved_member_unavailable_cleared');
+    trackedUnavailableSelection.current = null;
     setSelectedMember(null);
     setUrlSearchParams((current) => transitionMemberReviewUrlState(current, {
       type: 'clear-selection',
