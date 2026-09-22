@@ -30,6 +30,15 @@ type NotificationPool = {
 
 const ACCESS_REVISION_CHANNEL = "nexus_access_revisions";
 const reconnectDelayMs = 1_000;
+const publishAttempts = 3;
+const publishRetryDelayMs = 100;
+
+function wait(delayMs: number) {
+  return new Promise<void>((resolve) => {
+    const timer = setTimeout(resolve, delayMs);
+    timer.unref();
+  });
+}
 
 function listenerKey(userId: string, organizationId: string) {
   return `${userId}:${organizationId}`;
@@ -52,6 +61,8 @@ export function createAccessRevisionBus(
   options: {
     onError?: (error: Error) => void;
     reconnectDelayMs?: number;
+    publishAttempts?: number;
+    publishRetryDelayMs?: number;
   } = {},
 ) {
   const listeners = new Map<string, Set<Listener>>();
@@ -144,10 +155,22 @@ export function createAccessRevisionBus(
       };
     },
     async publish(event: AccessRevisionEvent) {
-      await notificationPool.query("SELECT pg_notify($1, $2)", [
-        ACCESS_REVISION_CHANNEL,
-        JSON.stringify(event),
-      ]);
+      const attempts = Math.max(1, options.publishAttempts ?? publishAttempts);
+      for (let attempt = 1; attempt <= attempts; attempt += 1) {
+        try {
+          await notificationPool.query("SELECT pg_notify($1, $2)", [
+            ACCESS_REVISION_CHANNEL,
+            JSON.stringify(event),
+          ]);
+          return;
+        } catch (error) {
+          if (attempt < attempts) {
+            await wait(options.publishRetryDelayMs ?? publishRetryDelayMs);
+            continue;
+          }
+          reportError(error instanceof Error ? error : new Error(String(error)));
+        }
+      }
     },
     async close() {
       closed = true;

@@ -197,6 +197,63 @@ test("access revision events fan out between API instances through PostgreSQL", 
   }
 });
 
+test("access revision publication retries transient failures", async () => {
+  const event = {
+    userId: randomUUID(),
+    organizationId: randomUUID(),
+    reason: "ROLE_BINDING_CHANGED" as const,
+  };
+  let attempts = 0;
+  const errors: Error[] = [];
+  const bus = createAccessRevisionBus({
+    async connect() {
+      throw new Error("listener connection is not used");
+    },
+    async query() {
+      attempts += 1;
+      if (attempts < 3) throw new Error("notifications temporarily unavailable");
+      return {};
+    },
+  }, {
+    onError: (error) => errors.push(error),
+    publishAttempts: 3,
+    publishRetryDelayMs: 0,
+  });
+
+  await bus.publish(event);
+
+  assert.equal(attempts, 3);
+  assert.deepEqual(errors, []);
+});
+
+test("access revision publication reports exhausted delivery without rejecting the committed mutation path", async () => {
+  const deliveryError = new Error("notifications unavailable");
+  const errors: Error[] = [];
+  let attempts = 0;
+  const bus = createAccessRevisionBus({
+    async connect() {
+      throw new Error("listener connection is not used");
+    },
+    async query() {
+      attempts += 1;
+      throw deliveryError;
+    },
+  }, {
+    onError: (error) => errors.push(error),
+    publishAttempts: 3,
+    publishRetryDelayMs: 0,
+  });
+
+  await assert.doesNotReject(bus.publish({
+    userId: randomUUID(),
+    organizationId: randomUUID(),
+    reason: "ROLE_PERMISSIONS_CHANGED",
+  }));
+
+  assert.equal(attempts, 3);
+  assert.deepEqual(errors, [deliveryError]);
+});
+
 test("portfolio CSV parser requires exact headers and preserves stable references", () => {
   const csv = `${portfolioImportHeaderLine
     }FACILITY,facility-a,,,,,Main Campus,F-1,,ACTIVE\n`
