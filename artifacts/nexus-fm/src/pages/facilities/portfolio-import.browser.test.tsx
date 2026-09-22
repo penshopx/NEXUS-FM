@@ -402,7 +402,7 @@ describe('facility portfolio import browser regressions', () => {
     await user.keyboard('{Escape}');
 
     await user.click(screen.getByTestId('button-edit-registry-facility-1'));
-    expect(screen.getByRole('dialog', { name: 'Edit Fasilitas' })).toBeVisible();
+    expect(screen.getByRole('dialog', { name: 'Ubah Fasilitas' })).toBeVisible();
     await expectNoHighImpactAccessibilityViolations();
     await user.keyboard('{Escape}');
 

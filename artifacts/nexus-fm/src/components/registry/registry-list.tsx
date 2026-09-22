@@ -157,7 +157,7 @@ export function RegistryList<T extends RegistryRecord>({
                             size="icon"
                             className="size-8"
                             onClick={() => onEdit(item)}
-                            aria-label={`Edit ${item.name}`}
+                            aria-label={`Ubah ${item.name}`}
                             data-testid={`button-edit-${testIdPrefix}-${item.id}`}
                           >
                             <Edit2 className="size-4" />

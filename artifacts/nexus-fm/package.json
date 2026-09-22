@@ -7,8 +7,10 @@
     "dev": "vite --config vite.config.ts --host 0.0.0.0",
     "build": "vite build --config vite.config.ts",
     "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
-    "pretypecheck": "if [ \"${NEXUS_FM_API_CLIENT_DECLARATIONS_READY:-0}\" != \"1\" ]; then pnpm --filter @workspace/api-client-react run build; fi",
+    "check:ui-language": "node ./scripts/check-ui-language.mjs",
+    "pretypecheck": "if [ \"${NEXUS_FM_API_CLIENT_DECLARATIONS_READY:-0}\" != \"1\" ]; then pnpm --filter @workspace/api-client-react run build; fi && pnpm run check:ui-language",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "pretest": "pnpm run check:ui-language",
     "test": "vitest run --config vitest.config.ts"
   },
   "devDependencies": {

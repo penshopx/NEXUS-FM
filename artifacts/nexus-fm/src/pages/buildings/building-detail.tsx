@@ -188,7 +188,7 @@ export function BuildingDetailPage() {
       <Dialog open={!!editingItem} onOpenChange={(open) => !open && setEditingItem(null)}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-           <DialogTitle>Edit Ruang</DialogTitle>
+           <DialogTitle>Ubah Ruang</DialogTitle>
            <DialogDescription>Perbarui detail ruang.</DialogDescription>
           </DialogHeader>
           {editingItem && (

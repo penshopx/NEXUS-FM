@@ -440,7 +440,7 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
                       type="button"
                       variant="outline"
                       size="icon"
-                      aria-label="Clear organization filter"
+                      aria-label="Hapus filter organisasi"
                       onClick={() => {
                         setSelectedOrganization(null);
                         setOrganizationQuery('');
@@ -794,7 +794,7 @@ function BindingsManager({ userId, member, canManage }: {
       <div className="p-4 border-b border-border bg-muted/10">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <div className="flex-1 space-y-1.5">
-            <label className="text-sm font-medium" htmlFor="binding-role-filter">Role</label>
+            <label className="text-sm font-medium" htmlFor="binding-role-filter">Peran</label>
             <Select value={roleFilter} onValueChange={(value) => {
               const nextRoleFilter = value as CanonicalRole | 'ALL';
               updateBindingFilters(
@@ -1079,9 +1079,9 @@ function BindingRow({ binding, userId, canManage, onEdit }: {
           size="sm" 
           onClick={onEdit}
           disabled={isExpired}
-           aria-label={`Edit masa berlaku dan cakupan ${bindingName}`}
+           aria-label={`Ubah masa berlaku dan cakupan ${bindingName}`}
           aria-describedby={isExpired ? `binding-status-description-${binding.id}` : undefined}
-           title="Edit Masa Berlaku/Cakupan"
+           title="Ubah Masa Berlaku/Cakupan"
           data-testid={`button-edit-binding-${binding.id}`}
         >
           <Edit2 className="size-4" />
@@ -1562,7 +1562,7 @@ function EditBindingDialog({ userId, binding, organizationName, open, onOpenChan
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent>
         <DialogHeader>
-           <DialogTitle>Edit Penetapan Peran</DialogTitle>
+           <DialogTitle>Ubah Penetapan Peran</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">

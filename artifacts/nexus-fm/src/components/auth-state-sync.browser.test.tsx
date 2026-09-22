@@ -252,7 +252,7 @@ describe('revoked-session browser synchronization', () => {
     await waitFor(() => expect(server.sessionResponses).toHaveLength(0));
     await act(async () => failRevisionRefresh());
 
-    expect(await screen.findByText('Organization access could not be refreshed.')).toBeVisible();
+    expect(await screen.findByText('Akses organisasi tidak dapat diperbarui.')).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Manage role bindings' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'View members' })).not.toBeInTheDocument();
 
@@ -261,7 +261,7 @@ describe('revoked-session browser synchronization', () => {
     await waitFor(() => expect(server.sessionResponses).toHaveLength(0));
     await act(async () => failFocusRefresh());
 
-    expect(await screen.findByText('Organization access could not be refreshed.')).toBeVisible();
+    expect(await screen.findByText('Akses organisasi tidak dapat diperbarui.')).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Manage role bindings' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'View members' })).not.toBeInTheDocument();
 

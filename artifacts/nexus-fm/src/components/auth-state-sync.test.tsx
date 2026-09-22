@@ -157,7 +157,7 @@ describe('AuthStateSync organization context', () => {
       }));
     });
 
-    expect(await screen.findByText('Organization access could not be refreshed.')).toBeVisible();
+    expect(await screen.findByText('Akses organisasi tidak dapat diperbarui.')).toBeVisible();
     expect(screen.getByRole('button', { name: 'Reload securely' })).toBeVisible();
   });
 });

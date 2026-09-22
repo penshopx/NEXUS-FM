@@ -196,7 +196,7 @@ export function SystemDetailPage() {
       <Dialog open={!!editingItem} onOpenChange={(open) => !open && setEditingItem(null)}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-             <DialogTitle>Edit Aset</DialogTitle>
+             <DialogTitle>Ubah Aset</DialogTitle>
              <DialogDescription>Perbarui detail aset.</DialogDescription>
           </DialogHeader>
           {editingItem && (

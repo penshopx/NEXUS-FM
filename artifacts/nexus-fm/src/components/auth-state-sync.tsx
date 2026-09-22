@@ -126,8 +126,8 @@ export function AuthStateSync({ children }: { children?: ReactNode }) {
       <div className="max-w-sm px-6 text-center">
         <p className="font-mono text-sm font-semibold text-foreground">
           {syncState === 'syncing'
-            ? 'Updating organization access…'
-            : 'Organization access could not be refreshed.'}
+            ? 'Memperbarui akses organisasi…'
+            : 'Akses organisasi tidak dapat diperbarui.'}
         </p>
         {syncState === 'failed' && (
           <button

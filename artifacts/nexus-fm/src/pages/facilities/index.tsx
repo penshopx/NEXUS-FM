@@ -140,7 +140,7 @@ export function FacilitiesPage() {
       <Dialog open={!!editingItem} onOpenChange={(open) => !open && setEditingItem(null)}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Edit Fasilitas</DialogTitle>
+            <DialogTitle>Ubah Fasilitas</DialogTitle>
             <DialogDescription>Perbarui detail fasilitas.</DialogDescription>
           </DialogHeader>
           {editingItem && (

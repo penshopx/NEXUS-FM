@@ -253,7 +253,7 @@ function RoleEditor({ role }: { role: Role }) {
         <div className="flex items-center gap-2">
           {!isEditing ? (
             <Button variant="outline" size="sm" onClick={handleEditChange} data-testid="button-edit-policy">
-               Edit Kebijakan
+              Ubah Kebijakan
             </Button>
           ) : (
             <>

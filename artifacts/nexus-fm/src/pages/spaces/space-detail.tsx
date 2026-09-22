@@ -325,7 +325,7 @@ export function SpaceDetailPage() {
       
       <Dialog open={!!editingSystem} onOpenChange={(open) => !open && setEditingSystem(null)}>
         <DialogContent className="sm:max-w-[600px]">
-           <DialogHeader><DialogTitle>Edit Sistem</DialogTitle></DialogHeader>
+           <DialogHeader><DialogTitle>Ubah Sistem</DialogTitle></DialogHeader>
           {editingSystem && <RegistryForm defaultValues={editingSystem} onSubmit={handleUpdateSystem} isPending={updateSystem.isPending} onCancel={() => setEditingSystem(null)} />}
         </DialogContent>
       </Dialog>
@@ -350,7 +350,7 @@ export function SpaceDetailPage() {
       
       <Dialog open={!!editingAsset} onOpenChange={(open) => !open && setEditingAsset(null)}>
         <DialogContent className="sm:max-w-[600px]">
-           <DialogHeader><DialogTitle>Edit Aset</DialogTitle></DialogHeader>
+           <DialogHeader><DialogTitle>Ubah Aset</DialogTitle></DialogHeader>
           {editingAsset && <RegistryForm defaultValues={editingAsset} onSubmit={handleUpdateAsset} isPending={updateAsset.isPending} onCancel={() => setEditingAsset(null)} />}
         </DialogContent>
       </Dialog>

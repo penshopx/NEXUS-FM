@@ -46,9 +46,10 @@ export function AuthGate({ children, anyOf }: AuthGateProps) {
         <div className="size-16 rounded-full bg-destructive/10 flex items-center justify-center mb-6">
           <ShieldAlert className="size-8 text-destructive" />
         </div>
-        <h2 className="text-2xl font-bold tracking-tight mb-2">Access Denied</h2>
+        <h2 className="text-2xl font-bold tracking-tight mb-2">Akses ditolak</h2>
         <p className="text-muted-foreground max-w-md">
-          You do not have the required permissions to view this surface. Please contact a platform administrator if you require access.
+          Anda tidak memiliki izin yang diperlukan untuk membuka halaman ini.
+          Hubungi administrator platform jika Anda memerlukan akses.
         </p>
       </div>
     );
