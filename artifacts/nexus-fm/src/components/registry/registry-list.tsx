@@ -4,6 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RegistryRecord } from '@workspace/api-client-react';
+import { listFacilitiesQueryQMin } from '@workspace/api-zod';
+
+export const registrySearchHelpText =
+  `1–${listFacilitiesQueryQMin - 1} karakter mencocokkan kode secara tepat. ` +
+  `Gunakan ${listFacilitiesQueryQMin}+ karakter untuk mencari dalam nama atau kode.`;
 
 interface RegistryListProps<T extends RegistryRecord> {
   title: string;
@@ -74,7 +79,7 @@ export function RegistryList<T extends RegistryRecord>({
               className="mt-1.5 text-xs text-muted-foreground"
               data-testid={`text-search-help-${testIdPrefix}`}
             >
-              1–2 karakter mencocokkan kode secara tepat. Gunakan 3+ karakter untuk mencari dalam nama atau kode.
+              {registrySearchHelpText}
             </p>
           </div>
           <div className="flex items-center gap-2">

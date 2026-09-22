@@ -61,6 +61,7 @@ import {
   parsePortfolioImport,
   portfolioImportHeaderLine,
   PORTFOLIO_IMPORT_MAX_ROWS,
+  REGISTRY_SEARCH_MIN_LENGTH,
   RegistryExportAuthorizationError,
   listAuthorizedRegistryBatch,
   normalizedRegistrySearch,
@@ -2327,12 +2328,14 @@ test("empty facility collection exposes server-derived bootstrap create capabili
   }
 });
 
-test("registry search normalizes one- and two-character exact-code terms", async () => {
+test("registry search normalizes terms around the generated substring-search limit", async () => {
   assert.equal(normalizedRegistrySearch(undefined), undefined);
   assert.equal(normalizedRegistrySearch("   "), undefined);
-  assert.equal(normalizedRegistrySearch(" abc "), "abc");
-  assert.equal(normalizedRegistrySearch("a"), "a");
-  assert.equal(normalizedRegistrySearch(" ab "), "ab");
+  const belowMinimum = "x".repeat(REGISTRY_SEARCH_MIN_LENGTH - 1);
+  const atMinimum = "x".repeat(REGISTRY_SEARCH_MIN_LENGTH);
+  assert.equal(normalizedRegistrySearch(` ${atMinimum} `), atMinimum);
+  assert.equal(normalizedRegistrySearch("x"), "x");
+  assert.equal(normalizedRegistrySearch(` ${belowMinimum} `), belowMinimum);
 });
 
 test("large registry portfolio keeps list, search, nested totals, and export queries bounded", async () => {

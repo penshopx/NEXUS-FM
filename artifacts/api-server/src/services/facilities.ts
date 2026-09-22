@@ -15,10 +15,11 @@ import {
   usersTable,
 } from "@workspace/db";
 import type { Asset, Building, Facility, Space, System } from "@workspace/db";
+import { listFacilitiesQueryQMin } from "@workspace/api-zod";
 import { authorize, isBindingScopeCompatible, type AuthorizationDecision } from "./authorization";
 
 export const REGISTRY_KINDS = ["FACILITY", "BUILDING", "SPACE", "SYSTEM", "ASSET"] as const;
-export const REGISTRY_SEARCH_MIN_LENGTH = 3;
+export const REGISTRY_SEARCH_MIN_LENGTH = listFacilitiesQueryQMin;
 export type RegistryKind = typeof REGISTRY_KINDS[number];
 export type RegistryRow = Facility | Building | Space | System | Asset;
 
