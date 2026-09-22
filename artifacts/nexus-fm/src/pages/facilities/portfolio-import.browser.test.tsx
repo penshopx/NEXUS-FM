@@ -67,7 +67,7 @@ function renderPage() {
 
 async function openImportDialog(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByTestId('button-import-registry'));
-  return screen.getByRole('dialog', { name: 'Import portfolio from CSV' });
+  return screen.getByTestId('dialog-portfolio-import');
 }
 
 async function selectCsv(user: ReturnType<typeof userEvent.setup>, contents = 'facility_name\nHQ') {
@@ -175,7 +175,7 @@ describe('facility portfolio import browser regressions', () => {
       expect.objectContaining({ onSuccess: expect.any(Function), onError: expect.any(Function) }),
     );
     expect(await screen.findByTestId('alert-import-preview')).toHaveTextContent(
-      'Validation passed. Committing will create 8 records.',
+      'Validasi berhasil. Commit akan membuat 8 catatan.',
     );
     expect(analytics.track).toHaveBeenCalledWith('portfolio_import', {
       stage: 'validation_success',
@@ -188,15 +188,38 @@ describe('facility portfolio import browser regressions', () => {
     });
     expect(screen.getByText('North Campus')).toBeVisible();
     expect(screen.getByText('South Campus')).toBeVisible();
-    expect(screen.getByTestId('status-import-facility-0')).toHaveTextContent('NEW FACILITY');
-    expect(screen.getByTestId('identifier-import-facility-0')).toHaveTextContent('CSV ref: facility-a');
-    expect(screen.getByTestId('status-import-facility-1')).toHaveTextContent('EXISTING REGISTRY FACILITY');
+    expect(screen.getByTestId('status-import-facility-0')).toHaveTextContent('FASILITAS BARU');
+    expect(screen.getByTestId('identifier-import-facility-0')).toHaveTextContent('ref CSV: facility-a');
+    expect(screen.getByTestId('status-import-facility-1')).toHaveTextContent('FASILITAS REGISTRY YANG ADA');
     expect(screen.getByTestId('identifier-import-facility-1')).toHaveTextContent(
-      'registry ID: 2cc1d1b7-f3bd-45f1-a266-a78d7641a95f',
+      'ID registry: 2cc1d1b7-f3bd-45f1-a266-a78d7641a95f',
     );
     expect(screen.queryByText('Main Building')).not.toBeInTheDocument();
 
+    await user.click(screen.getByTestId('filter-import-origin-new'));
+    expect(screen.getByText('North Campus')).toBeVisible();
+    expect(screen.queryByText('South Campus')).not.toBeInTheDocument();
+
+    await user.click(screen.getByTestId('filter-import-origin-existing'));
+    expect(screen.queryByText('North Campus')).not.toBeInTheDocument();
+    expect(screen.getByText('South Campus')).toBeVisible();
+
     const previewFilter = screen.getByTestId('input-filter-import-preview');
+    await user.type(previewFilter, 'north');
+    expect(screen.queryByText('North Campus')).not.toBeInTheDocument();
+    expect(screen.queryByText('South Campus')).not.toBeInTheDocument();
+    expect(screen.getByTestId('empty-import-facility-filter')).toHaveTextContent(
+      /hapus pencarian atau pilih asal lain/i,
+    );
+
+    await user.click(screen.getByTestId('filter-import-origin-all'));
+    expect(screen.getByTestId('button-toggle-import-facility-0')).toBeVisible();
+    expect(screen.queryByTestId('button-toggle-import-facility-1')).not.toBeInTheDocument();
+
+    await user.clear(previewFilter);
+    expect(screen.getByText('North Campus')).toBeVisible();
+    expect(screen.getByText('South Campus')).toBeVisible();
+
     await user.type(previewFilter, 'asset');
     expect(analytics.track).toHaveBeenCalledWith('portfolio_import_preview_filter', {
       action: 'applied',
@@ -208,10 +231,12 @@ describe('facility portfolio import browser regressions', () => {
     expect(screen.queryByText('South Campus')).not.toBeInTheDocument();
     expect(screen.getByText('Air Handler')).toBeVisible();
     expect(screen.queryByText('Main Building')).not.toBeInTheDocument();
-    expect(screen.getByText('1 match')).toBeVisible();
-    expect(screen.getByTestId('highlight-import-preview-match')).toHaveTextContent('ASSET');
-    expect(screen.getByTestId('highlight-import-preview-match').tagName).toBe('MARK');
-    expect(screen.getByTestId('highlight-import-preview-match')).toHaveClass('underline', 'font-semibold');
+    expect(screen.getByText('1 kecocokan')).toBeVisible();
+    const highlightedAssetKind = screen.getAllByTestId('highlight-import-preview-match')
+      .find((match) => match.textContent === 'ASSET');
+    expect(highlightedAssetKind).toBeDefined();
+    expect(highlightedAssetKind?.tagName).toBe('MARK');
+    expect(highlightedAssetKind).toHaveClass('underline', 'font-semibold');
 
     await user.clear(previewFilter);
     expect(analytics.track).toHaveBeenCalledWith('portfolio_import_preview_filter', {
@@ -265,8 +290,8 @@ describe('facility portfolio import browser regressions', () => {
       { data: file },
       expect.objectContaining({ onSuccess: expect.any(Function), onError: expect.any(Function) }),
     );
-    expect(await screen.findByText('Portfolio imported successfully')).toBeVisible();
-    expect(screen.getByText('5 records were created.')).toBeVisible();
+    expect(await screen.findByText('Portofolio berhasil diimpor')).toBeVisible();
+    expect(screen.getByText('5 catatan berhasil dibuat.')).toBeVisible();
     expect(screen.queryByTestId('dialog-portfolio-import')).not.toBeInTheDocument();
     expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ['/api/facilities'] });
     expect(analytics.track).toHaveBeenCalledWith('portfolio_import', {
@@ -275,7 +300,7 @@ describe('facility portfolio import browser regressions', () => {
       record_count: 5,
       preview_filter_used: true,
       preview_filter_active: false,
-      preview_filter_clear_count: 5,
+      preview_filter_clear_count: 6,
     });
     expect(JSON.stringify(analytics.track.mock.calls)).not.toMatch(
       /asset-a|bldg-a|north campus|handler/i,
@@ -364,17 +389,17 @@ describe('facility portfolio import browser regressions', () => {
     await expectNoHighImpactAccessibilityViolations();
 
     await user.click(screen.getByTestId('button-create-registry'));
-    expect(screen.getByRole('dialog', { name: 'Create Facility' })).toBeVisible();
+    expect(screen.getByRole('dialog', { name: 'Buat Fasilitas' })).toBeVisible();
     await expectNoHighImpactAccessibilityViolations();
     await user.keyboard('{Escape}');
 
     await user.click(screen.getByTestId('button-edit-registry-facility-1'));
-    expect(screen.getByRole('dialog', { name: 'Edit Facility' })).toBeVisible();
+    expect(screen.getByRole('dialog', { name: 'Edit Fasilitas' })).toBeVisible();
     await expectNoHighImpactAccessibilityViolations();
     await user.keyboard('{Escape}');
 
     await user.click(screen.getByTestId('button-delete-registry-facility-1'));
-    expect(screen.getByRole('alertdialog', { name: 'Are you absolutely sure?' })).toBeVisible();
+    expect(screen.getByRole('alertdialog', { name: 'Apakah Anda benar-benar yakin?' })).toBeVisible();
     await expectNoHighImpactAccessibilityViolations();
     await user.keyboard('{Escape}');
 
@@ -411,7 +436,7 @@ describe('facility portfolio import browser regressions', () => {
     await user.click(screen.getByTestId('button-submit-portfolio-import'));
 
     expect(await screen.findByTestId('text-import-failure')).toHaveTextContent(
-      'The CSV contains validation errors.',
+      'CSV berisi kesalahan validasi.',
     );
     expect(analytics.track).toHaveBeenCalledWith('portfolio_import', {
       stage: 'validation_failure',
@@ -449,11 +474,11 @@ describe('facility portfolio import browser regressions', () => {
   it.each([
     [
       403,
-      'You do not have permission to import this portfolio. Ask an administrator to grant the required registry access.',
+      'Anda tidak memiliki izin untuk mengimpor portofolio ini. Minta administrator memberikan akses registry yang diperlukan.',
     ],
     [
       413,
-      'This CSV is larger than the 2 MB upload limit. Split it into smaller files and try again.',
+      'CSV ini lebih besar dari batas unggah 2 MB. Bagi menjadi beberapa file yang lebih kecil lalu coba lagi.',
     ],
   ])('shows specific guidance when validation fails with status %s', async (status, guidance) => {
     const user = userEvent.setup();
@@ -554,7 +579,7 @@ describe('facility portfolio import browser regressions', () => {
     await user.click(screen.getByTestId('button-submit-portfolio-import'));
 
     expect(await screen.findByTestId('text-import-failure')).toHaveTextContent(
-      'You do not have permission to import this portfolio.',
+      'Anda tidak memiliki izin untuk mengimpor portofolio ini.',
     );
     expect(analytics.track).toHaveBeenCalledWith('portfolio_import', {
       stage: 'commit_failure',

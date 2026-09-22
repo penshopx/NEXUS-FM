@@ -37,6 +37,8 @@ type ImportFailure = {
 
 const PREVIEW_PAGE_SIZE = 100;
 
+type FacilityOriginFilter = 'ALL' | 'NEW_FACILITY' | 'EXISTING_FACILITY';
+
 type HierarchyRecord = {
   record: PortfolioImportPreviewRecord;
   depth: number;
@@ -352,6 +354,7 @@ export function PortfolioImportDialog({
   const [isDownloadingTemplate, setIsDownloadingTemplate] = useState(false);
   const [preview, setPreview] = useState<PortfolioImportPreview | null>(null);
   const [previewFilter, setPreviewFilter] = useState('');
+  const [facilityOriginFilter, setFacilityOriginFilter] = useState<FacilityOriginFilter>('ALL');
   const importPortfolio = useImportFacilityPortfolio();
   const validatePortfolio = useValidateFacilityPortfolioImport();
 
@@ -364,6 +367,7 @@ export function PortfolioImportDialog({
     setFailure(null);
     setPreview(null);
     setPreviewFilter('');
+    setFacilityOriginFilter('ALL');
     importPortfolio.reset();
     validatePortfolio.reset();
     if (inputRef.current) inputRef.current.value = '';
@@ -424,6 +428,7 @@ export function PortfolioImportDialog({
       {
         onSuccess: (result) => {
           setPreview(result);
+          setFacilityOriginFilter('ALL');
           trackEvent('portfolio_import', {
             stage: 'validation_success',
             workflow_stage: 'review',
@@ -517,6 +522,33 @@ export function PortfolioImportDialog({
     });
   };
 
+  const normalizedPreviewFilter = previewFilter.trim().toLowerCase();
+  const visibleFacilityGroups = preview?.facilityGroups
+    .map((facility, index) => ({ facility, index }))
+    .filter(({ facility }) => (
+      facilityOriginFilter === 'ALL' || facility.facilityStatus === facilityOriginFilter
+    ))
+    .filter(({ facility }) => (
+      !normalizedPreviewFilter
+      || includesPreviewQuery({
+        name: facility.name,
+        code: facility.code,
+        clientRef: facility.clientRef,
+        kind: 'FACILITY',
+      }, normalizedPreviewFilter)
+      || facility.records.some((record) => includesPreviewQuery(record, normalizedPreviewFilter))
+    )) ?? [];
+
+  const emptyPreviewMessage = normalizedPreviewFilter
+    ? facilityOriginFilter === 'ALL'
+      ? 'Tidak ada catatan yang direncanakan sesuai filter teks ini.'
+      : 'Tidak ada fasilitas dari asal yang dipilih yang sesuai dengan filter teks ini. Coba hapus pencarian atau pilih asal lain.'
+    : facilityOriginFilter === 'NEW_FACILITY'
+      ? 'Tidak ada fasilitas baru dalam pratinjau ini. Pilih Semua atau Fasilitas registry yang ada.'
+      : facilityOriginFilter === 'EXISTING_FACILITY'
+        ? 'Tidak ada fasilitas registry yang ada dalam pratinjau ini. Pilih Semua atau Fasilitas baru.'
+        : 'Tidak ada grup fasilitas dalam pratinjau ini.';
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[760px]" data-testid="dialog-portfolio-import">
@@ -560,6 +592,7 @@ export function PortfolioImportDialog({
                 setFailure(null);
                 setPreview(null);
                 setPreviewFilter('');
+                 setFacilityOriginFilter('ALL');
               }}
               data-testid="input-portfolio-import-file"
             />
@@ -594,6 +627,35 @@ export function PortfolioImportDialog({
                 </dl>
                 <div className="mt-4">
                   <p className="mb-2 text-sm font-medium">Hierarki yang direncanakan berdasarkan fasilitas</p>
+                   <div className="mb-2">
+                     <Label className="mb-1.5 block text-xs text-muted-foreground">
+                       Tampilkan fasilitas
+                     </Label>
+                     <div
+                       role="group"
+                       aria-label="Filter asal fasilitas"
+                       className="flex flex-wrap gap-1.5"
+                       data-testid="filter-import-facility-origin"
+                     >
+                       {([
+                         ['ALL', 'Semua', 'filter-import-origin-all'],
+                         ['NEW_FACILITY', 'Fasilitas baru', 'filter-import-origin-new'],
+                         ['EXISTING_FACILITY', 'Fasilitas registry yang ada', 'filter-import-origin-existing'],
+                       ] as const).map(([value, label, testId]) => (
+                         <Button
+                           key={value}
+                           type="button"
+                           variant={facilityOriginFilter === value ? 'default' : 'outline'}
+                           size="sm"
+                           aria-pressed={facilityOriginFilter === value}
+                           onClick={() => setFacilityOriginFilter(value)}
+                           data-testid={testId}
+                         >
+                           {label}
+                         </Button>
+                       ))}
+                     </div>
+                   </div>
                   <div className="relative mb-2">
                     <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" aria-hidden="true" />
                     <Input
@@ -621,19 +683,7 @@ export function PortfolioImportDialog({
                   </div>
                   <ScrollArea className="h-[280px] pr-3">
                     <div className="space-y-2" data-testid="list-import-facility-groups">
-                      {preview.facilityGroups
-                        .map((facility, index) => ({ facility, index }))
-                        .filter(({ facility }) => {
-                          const query = previewFilter.trim().toLowerCase();
-                          if (!query) return true;
-                          return includesPreviewQuery({
-                            name: facility.name,
-                            code: facility.code,
-                            clientRef: facility.clientRef,
-                            kind: 'FACILITY',
-                          }, query) || facility.records.some((record) => includesPreviewQuery(record, query));
-                        })
-                        .map(({ facility, index }) => (
+                       {visibleFacilityGroups.map(({ facility, index }) => (
                           <FacilityPreviewGroup
                             key={`${facility.clientRef}-${index}`}
                             facility={facility}
@@ -641,17 +691,12 @@ export function PortfolioImportDialog({
                             filter={previewFilter}
                           />
                         ))}
-                      {previewFilter.trim() && !preview.facilityGroups.some((facility) => {
-                        const query = previewFilter.trim().toLowerCase();
-                        return includesPreviewQuery({
-                          name: facility.name,
-                          code: facility.code,
-                          clientRef: facility.clientRef,
-                          kind: 'FACILITY',
-                        }, query) || facility.records.some((record) => includesPreviewQuery(record, query));
-                      }) && (
-                        <p className="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">
-                          Tidak ada catatan yang direncanakan sesuai filter ini.
+                       {visibleFacilityGroups.length === 0 && (
+                         <p
+                           className="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground"
+                           data-testid="empty-import-facility-filter"
+                         >
+                           {emptyPreviewMessage}
                         </p>
                       )}
                     </div>
