@@ -1,0 +1,64 @@
+Jenis Usaha : Pekerjaan Konstruksi
+Sifat Usaha : Spesialis
+Kategori Badan Usaha : BUJKN & BUJKA
+Klasifikasi : (KK) Konstruksi Khusus
+KODE	SUB KLASIFIKASI	KUALIFIKASI
+KK001	Pondasi Konstruksi	-
+KK002	Konstruksi Reservoir Pembangkit Listrik Tenaga Air	-
+KK003	Konstruksi Intake, Control Gate, Penstock dan Outflow Pembangkit Listrik Tenaga Air	-
+KK004	Konstruksi Pelindung Pantai	-
+KK005	Pekerjaan Lapis Perkerasan Beton (Rigid Pavement)	-
+KK006	Pekerjaan Konstruksi Kedap Air, Minyak, dan Gas	-
+KK007	Pekerjaan Konstruksi Kedap Suara	-
+KK008	Perkerasan Aspal	-
+KK009	Perkerasan Berbutir	-
+KK010	Pengeboran dan Injeksi Semen Bertekanan (Drilling and Grouting)	-
+KK011	Pemasangan Rangka dan Atap/Roofcovering	-
+KK012	Pekerjaan Struktur Beton	-
+KK013	Konstruksi Struktur Beton Pascatarik (Post Tensioned)	-
+KK014	Konstruksi Terowongan	-
+KK015	Pekerjaan Konstruksi Tahan Api (Tanur, Anneling, Flare, atau Incenerator)	-
+KK016	Pemasangan Kerangka Baja	-
+Spesialis
+Jenis Usaha : Pekerjaan Konstruksi
+Sifat Usaha : Spesialis
+Kategori Badan Usaha : BUJKN & BUJKA
+Klasifikasi : (KP) Konstruksi Prapabrikasi
+KODE	SUB KLASIFIKASI	KUALIFIKASI
+KP001	Pekerjaan konstruksi Prapabrikasi Bangunan Gedung	-
+KP002	Pekerjaan Konstruksi Prapabrikasi bangunan sipil	-
+Spesialis
+Jenis Usaha : Pekerjaan Konstruksi
+Sifat Usaha : Spesialis
+Kategori Badan Usaha : BUJKN & BUJKA
+Klasifikasi : (PA) Penyewaan Peralatan
+KODE	SUB KLASIFIKASI	KUALIFIKASI
+PA001	Penyewaan Peralatan Konstruksi	-
+Spesialis
+Jenis Usaha : Pekerjaan Konstruksi
+Sifat Usaha : Spesialis
+Kategori Badan Usaha : BUJKN & BUJKA
+Klasifikasi : (PB) Penyelesaian Bangunan
+KODE	SUB KLASIFIKASI	KUALIFIKASI
+PB001	Pengerjaan Pemasangan Kaca Dan Alumunium	-
+PB003	Pengerjaan Lantai, Dinding, Peralatan Saniter Dan Plafon	-
+PB004	Dekorasi Interior	-
+PB005	Pemasangan Ornamen dan Pekerjaan Seni	-
+PB007	Pengecatan	-
+PB009	Pembersihan dan Perapihan Bangunan Gedung dan/atau Bangunan Sipil	-
+PB010	Pekerjaan Lanskap, Pertamanan, dan Penanaman Vegetasi	-
+PB011	Pemulihan Lahan Pekerjaan Konstruksi	-
+Spesialis
+Jenis Usaha : Pekerjaan Konstruksi
+Sifat Usaha : Spesialis
+Kategori Badan Usaha : BUJKN & BUJKA
+Klasifikasi : (PL) Persiapan
+KODE	SUB KLASIFIKASI	KUALIFIKASI
+PL001	Pembongkaran Bangunan	-
+PL002	Pengerukan	-
+PL003	Penyiapan Lahan Konstruksi	-
+PL004	Pekerjaan Tanah	-
+PL005	Pembuatan/Pengeboran Sumur Air Tanah	-
+PL006	Pelaksanaan Pekerjaan Utilitas	-
+PL007	Survei Penyelidikan Lapangan	-
+PL008	Pemasangan Perancah (Steiger)	-
