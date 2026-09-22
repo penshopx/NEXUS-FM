@@ -66,7 +66,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="min-h-[100dvh] flex flex-col bg-background">
       <header className="sticky top-0 z-40 w-full border-b border-border bg-card">
         <div className="flex h-14 items-center px-4 md:px-6 gap-6">
-          <Link href="/app" className="flex items-center gap-2 mr-4">
+          <Link href="/app" aria-label="NEXUS-FM dashboard" className="flex items-center gap-2 mr-4">
             <div className="size-6 bg-primary rounded flex items-center justify-center">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="size-4 text-primary-foreground">
                 <path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v4" strokeLinecap="round" strokeLinejoin="round"/>
@@ -81,7 +81,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             ) : session ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="font-mono justify-between min-w-[200px] border-border hover:bg-muted/50">
+                  <Button
+                    variant="outline"
+                    aria-label={`Select organization, current organization: ${session.activeOrganization?.organization.name ?? 'none selected'}`}
+                    className="font-mono justify-between min-w-[200px] border-border hover:bg-muted/50"
+                  >
                     <div className="flex items-center gap-2 truncate">
                       <Building2 className="size-4 text-primary" />
                       <span className="truncate">
@@ -120,13 +124,21 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
 
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" onClick={() => signOut({ redirectUrl: import.meta.env.BASE_URL })}>
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label="Sign out"
+              onClick={() => signOut({ redirectUrl: import.meta.env.BASE_URL })}
+            >
               <LogOut className="size-4" />
               <span className="hidden sm:inline">Sign out</span>
             </Button>
           </div>
         </div>
-        <div className="flex items-center px-4 md:px-6 h-10 border-t border-border bg-background overflow-x-auto gap-1">
+        <nav
+          aria-label="Primary navigation"
+          className="flex items-center px-4 md:px-6 h-10 border-t border-border bg-background overflow-x-auto gap-1"
+        >
           {navItems.map((item) => {
             const isActive = location === item.href || (location.startsWith(item.href) && item.href !== '/app');
             const Icon = item.icon;
@@ -145,7 +157,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               </Link>
             )
           })}
-        </div>
+        </nav>
       </header>
 
       <main
