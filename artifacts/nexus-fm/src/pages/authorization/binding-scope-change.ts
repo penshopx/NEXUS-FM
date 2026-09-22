@@ -1,5 +1,5 @@
 import type { ScopeType } from '@workspace/api-client-react';
-import { doesAuthorizationScopeBroaden } from '@workspace/api-zod';
+import { doesAuthorizationScopeBroaden } from '@workspace/api-zod/authorization-scopes';
 
 export function doesBindingScopeBroaden(currentScope: ScopeType, nextScope: ScopeType) {
   return doesAuthorizationScopeBroaden(currentScope, nextScope);

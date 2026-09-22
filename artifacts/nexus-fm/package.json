@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite --config vite.config.ts --host 0.0.0.0",
     "build": "vite build --config vite.config.ts",
+    "check:registry-constants-bundle": "node ./scripts/check-registry-constants-bundle.mjs",
     "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
     "check:ui-language": "node ./scripts/check-ui-language.mjs",
     "pretypecheck": "if [ \"${NEXUS_FM_API_CLIENT_DECLARATIONS_READY:-0}\" != \"1\" ]; then pnpm --filter @workspace/api-client-react run build; fi && pnpm run check:ui-language",

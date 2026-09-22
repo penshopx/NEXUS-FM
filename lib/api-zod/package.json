@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./authorization-scopes": "./src/authorization-scopes.ts",
+    "./constants": "./src/generated/constants.ts"
   },
   "dependencies": {
     "zod": "catalog:"

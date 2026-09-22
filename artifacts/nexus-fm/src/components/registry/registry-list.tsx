@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RegistryRecord } from '@workspace/api-client-react';
-import { listFacilitiesQueryQMin } from '@workspace/api-zod';
+import { listFacilitiesQueryQMin } from '@workspace/api-zod/constants';
 
 export const registrySearchHelpText =
   `1–${listFacilitiesQueryQMin - 1} karakter mencocokkan kode secara tepat. ` +

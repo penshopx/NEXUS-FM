@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   ListFacilitiesQueryParams,
-  listFacilitiesQueryQMin,
 } from '@workspace/api-zod';
+import { listFacilitiesQueryQMin } from '@workspace/api-zod/constants';
 import { registrySearchHelpText } from './registry-list';
 
 describe('registry search limit', () => {

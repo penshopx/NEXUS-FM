@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AUTHORIZATION_SCOPE_DEFINITIONS } from '@workspace/api-zod';
+import { AUTHORIZATION_SCOPE_DEFINITIONS } from '@workspace/api-zod/authorization-scopes';
 import { describeBindingScope, doesBindingScopeBroaden } from './binding-scope-change';
 
 describe('doesBindingScopeBroaden', () => {
