@@ -136,8 +136,8 @@ function ClerkProviderWithRoutes() {
       signInUrl={`${basePath}/sign-in`}
       signUpUrl={`${basePath}/sign-up`}
       localization={{
-        signIn: { start: { title: 'Access NEXUS-FM', subtitle: 'Authenticate to enter the facility control system' } },
-        signUp: { start: { title: 'Create your operator identity', subtitle: 'Set up secure access to NEXUS-FM' } },
+        signIn: { start: { title: 'Akses TATABANGUN', subtitle: 'Masuk ke sistem tata kelola fasilitas' } },
+        signUp: { start: { title: 'Buat identitas pengguna', subtitle: 'Siapkan akses aman ke TATABANGUN' } },
       }}
       routerPush={(to) => setLocation(stripBase(to))}
       routerReplace={(to) => setLocation(stripBase(to), { replace: true })}

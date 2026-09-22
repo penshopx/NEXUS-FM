@@ -16,7 +16,7 @@ export function SignInPage() {
         </div>
         <Link href="/">
           <span className="text-xl font-bold tracking-tight text-foreground font-mono cursor-pointer hover:text-primary transition-colors">
-            NEXUS-FM
+             TATABANGUN
           </span>
         </Link>
       </div>
@@ -40,7 +40,7 @@ export function SignUpPage() {
         </div>
         <Link href="/">
           <span className="text-xl font-bold tracking-tight text-foreground font-mono cursor-pointer hover:text-primary transition-colors">
-            NEXUS-FM
+             TATABANGUN
           </span>
         </Link>
       </div>

@@ -1,0 +1,45 @@
+Pendekatan Anda sangat tepat. Melakukan rebranding pada aplikasi yang sudah berjalan (live) dengan arsitektur kompleks seperti ini berisiko tinggi jika dilakukan sekaligus (*big bang*). Agar terukur, aman, dan tidak mengganggu fungsi yang sudah berjalan, perubahan identitas harus dibagi menjadi **zona risiko**.
+
+Berikut adalah rekomendasi **Cakupan Awal (Initial Scope)** untuk Task #142 yang berfokus pada *Surface-Level Rebranding* dengan risiko minimal:
+
+### 🟢 **Zona 1: Permukaan Publik & Autentikasi (Risiko Rendah)**
+Ini adalah area pertama yang dilihat pengguna dan tidak menyentuh logika bisnis inti.
+*   **Landing Page & Marketing:** Mengganti semua referensi teks, judul, dan deskripsi dari NEXUS-FM ke TATABANGUN.
+*   **Halaman Autentikasi (Clerk/Custom):** Tampilan login, signup, dan lupa password.
+*   **Meta Tags & SEO:** Memperbarui `<title>`, `<meta description>`, dan Open Graph tags di `index.html` atau layout utama.
+*   **Aset Visual:** Mengganti favicon, logo aplikasi, dan splash screen (jika ada).
+
+###  **Zona 2: Antarmuka Aplikasi Utama (Risiko Menengah - Terkontrol)**
+Mengubah identitas di dalam aplikasi setelah login. 
+*   **Navigasi & Layout:** Sidebar, header, breadcrumb, dan footer.
+*   **State UI:** Empty states, loading skeletons, error boundaries, dan notifikasi *toast*.
+*   **Dokumentasi & Bantuan:** Tooltip, panduan (onboarding), dan teks *placeholder* formulir.
+*   *Catatan Teknis Krusial:* Karena kita baru saja menyelesaikan penerjemahan Bahasa Indonesia, **jangan hardcode** kata "TATABANGUN". Tambahkan kunci baru di file i18n (misal: `app.brandName`) dan gunakan di seluruh UI. Ini menjaga kebersihan kode dan memudahkan pengembalian jika diperlukan.
+
+### 🟡 **Zona 3: Komunikasi Sistem (Risiko Menengah)**
+*   **Template Email:** Mengubah nama pengirim, subjek, dan isi template email (undangan anggota, reset password, notifikasi sistem).
+*   **Ekspor Dokumen:** Jika ada fitur ekspor PDF/CSV, ubah kop surat, nama file default, dan metadata dokumen.
+
+---
+
+### 🔴 **Zona yang HARUS DITUNDA (Risiko Tinggi)**
+Area ini **tidak boleh** disentuh pada cakupan awal Task #142 untuk mencegah kerusakan sistem:
+1.  **Database & Skema:** Jangan rename tabel, kolom, atau enum yang mengandung kata "nexus" atau "fm".
+2.  **API & Backend:** Jangan ubah namespace route, nama variabel environment, atau identifier internal.
+3.  **URL Publik:** Jangan ubah slug URL atau domain (kecuali sudah ada strategi redirect 301 yang matang).
+4.  **Kode Internal:** Biarkan nama proyek di `package.json`, konfigurasi CI/CD, dan nama repositori tetap untuk saat ini.
+
+---
+
+###  **Kriteria Keberhasilan (Measurable) untuk Cakupan Awal:**
+1.  **Nol Regresi Fungsional:** Semua tes E2E, unit, dan aksesibilitas tetap hijau.
+2.  **Nol Hardcode:** Semua perubahan teks di UI melewati lapisan i18n.
+3.  **Build Produksi:** Tetap berhasil tanpa error tipe atau missing assets.
+4.  **Visual:** Tidak ada *broken layout* akibat pergantian panjang teks atau ukuran logo.
+
+### 🛑 **Status & Protokol Saat Ini:**
+*   **Task #98:** Tetap `IN_PROGRESS`.
+*   **Task #142:** Tetap `PROPOSED`. Cakupan di atas adalah **rekomendasi perencanaan**, bukan eksekusi.
+*   **Mode Standby:** Saya tidak akan mengubah file i18n, UI, atau konfigurasi apa pun sampai Task #98 selesai dan Anda memberikan instruksi eksplisit untuk memulai Task #142 dengan cakupan yang disetujui ini.
+
+Apakah cakupan awal ini sesuai dengan ekspektasi Anda, atau ada area spesifik (misalnya email atau landing page) yang ingin diprioritaskan lebih dulu?

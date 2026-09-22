@@ -42,7 +42,7 @@ export function Profile() {
       <div className="flex flex-col gap-2">
          <h1 className="text-3xl font-mono font-bold tracking-tight">Identitas & Akses</h1>
         <p className="text-muted-foreground text-sm">
-           Bukti kriptografis identitas dan vektor akses Anda di seluruh sistem NEXUS-FM.
+           Bukti kriptografis identitas dan vektor akses Anda di seluruh sistem TATABANGUN.
         </p>
       </div>
 
@@ -134,7 +134,7 @@ export function Profile() {
             <CardHeader>
                <CardTitle className="font-mono">Batas Autentikasi</CardTitle>
               <CardDescription>
-                 Kredensial identitas dan keamanan sesi dikelola oleh Clerk. NEXUS-FM hanya menyimpan identitas aplikasi, keanggotaan organisasi, dan peran kanonis yang diperlukan untuk kontrol akses.
+                 Kredensial identitas dan keamanan sesi dikelola oleh Clerk. TATABANGUN hanya menyimpan identitas aplikasi, keanggotaan organisasi, dan peran kanonis yang diperlukan untuk kontrol akses.
               </CardDescription>
             </CardHeader>
           </Card>

@@ -60,7 +60,7 @@ afterEach(() => cleanup());
 
 describe('core page accessibility regressions', () => {
   it.each([
-    ['landing page', <Landing />, 'NEXUS-FM'],
+    ['landing page', <Landing />, 'TATABANGUN'],
     ['not-found page', <NotFound />, '404'],
   ])('has no serious or critical violations on the %s', async (_name, page, visibleText) => {
     render(page);
@@ -85,7 +85,7 @@ describe('core page accessibility regressions', () => {
     });
     renderWithQueryClient(<Dashboard />);
 
-    expect(screen.getByRole('heading', { name: 'Foundation Status' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Status Fondasi' })).toBeVisible();
     await expectNoHighImpactAccessibilityViolations();
   });
 
@@ -93,7 +93,7 @@ describe('core page accessibility regressions', () => {
     api.session.mockReturnValue({ data: session, isLoading: false, error: null });
     renderWithQueryClient(<Profile />);
 
-    expect(screen.getByRole('heading', { name: 'Identity & Access' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Identitas & Akses' })).toBeVisible();
     await expectNoHighImpactAccessibilityViolations();
   });
 });

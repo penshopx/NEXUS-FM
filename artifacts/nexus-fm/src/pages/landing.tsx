@@ -20,7 +20,7 @@ export default function Landing() {
                 <path d="m9 18 3-3-3-3" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </div>
-            <span className="font-mono font-bold tracking-tight text-lg">NEXUS-FM</span>
+            <span className="font-mono font-bold tracking-tight text-lg">TATABANGUN</span>
           </div>
           <nav className="flex items-center gap-4">
             {isSignedIn ? (
@@ -56,18 +56,18 @@ export default function Landing() {
           <div className="container relative z-10 flex flex-col items-center text-center">
             <div className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-sm text-primary mb-8 backdrop-blur-sm">
               <span className="flex size-1.5 rounded-full bg-primary mr-2 animate-pulse" />
-               <span className="font-mono text-xs uppercase tracking-wider">Sistem Operasional</span>
+               <span className="font-mono text-xs uppercase tracking-wider">Facility Governance Platform</span>
             </div>
             
             <h1 className="max-w-4xl text-5xl font-bold tracking-tight sm:text-6xl md:text-7xl lg:text-8xl">
-               Kendali presisi untuk <br />
+               Tata kelola terpadu untuk <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-400">
-                 tim fasilitas.
+                  fasilitas tepercaya.
               </span>
             </h1>
             
             <p className="mt-8 max-w-2xl text-lg text-muted-foreground sm:text-xl leading-relaxed">
-               NEXUS-FM adalah sistem operasi digital tepercaya yang menyediakan kendali berbasis bukti atas organisasi, akses, fasilitas, aset, pekerjaan, risiko, dan kepatuhan.
+               TATABANGUN adalah sistem tata kelola gedung, gudang, dan infrastruktur yang menghubungkan fasilitas, pekerjaan, kompetensi, risiko, dan bukti kepatuhan.
             </p>
             
             <div className="mt-10 flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
@@ -177,11 +177,11 @@ export default function Landing() {
             <div className="size-6 bg-primary/20 border border-primary/50 rounded flex items-center justify-center">
               <span className="text-[10px] text-primary">N</span>
             </div>
-            <span>NEXUS-FM OS V1.0.0</span>
+             <span>TATABANGUN V1.0.0</span>
           </div>
           <div className="text-xs text-muted-foreground font-mono text-center sm:text-right">
              OPERASI FASILITAS AMAN<br/>
-            &copy; {new Date().getFullYear()} NEXUS SYSTEMS
+             &copy; {new Date().getFullYear()} TATABANGUN
           </div>
         </div>
       </footer>

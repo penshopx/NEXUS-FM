@@ -66,13 +66,13 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="min-h-[100dvh] flex flex-col bg-background">
       <header className="sticky top-0 z-40 w-full border-b border-border bg-card">
         <div className="flex h-14 items-center px-4 md:px-6 gap-6">
-          <Link href="/app" aria-label="Dasbor NEXUS-FM" className="flex items-center gap-2 mr-4">
+          <Link href="/app" aria-label="Dasbor TATABANGUN" className="flex items-center gap-2 mr-4">
             <div className="size-6 bg-primary rounded flex items-center justify-center">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="size-4 text-primary-foreground">
                 <path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v4" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </div>
-            <span className="font-mono font-bold tracking-tight hidden md:inline-block">NEXUS-FM</span>
+            <span className="font-mono font-bold tracking-tight hidden md:inline-block">TATABANGUN</span>
           </Link>
 
           <div className="flex-1 flex items-center gap-2">

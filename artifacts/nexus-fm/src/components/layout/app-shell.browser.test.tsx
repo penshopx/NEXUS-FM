@@ -90,17 +90,17 @@ describe('authenticated AppShell accessibility regressions', () => {
   it('has named controls and no high-impact violations in the desktop state', async () => {
     renderShell();
 
-    expect(screen.getByRole('link', { name: 'NEXUS-FM dashboard' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Dasbor TATABANGUN' })).toBeVisible();
     const organizationSelector = screen.getByRole('button', {
-      name: 'Select organization, current organization: Nexus Operations',
+      name: 'Pilih organisasi, organisasi saat ini: Nexus Operations',
     });
     expect(organizationSelector).toHaveAttribute(
       'aria-label',
-      'Select organization, current organization: Nexus Operations',
+      'Pilih organisasi, organisasi saat ini: Nexus Operations',
     );
-    expect(screen.getByRole('navigation', { name: 'Primary navigation' })).toBeVisible();
-    expect(screen.getByRole('link', { name: 'Identity & Access' })).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Sign out' })).toBeVisible();
+    expect(screen.getByRole('navigation', { name: 'Navigasi utama' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Identitas & Akses' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Keluar' })).toBeVisible();
 
     await expectNoHighImpactAccessibilityViolations();
   });
@@ -110,23 +110,23 @@ describe('authenticated AppShell accessibility regressions', () => {
 
     // jsdom does not load Tailwind's media queries. Apply the accessibility-tree
     // result of the compact `hidden md:inline-block` / `hidden sm:inline` rules.
-    screen.getByText('NEXUS-FM').hidden = true;
-    screen.getByText('Sign out').hidden = true;
+    screen.getByText('TATABANGUN').hidden = true;
+    screen.getByText('Keluar').hidden = true;
 
-    const dashboardLink = screen.getByRole('link', { name: 'NEXUS-FM dashboard' });
-    expect(dashboardLink).toHaveAttribute('aria-label', 'NEXUS-FM dashboard');
+    const dashboardLink = screen.getByRole('link', { name: 'Dasbor TATABANGUN' });
+    expect(dashboardLink).toHaveAttribute('aria-label', 'Dasbor TATABANGUN');
 
     const organizationSelector = screen.getByRole('button', {
-      name: 'Select organization, current organization: Nexus Operations',
+      name: 'Pilih organisasi, organisasi saat ini: Nexus Operations',
     });
     expect(organizationSelector).toHaveAttribute(
       'aria-label',
-      'Select organization, current organization: Nexus Operations',
+      'Pilih organisasi, organisasi saat ini: Nexus Operations',
     );
 
-    const signOutButton = screen.getByRole('button', { name: 'Sign out' });
-    expect(signOutButton).toHaveAttribute('aria-label', 'Sign out');
-    expect(screen.getByRole('navigation', { name: 'Primary navigation' })).toBeVisible();
+    const signOutButton = screen.getByRole('button', { name: 'Keluar' });
+    expect(signOutButton).toHaveAttribute('aria-label', 'Keluar');
+    expect(screen.getByRole('navigation', { name: 'Navigasi utama' })).toBeVisible();
 
     await expectNoHighImpactAccessibilityViolations();
   });
