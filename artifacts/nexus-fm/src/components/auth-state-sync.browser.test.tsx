@@ -90,14 +90,22 @@ function AffectedSession() {
   const canManageRoles = permissions.data?.permissions.some(
     (permission) => permission.code === 'ROLE.MANAGE' && permission.effect === 'ALLOW',
   );
+  const canViewMembers = permissions.data?.permissions.some(
+    (permission) => permission.code === 'USER.VIEW' && permission.effect === 'ALLOW',
+  );
 
   if (!session.data?.activeOrganization) {
     return <p>No active organization membership</p>;
   }
 
-  return canManageRoles
-    ? <button type="button">Manage role bindings</button>
-    : <p>Role management access revoked</p>;
+  return (
+    <>
+      {canManageRoles
+        ? <button type="button">Manage role bindings</button>
+        : <p>Role management access revoked</p>}
+      {canViewMembers && <button type="button">View members</button>}
+    </>
+  );
 }
 
 function renderAffectedSession() {
@@ -147,6 +155,17 @@ function queueSessionRefresh(
   });
   server.sessionResponses.push(response);
   return release;
+}
+
+function queueFailedSessionRefresh() {
+  let reject!: (error: Error) => void;
+  const response = new Promise<{
+    activeOrganization: { organization: { id: string; name: string } } | null;
+  }>((_resolve, rejectResponse) => {
+    reject = rejectResponse;
+  });
+  server.sessionResponses.push(response);
+  return () => reject(new Error('Session refresh unavailable'));
 }
 
 describe('revoked-session browser synchronization', () => {
@@ -213,6 +232,43 @@ describe('revoked-session browser synchronization', () => {
     await act(async () => releaseSession());
 
     expect(await screen.findByText('No active organization membership')).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Manage role bindings' })).not.toBeInTheDocument();
+  });
+
+  it('keeps revoked controls locked down through failed focus and online refreshes', async () => {
+    renderAffectedSession();
+
+    expect(await screen.findByRole('button', { name: 'Manage role bindings' })).toBeVisible();
+    await waitFor(() => expect(FakeEventSource.latest).not.toBeNull());
+
+    const failRevisionRefresh = queueFailedSessionRefresh();
+    server.revision = 'revision-2';
+    server.permissions = {
+      organizationId: 'org-1',
+      permissions: [{ code: 'USER.VIEW', effect: 'ALLOW', scopeType: 'ORGANIZATION' }],
+    };
+
+    act(() => FakeEventSource.latest?.emit('access-revision'));
+    await waitFor(() => expect(server.sessionResponses).toHaveLength(0));
+    await act(async () => failRevisionRefresh());
+
+    expect(await screen.findByText('Organization access could not be refreshed.')).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Manage role bindings' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'View members' })).not.toBeInTheDocument();
+
+    const failFocusRefresh = queueFailedSessionRefresh();
+    act(() => window.dispatchEvent(new Event('focus')));
+    await waitFor(() => expect(server.sessionResponses).toHaveLength(0));
+    await act(async () => failFocusRefresh());
+
+    expect(await screen.findByText('Organization access could not be refreshed.')).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Manage role bindings' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'View members' })).not.toBeInTheDocument();
+
+    act(() => window.dispatchEvent(new Event('online')));
+
+    expect(await screen.findByRole('button', { name: 'View members' })).toBeVisible();
+    expect(screen.getByText('Role management access revoked')).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Manage role bindings' })).not.toBeInTheDocument();
   });
 
