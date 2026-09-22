@@ -11,6 +11,7 @@ import {
   teamsTable,
   userRoleBindingsTable,
   usersTable,
+  vendorAssignmentMembershipsTable,
   vendorAssignmentsTable,
   scopeTypeValues,
 } from "@workspace/db";
@@ -94,21 +95,31 @@ export async function resolveVendorAssignmentWorkScope(
   database: typeof db,
   organizationId: string,
   vendorAssignmentId: string,
-  vendorUserId: string,
+  actorUserId: string,
 ): Promise<WorkScopeResolution> {
-  const assignment = await resolveActiveWorkScope(
-    database,
-    vendorAssignmentsTable,
-    organizationId,
-    vendorAssignmentId,
-  );
-  if (!assignment) return { found: false };
+  const [membership] = await database.select({
+    vendorAssignmentId: vendorAssignmentMembershipsTable.vendorAssignmentId,
+    userId: vendorAssignmentMembershipsTable.userId,
+  })
+    .from(vendorAssignmentMembershipsTable)
+    .innerJoin(vendorAssignmentsTable, and(
+      eq(vendorAssignmentsTable.id, vendorAssignmentMembershipsTable.vendorAssignmentId),
+      eq(vendorAssignmentsTable.organizationId, vendorAssignmentMembershipsTable.organizationId),
+    ))
+    .where(and(
+      eq(vendorAssignmentMembershipsTable.vendorAssignmentId, vendorAssignmentId),
+      eq(vendorAssignmentMembershipsTable.organizationId, organizationId),
+      eq(vendorAssignmentMembershipsTable.userId, actorUserId),
+      eq(vendorAssignmentMembershipsTable.status, "ACTIVE"),
+      eq(vendorAssignmentsTable.status, "ACTIVE"),
+    ));
+  if (!membership) return { found: false };
   return {
     found: true,
     verifiedContext: {
       organizationId,
-      vendorAssignmentId: assignment.id,
-      vendorUserId,
+      vendorAssignmentId: membership.vendorAssignmentId,
+      vendorUserId: membership.userId,
       scopeVerified: true,
     },
   };

@@ -25,6 +25,7 @@ import {
   userContextsTable,
   userRoleBindingsTable,
   usersTable,
+  vendorAssignmentMembershipsTable,
   vendorAssignmentsTable,
 } from "@workspace/db";
 import {
@@ -99,16 +100,19 @@ async function makeFixture(
   roleCode: string,
   scopeType: "PLATFORM" | "ORGANIZATION" | "FACILITY" | "BUILDING" | "SPACE" | "ASSET" | "ASSIGNED" | "TEAM" | "VENDOR_ASSIGNMENT",
   scopeId?: string,
+  existingOrganizationId?: string,
 ) {
   const [user] = await db.insert(usersTable).values({
     externalAuthId: `task02-test-${randomUUID()}`,
     displayName: `Task 02 ${roleCode}`,
     email: `${randomUUID()}@task02.invalid`,
   }).returning();
-  const [organization] = await db.insert(organizationsTable).values({
-    name: `Task 02 ${roleCode}`,
-    slug: `task02-${randomUUID()}`,
-  }).returning();
+  const organization = existingOrganizationId
+    ? { id: existingOrganizationId }
+    : (await db.insert(organizationsTable).values({
+      name: `Task 02 ${roleCode}`,
+      slug: `task02-${randomUUID()}`,
+    }).returning())[0]!;
   await db.insert(membershipsTable).values({
     userId: user.id,
     organizationId: organization.id,
@@ -767,22 +771,77 @@ test("work scope resolvers reject spoofed, inactive, deleted, and cross-organiza
     code: activeTeam!.code,
     status: "ACTIVE",
   });
-  await db.insert(vendorAssignmentsTable).values({
+  const collidingVendorAssignment = (await db.insert(vendorAssignmentsTable).values({
     organizationId: organizationB.id,
     name: activeVendor!.name,
     code: activeVendor!.code,
     status: "ACTIVE",
-  });
+  }).returning())[0]!;
+  const vendorA = await makeFixture("VENDOR", "VENDOR_ASSIGNMENT", activeVendor!.id, organizationA.id);
+  const vendorB = await makeFixture("VENDOR", "VENDOR_ASSIGNMENT", collidingVendorAssignment.id, organizationB.id);
+  const inactiveMember = await makeFixture("VENDOR", "VENDOR_ASSIGNMENT", activeVendor!.id, organizationA.id);
+  const removedMember = await makeFixture("VENDOR", "VENDOR_ASSIGNMENT", activeVendor!.id, organizationA.id);
+  await db.insert(vendorAssignmentMembershipsTable).values([
+    {
+      organizationId: organizationA.id,
+      vendorAssignmentId: activeVendor!.id,
+      userId: vendorA.userId,
+      status: "ACTIVE",
+    },
+    {
+      organizationId: organizationA.id,
+      vendorAssignmentId: activeVendor!.id,
+      userId: inactiveMember.userId,
+      status: "INACTIVE",
+    },
+    {
+      organizationId: organizationA.id,
+      vendorAssignmentId: activeVendor!.id,
+      userId: removedMember.userId,
+      status: "ACTIVE",
+    },
+    {
+      organizationId: organizationA.id,
+      vendorAssignmentId: inactiveVendor!.id,
+      userId: vendorA.userId,
+      status: "ACTIVE",
+    },
+    {
+      organizationId: organizationA.id,
+      vendorAssignmentId: deletedVendor!.id,
+      userId: vendorA.userId,
+      status: "ACTIVE",
+    },
+    {
+      organizationId: organizationB.id,
+      vendorAssignmentId: collidingVendorAssignment.id,
+      userId: vendorB.userId,
+      status: "ACTIVE",
+    },
+  ]);
+  await assert.rejects(
+    db.insert(vendorAssignmentMembershipsTable).values({
+      organizationId: organizationB.id,
+      vendorAssignmentId: activeVendor!.id,
+      userId: vendorB.userId,
+      status: "ACTIVE",
+    }),
+    (error: unknown) => (error as { cause?: { code?: string } }).cause?.code === "23503",
+  );
+  await db.delete(vendorAssignmentMembershipsTable).where(and(
+    eq(vendorAssignmentMembershipsTable.organizationId, organizationA.id),
+    eq(vendorAssignmentMembershipsTable.vendorAssignmentId, activeVendor!.id),
+    eq(vendorAssignmentMembershipsTable.userId, removedMember.userId),
+  ));
   await db.delete(teamsTable).where(eq(teamsTable.id, deletedTeam!.id));
   await db.delete(vendorAssignmentsTable).where(eq(vendorAssignmentsTable.id, deletedVendor!.id));
 
-  const vendorUserId = randomUUID();
   const activeTeamResolution = await resolveTeamWorkScope(db, organizationA.id, activeTeam!.id);
   const activeVendorResolution = await resolveVendorAssignmentWorkScope(
     db,
     organizationA.id,
     activeVendor!.id,
-    vendorUserId,
+    vendorA.userId,
   );
   assert.deepEqual(activeTeamResolution, {
     found: true,
@@ -797,7 +856,7 @@ test("work scope resolvers reject spoofed, inactive, deleted, and cross-organiza
     verifiedContext: {
       organizationId: organizationA.id,
       vendorAssignmentId: activeVendor!.id,
-      vendorUserId,
+      vendorUserId: vendorA.userId,
       scopeVerified: true,
     },
   });
@@ -807,10 +866,13 @@ test("work scope resolvers reject spoofed, inactive, deleted, and cross-organiza
     resolveTeamWorkScope(db, organizationA.id, inactiveTeam!.id),
     resolveTeamWorkScope(db, organizationA.id, deletedTeam!.id),
     resolveTeamWorkScope(db, organizationA.id, randomUUID()),
-    resolveVendorAssignmentWorkScope(db, organizationB.id, activeVendor!.id, vendorUserId),
-    resolveVendorAssignmentWorkScope(db, organizationA.id, inactiveVendor!.id, vendorUserId),
-    resolveVendorAssignmentWorkScope(db, organizationA.id, deletedVendor!.id, vendorUserId),
-    resolveVendorAssignmentWorkScope(db, organizationA.id, randomUUID(), vendorUserId),
+    resolveVendorAssignmentWorkScope(db, organizationA.id, activeVendor!.id, vendorB.userId),
+    resolveVendorAssignmentWorkScope(db, organizationA.id, activeVendor!.id, inactiveMember.userId),
+    resolveVendorAssignmentWorkScope(db, organizationA.id, activeVendor!.id, removedMember.userId),
+    resolveVendorAssignmentWorkScope(db, organizationB.id, activeVendor!.id, vendorB.userId),
+    resolveVendorAssignmentWorkScope(db, organizationA.id, inactiveVendor!.id, vendorA.userId),
+    resolveVendorAssignmentWorkScope(db, organizationA.id, deletedVendor!.id, vendorA.userId),
+    resolveVendorAssignmentWorkScope(db, organizationA.id, randomUUID(), vendorA.userId),
   ]);
   assert.ok(rejected.every((result) => result.found === false), JSON.stringify(rejected));
 
