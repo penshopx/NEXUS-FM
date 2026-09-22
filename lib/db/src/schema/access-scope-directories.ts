@@ -26,8 +26,6 @@ export const teamsTable = pgTable("teams", {
   unique("teams_id_organization_unique").on(table.id, table.organizationId),
   index("teams_organization_idx").on(table.organizationId),
   index("teams_organization_name_id_idx").on(table.organizationId, table.name, table.id),
-  index("teams_name_trgm_idx").using("gin", table.name.op("gin_trgm_ops")),
-  index("teams_code_trgm_idx").using("gin", table.code.op("gin_trgm_ops")),
 ]);
 
 export const vendorAssignmentsTable = pgTable("vendor_assignments", {
@@ -36,8 +34,6 @@ export const vendorAssignmentsTable = pgTable("vendor_assignments", {
   unique("vendor_assignments_id_organization_unique").on(table.id, table.organizationId),
   index("vendor_assignments_organization_idx").on(table.organizationId),
   index("vendor_assignments_organization_name_id_idx").on(table.organizationId, table.name, table.id),
-  index("vendor_assignments_name_trgm_idx").using("gin", table.name.op("gin_trgm_ops")),
-  index("vendor_assignments_code_trgm_idx").using("gin", table.code.op("gin_trgm_ops")),
 ]);
 
 export type Team = typeof teamsTable.$inferSelect;

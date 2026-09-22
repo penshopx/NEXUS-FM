@@ -29,8 +29,6 @@ export const facilitiesTable = pgTable("facilities", {
   index("facilities_organization_idx").on(table.organizationId),
   index("facilities_organization_code_idx").on(table.organizationId, table.code),
   index("facilities_organization_name_id_idx").on(table.organizationId, table.name, table.id),
-  index("facilities_name_trgm_idx").using("gin", table.name.op("gin_trgm_ops")),
-  index("facilities_code_trgm_idx").using("gin", table.code.op("gin_trgm_ops")),
 ]);
 
 export const buildingsTable = pgTable("buildings", {
@@ -47,8 +45,6 @@ export const buildingsTable = pgTable("buildings", {
   index("buildings_organization_facility_idx").on(table.organizationId, table.facilityId),
   index("buildings_organization_code_idx").on(table.organizationId, table.code),
   index("buildings_organization_name_id_idx").on(table.organizationId, table.name, table.id),
-  index("buildings_name_trgm_idx").using("gin", table.name.op("gin_trgm_ops")),
-  index("buildings_code_trgm_idx").using("gin", table.code.op("gin_trgm_ops")),
 ]);
 
 export const spacesTable = pgTable("spaces", {
@@ -66,8 +62,6 @@ export const spacesTable = pgTable("spaces", {
   index("spaces_organization_building_idx").on(table.organizationId, table.buildingId),
   index("spaces_organization_code_idx").on(table.organizationId, table.code),
   index("spaces_organization_name_id_idx").on(table.organizationId, table.name, table.id),
-  index("spaces_name_trgm_idx").using("gin", table.name.op("gin_trgm_ops")),
-  index("spaces_code_trgm_idx").using("gin", table.code.op("gin_trgm_ops")),
 ]);
 
 export const systemsTable = pgTable("systems", {
@@ -86,8 +80,6 @@ export const systemsTable = pgTable("systems", {
   index("systems_organization_space_idx").on(table.organizationId, table.spaceId),
   index("systems_organization_code_idx").on(table.organizationId, table.code),
   index("systems_organization_name_id_idx").on(table.organizationId, table.name, table.id),
-  index("systems_name_trgm_idx").using("gin", table.name.op("gin_trgm_ops")),
-  index("systems_code_trgm_idx").using("gin", table.code.op("gin_trgm_ops")),
 ]);
 
 export const assetsTable = pgTable("assets", {
@@ -111,8 +103,6 @@ export const assetsTable = pgTable("assets", {
   index("assets_organization_space_idx").on(table.organizationId, table.spaceId),
   index("assets_organization_code_idx").on(table.organizationId, table.code),
   index("assets_organization_name_id_idx").on(table.organizationId, table.name, table.id),
-  index("assets_name_trgm_idx").using("gin", table.name.op("gin_trgm_ops")),
-  index("assets_code_trgm_idx").using("gin", table.code.op("gin_trgm_ops")),
 ]);
 
 export type Facility = typeof facilitiesTable.$inferSelect;

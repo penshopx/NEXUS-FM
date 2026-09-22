@@ -1,0 +1,185 @@
+2026-09-17 19:44:05.32
+f6126660
+System
+metasidecar: loaded enterprise status from environment is_enterprise=false
+2026-09-17 19:44:05.32
+f6126660
+System
+starting artifact processes for monorepo deployment
+2026-09-17 19:44:05.32
+f6126660
+System
+registered static handler for artifact publicDir=artifacts/nexus-fm/dist/public path=/
+2026-09-17 19:44:05.32
+f6126660
+System
+forwarding local port 0 to external port 80 (mapped as 1104)
+2026-09-17 19:44:05.32
+f6126660
+System
+waiting for runnable artifact ports ports=[8080]
+2026-09-17 19:44:05.32
+f6126660
+System
+healthcheck failed error=healthcheck /api returned status 500
+2026-09-17 19:44:05.32
+f6126660
+System
+healthcheck failed error=healthcheck /api returned status 500
+2026-09-17 19:44:05.32
+f6126660
+System
+baseline ports snapshot before artifact start ports=[1105 1106 1104]
+2026-09-17 19:44:05.32
+f6126660
+System
+starting artifact processes count=1
+2026-09-17 19:44:05.33
+f6126660
+System
+starting artifact process args=[node --enable-source-maps artifacts/api-server/dist/index.mjs] port=8080 artifact=artifacts/api-server
+2026-09-17 19:44:05.33
+f6126660
+System
+artifact process started artifact=artifacts/api-server pid=21
+2026-09-17 19:44:05.34
+f6126660
+System
+healthcheck failed error=healthcheck /api returned status 500
+2026-09-17 19:44:05.38
+f6126660
+System
+healthcheck failed error=healthcheck /api returned status 500
+2026-09-17 19:44:05.42
+f6126660
+System
+healthcheck failed error=healthcheck /api returned status 500
+2026-09-17 19:44:05.43
+f6126660
+System
+healthcheck failed error=healthcheck /api returned status 500
+2026-09-17 19:44:05.60
+f6126660
+System
+healthcheck failed error=healthcheck /api returned status 500
+2026-09-17 19:44:06.00
+f6126660
+User
+In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq semantics, which have weaker security guarantees.
+2026-09-17 19:44:06.00
+f6126660
+User
+(node:21) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 'verify-full'.
+2026-09-17 19:59:17.50
+f6126660
+System
+received signal, shutting down artifact processes signal=terminated
+2026-09-17 19:59:17.50
+f6126660
+System
+sending SIGTERM to artifact process artifact=artifacts/api-server
+2026-09-17 19:59:17.50
+f6126660
+System
+all artifact processes stopped
+2026-09-17 19:59:17.50
+f6126660
+System
+artifact process exited with error artifact=artifacts/api-server error=signal: terminated
+2026-09-17 19:59:17.50
+f6126660
+System
+main done, exiting
+2026-09-17 20:09:13.75
+f6126660
+System
+metasidecar: loaded enterprise status from environment is_enterprise=false
+2026-09-17 20:09:13.75
+f6126660
+System
+starting artifact processes for monorepo deployment
+2026-09-17 20:09:13.75
+f6126660
+System
+registered static handler for artifact path=/ publicDir=artifacts/nexus-fm/dist/public
+2026-09-17 20:09:13.75
+f6126660
+System
+artifact mode enabled runnable=1 static=1
+2026-09-17 20:09:13.75
+f6126660
+System
+starting up user application
+2026-09-17 20:09:13.76
+f6126660
+System
+starting artifact process artifact=artifacts/api-server args=[node --enable-source-maps artifacts/api-server/dist/index.mjs] port=8080
+
+2026-09-17 20:09:13.86
+f6126660
+System
+healthcheck failed error=healthcheck /api returned status 500
+2026-09-17 20:09:14.00
+f6126660
+System
+healthcheck failed error=healthcheck /api returned status 500
+2026-09-17 20:09:14.30
+f6126660
+System
+healthcheck failed error=healthcheck /api returned status 500
+2026-09-17 20:09:14.32
+f6126660
+User
+(node:21) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 'verify-full'.
+2026-09-17 20:09:14.32
+f6126660
+User
+- If you want the current behavior, explicitly use 'sslmode=verify-full'
+2026-09-17 20:09:14.32
+f6126660
+User
+In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq semantics, which have weaker security guarantees.
+2026-09-17 20:09:14.32
+f6126660
+User
+(Use `node --trace-warnings ...` to show where the warning was created)
+2026-09-17 20:09:14.32
+f6126660
+User
+- If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+2026-09-17 20:09:14.32
+f6126660
+User
+To prepare for this change:
+2026-09-17 20:09:14.32
+f6126660
+User
+See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+2026-09-17 20:09:15.14
+f6126660
+System
+healthcheck failed error=healthcheck /api returned status 500
+2026-09-17 20:09:17.09
+f6126660
+System
+healthcheck failed error=healthcheck /api returned status 500
+2026-09-17 22:09:27.51
+f6126660
+System
+received signal, shutting down artifact processes signal=terminated
+2026-09-17 22:09:27.51
+f6126660
+System
+sending SIGTERM to artifact process artifact=artifacts/api-server
+2026-09-17 22:09:27.53
+f6126660
+System
+artifact process exited with error error=signal: terminated artifact=artifacts/api-server
+2026-09-17 22:09:27.53
+f6126660
+System
+all artifact processes stopped
+2026-09-17 22:09:27.53
+f6126660
+System
+main done, exiting
