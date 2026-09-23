@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { UserRoleBinding } from '@workspace/api-client-react';
 import type { AuthorizationApiHookMock } from './authorization-api-mocks';
 import { expectNoHighImpactAccessibilityViolations } from '@/test/accessibility';
 
@@ -425,6 +426,80 @@ describe('authorization administration browser regressions', () => {
         }),
       );
     }
+  });
+
+  it('keeps registry context and historical status visible on saved binding cards', async () => {
+    const user = userEvent.setup();
+    const common = {
+      userId: member.userId,
+      roleId: role.id,
+      roleCode: 'FACILITY_MANAGER',
+      organizationId: member.organizationId,
+      status: 'ACTIVE',
+      startsAt: null,
+      endsAt: null,
+    } as const;
+    const items = [
+      {
+        ...common,
+        id: 'resolved-building',
+        version: 'resolved-version',
+        scopeType: 'BUILDING',
+        scopeId: 'building-1',
+        scopeTargetName: 'Central Plant',
+        scopeTargetCode: 'BLDG-NORTH',
+        scopeTargetParentPath: ['North Campus', 'Operations Zone'],
+        scopeTargetStatus: 'RESOLVED',
+      },
+      {
+        ...common,
+        id: 'inactive-space',
+        version: 'inactive-version',
+        scopeType: 'SPACE',
+        scopeId: 'space-inactive',
+        scopeTargetName: 'Boiler Room',
+        scopeTargetCode: 'ROOM-12',
+        scopeTargetParentPath: ['North Campus', 'Central Plant'],
+        scopeTargetStatus: 'MISSING',
+      },
+      {
+        ...common,
+        id: 'missing-facility',
+        version: 'missing-version',
+        scopeType: 'FACILITY',
+        scopeId: 'facility-deleted',
+        scopeTargetName: null,
+        scopeTargetCode: null,
+        scopeTargetParentPath: [],
+        scopeTargetStatus: 'MISSING',
+      },
+    ] satisfies UserRoleBinding[];
+    api.bindings.mockReturnValue({
+      data: { items, page: 1, limit: 20, total: items.length },
+      isLoading: false,
+    });
+
+    renderPage();
+    await openBindingsForMember(user);
+
+    const resolved = within(screen.getByTestId('row-binding-resolved-building'));
+    expect(resolved.getByTestId('display-scopename-resolved-building')).toHaveTextContent('Gedung: Central Plant');
+    expect(resolved.getByTestId('display-scopecode-resolved-building')).toHaveTextContent('Kode: BLDG-NORTH');
+    expect(resolved.getByTestId('display-scopehierarchy-resolved-building')).toHaveTextContent('Hierarki: North Campus › Operations Zone');
+    expect(resolved.queryByTestId('display-scopehistorical-resolved-building')).not.toBeInTheDocument();
+
+    const inactive = within(screen.getByTestId('row-binding-inactive-space'));
+    expect(inactive.getByTestId('display-scopename-inactive-space')).toHaveTextContent('Ruang: Boiler Room (historical)');
+    expect(inactive.getByTestId('display-scopecode-inactive-space')).toHaveTextContent('Kode: ROOM-12');
+    expect(inactive.getByTestId('display-scopehierarchy-inactive-space')).toHaveTextContent('Hierarki: North Campus › Central Plant');
+    expect(inactive.getByTestId('display-scopehistorical-inactive-space')).toHaveTextContent('Target historis atau tidak lagi tersedia');
+
+    const missing = within(screen.getByTestId('row-binding-missing-facility'));
+    expect(missing.getByTestId('display-scopename-missing-facility')).toHaveTextContent('Fasilitas: Target hilang atau historis');
+    expect(missing.getByTestId('display-scopehistorical-missing-facility')).toHaveTextContent('Target historis atau tidak lagi tersedia');
+    expect(missing.getByTestId('display-scope-missing-facility')).toHaveTextContent('ID Cakupan: facility-deleted');
+    expect(missing.queryByTestId('display-scopecode-missing-facility')).not.toBeInTheDocument();
+    expect(missing.queryByTestId('display-scopehierarchy-missing-facility')).not.toBeInTheDocument();
   });
 
   it('shows a historical target without offering it as a current choice', async () => {
