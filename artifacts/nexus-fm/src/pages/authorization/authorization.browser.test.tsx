@@ -234,9 +234,9 @@ describe('authorization administration browser regressions', () => {
 
     expect(await screen.findByTestId('tab-roles')).toHaveAttribute('data-state', 'active');
     await user.click(screen.getByTestId('tab-bindings'));
-    expect(screen.getByText('Find a member')).toBeVisible();
+    expect(screen.getByText('Cari anggota')).toBeVisible();
     await user.click(screen.getByTestId('tab-audit'));
-    expect(screen.getByText(/Audit records are immutable/)).toBeVisible();
+    expect(screen.getByText(/Catatan audit tidak dapat diubah/)).toBeVisible();
   });
 
   it('has no serious or critical accessibility violations on administration tabs and dialogs', async () => {
@@ -286,17 +286,17 @@ describe('authorization administration browser regressions', () => {
     await expectNoHighImpactAccessibilityViolations();
 
     await user.click(screen.getByTestId('button-new-binding'));
-    expect(screen.getByRole('dialog', { name: 'Create Role Binding' })).toBeVisible();
+    expect(screen.getByRole('dialog', { name: 'Buat Penetapan Peran' })).toBeVisible();
     await expectNoHighImpactAccessibilityViolations();
     await user.keyboard('{Escape}');
 
     await user.click(screen.getByTestId('button-edit-binding-active'));
-    expect(screen.getByRole('dialog', { name: /Edit Role Binding/i })).toBeVisible();
+    expect(screen.getByRole('dialog', { name: 'Ubah Penetapan Peran' })).toBeVisible();
     await expectNoHighImpactAccessibilityViolations();
     await user.keyboard('{Escape}');
 
     await user.click(screen.getByTestId('button-revoke-binding-active'));
-    expect(screen.getByRole('alertdialog', { name: 'Revoke Binding Permanently?' })).toBeVisible();
+    expect(screen.getByRole('alertdialog', { name: 'Cabut Penetapan Secara Permanen?' })).toBeVisible();
     await expectNoHighImpactAccessibilityViolations();
     await user.keyboard('{Escape}');
 
@@ -304,7 +304,7 @@ describe('authorization administration browser regressions', () => {
     await expectNoHighImpactAccessibilityViolations();
 
     await user.click(await screen.findByTestId('button-audit-details-audit-1'));
-    expect(screen.getByRole('dialog', { name: 'Audit Record Details' })).toBeVisible();
+    expect(screen.getByRole('dialog', { name: 'Detail Catatan Audit' })).toBeVisible();
     await expectNoHighImpactAccessibilityViolations();
   });
 
@@ -324,7 +324,7 @@ describe('authorization administration browser regressions', () => {
       expect.anything(),
     );
     expect(screen.getByTestId('member-search-page-summary')).toHaveTextContent(
-      'Organization Acme Facilities (acme-facilities)',
+      'Organisasi Acme Facilities (acme-facilities)',
     );
     expect(window.location.search).toContain('query=Target');
     expect(window.location.search).toContain('organizationId=org-2');
@@ -451,7 +451,7 @@ describe('authorization administration browser regressions', () => {
     await openBindingsForMember(user);
     await user.click(screen.getByTestId('button-edit-binding-historical'));
 
-    expect(screen.getByText('Missing or historical target')).toBeVisible();
+    expect(screen.getByText('Target hilang atau historis')).toBeVisible();
     expect(screen.getByText('missing-facility')).toBeVisible();
     await user.click(screen.getByTestId('input-edit-scopeid'));
     expect(screen.queryByTestId('input-edit-scopeid-option-missing-facility')).not.toBeInTheDocument();
@@ -494,8 +494,8 @@ describe('authorization administration browser regressions', () => {
     expect(screen.getByTestId('broader-scope-current')).toHaveTextContent('SPACE: Boiler Room');
     expect(screen.getByTestId('broader-scope-new')).toHaveTextContent('TEAM: team-1');
 
-    await user.click(screen.getByRole('button', { name: 'Keep editing' }));
-    expect(screen.getByRole('dialog', { name: 'Edit Role Binding' })).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Lanjutkan mengedit' }));
+    expect(screen.getByRole('dialog', { name: 'Ubah Penetapan Peran' })).toBeVisible();
     expect(screen.getByTestId('select-edit-scopetype')).toHaveTextContent('TEAM');
     expect(update.mutate).not.toHaveBeenCalled();
 
@@ -620,7 +620,7 @@ describe('authorization administration browser regressions', () => {
 
     expect(window.location.search).toContain('memberId=target-user');
     expect(window.location.search).toContain('memberOrganizationId=org-1');
-    expect(screen.getByText('Role Bindings for Target Admin')).toBeVisible();
+    expect(screen.getByText('Penetapan Peran untuk Target Admin')).toBeVisible();
 
     cleanup();
     window.history.replaceState(
@@ -630,7 +630,7 @@ describe('authorization administration browser regressions', () => {
     );
     renderPage();
 
-    expect(await screen.findByText('Role Bindings for Target Admin')).toBeVisible();
+    expect(await screen.findByText('Penetapan Peran untuk Target Admin')).toBeVisible();
     expect(api.bindings).toHaveBeenLastCalledWith(
       'target-user',
       { page: 1, limit: 20 },
@@ -659,7 +659,7 @@ describe('authorization administration browser regressions', () => {
     );
     expect(screen.getByTestId('saved-member-unavailable')).not.toHaveTextContent('unauthorized-user');
     expect(screen.getByTestId('saved-member-unavailable')).not.toHaveTextContent('org-secret');
-    expect(screen.queryByText(/Role Bindings for/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Penetapan Peran untuk/)).not.toBeInTheDocument();
     expect(api.bindings).not.toHaveBeenCalled();
     await waitFor(() => expect(analytics.track).toHaveBeenCalledWith(
       'saved_member_unavailable_shown',
@@ -714,13 +714,13 @@ describe('authorization administration browser regressions', () => {
     await user.click(screen.getByTestId('button-search-user'));
     await user.click(await screen.findByTestId('member-result-target-user-org-1'));
     await user.click(screen.getByTestId('member-result-second-user-org-1'));
-    expect(screen.getByText('Role Bindings for Second Admin')).toBeVisible();
+    expect(screen.getByText('Penetapan Peran untuk Second Admin')).toBeVisible();
 
     window.history.back();
-    await waitFor(() => expect(screen.getByText('Role Bindings for Target Admin')).toBeVisible());
+    await waitFor(() => expect(screen.getByText('Penetapan Peran untuk Target Admin')).toBeVisible());
 
     window.history.forward();
-    await waitFor(() => expect(screen.getByText('Role Bindings for Second Admin')).toBeVisible());
+    await waitFor(() => expect(screen.getByText('Penetapan Peran untuk Second Admin')).toBeVisible());
   });
 
   it('restores earlier search state through browser navigation', async () => {
@@ -759,14 +759,14 @@ describe('authorization administration browser regressions', () => {
     renderPage();
 
     await user.click(await screen.findByTestId('member-result-target-user-org-1'));
-    expect(screen.getByText('Role Bindings for Target Admin')).toBeVisible();
+    expect(screen.getByText('Penetapan Peran untuk Target Admin')).toBeVisible();
 
     await user.click(screen.getByTestId('button-clear-member-search'));
 
     expect(screen.getByTestId('input-target-user')).toHaveValue('');
-    expect(screen.getByTestId('button-member-organization')).toHaveTextContent('All organizations');
+    expect(screen.getByTestId('button-member-organization')).toHaveTextContent('Semua organisasi');
     expect(screen.queryByTestId('member-search-results')).not.toBeInTheDocument();
-    expect(screen.queryByText('Role Bindings for Target Admin')).not.toBeInTheDocument();
+    expect(screen.queryByText('Penetapan Peran untuk Target Admin')).not.toBeInTheDocument();
     expect(screen.queryByTestId('button-clear-member-search')).not.toBeInTheDocument();
     expect(window.location.search).toBe('');
     expect(analytics.track).toHaveBeenCalledOnce();
@@ -946,7 +946,7 @@ describe('authorization administration browser regressions', () => {
     });
     renderPage();
 
-    expect(await screen.findByTestId('auth-gate-denied')).toHaveTextContent('Access Denied');
+    expect(await screen.findByTestId('auth-gate-denied')).toHaveTextContent('Akses ditolak');
     expect(screen.queryByTestId('tab-roles')).not.toBeInTheDocument();
   });
 
@@ -1088,7 +1088,7 @@ describe('authorization administration browser regressions', () => {
     });
     expect(JSON.stringify(analytics.track.mock.calls)).not.toContain(member.userId);
     expect(JSON.stringify(analytics.track.mock.calls)).not.toContain(member.organizationId);
-    expect(screen.queryByText('No role bindings found for this user.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Tidak ada penetapan peran untuk pengguna ini.')).not.toBeInTheDocument();
     expect(screen.queryByTestId('button-new-binding')).not.toBeInTheDocument();
   });
 
@@ -1202,8 +1202,8 @@ describe('authorization administration browser regressions', () => {
     await user.click(screen.getByTestId('role-select-PLATFORM_ADMIN'));
     await user.click(screen.getByTestId('button-edit-policy'));
     await user.click(screen.getByTestId('button-save-policy'));
-    expect(await screen.findByText(/Concurrent Update Detected/)).toBeVisible();
-    await user.click(screen.getByRole('button', { name: 'Reload Latest Policy' }));
+    expect(await screen.findByText(/Pembaruan Bersamaan Terdeteksi/)).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Muat Ulang Kebijakan Terbaru' }));
     expect(refetch).toHaveBeenCalledOnce();
 
     const selfEscalation = vi.fn((_variables, options) =>
@@ -1234,7 +1234,7 @@ describe('authorization administration browser regressions', () => {
     renderPage();
     await openBindingsForMember(user);
     await user.click(screen.getByTestId('button-toggle-suspend-self-binding'));
-    expect(await screen.findByText('Failed to suspend binding')).toBeVisible();
+    expect(await screen.findByText('Gagal menangguhkan penetapan')).toBeVisible();
     expect(screen.getByText('Administrators cannot change their own access binding')).toBeVisible();
   });
 
@@ -1307,15 +1307,15 @@ describe('authorization administration browser regressions', () => {
     renderPage();
     await openBindingsForMember(user);
 
-    expect(screen.getByTestId('display-status-suspended')).toHaveTextContent('SUSPENDED');
-    expect(screen.getByRole('button', { name: 'Reactivate PLATFORM_ADMIN binding' })).toBeEnabled();
-    expect(screen.getByTestId('display-status-expired')).toHaveTextContent('EXPIRED');
-    expect(screen.getByText(/PLATFORM_ADMIN binding is expired and read-only/)).toHaveClass('sr-only');
-    expect(screen.getByTestId('button-toggle-suspend-expired')).toHaveAccessibleName('Suspend PLATFORM_ADMIN binding');
+    expect(screen.getByTestId('display-status-suspended')).toHaveTextContent('Ditangguhkan');
+    expect(screen.getByRole('button', { name: 'Aktifkan kembali PLATFORM_ADMIN binding' })).toBeEnabled();
+    expect(screen.getByTestId('display-status-expired')).toHaveTextContent('Kedaluwarsa');
+    expect(screen.getByText(/PLATFORM_ADMIN binding kedaluwarsa dan hanya dapat dibaca/)).toHaveClass('sr-only');
+    expect(screen.getByTestId('button-toggle-suspend-expired')).toHaveAccessibleName('Tangguhkan PLATFORM_ADMIN binding');
     expect(screen.getByTestId('button-toggle-suspend-expired')).toBeDisabled();
-    expect(screen.getByTestId('button-edit-binding-expired')).toHaveAccessibleName('Edit expiry and scope for PLATFORM_ADMIN binding');
+    expect(screen.getByTestId('button-edit-binding-expired')).toHaveAccessibleName('Ubah masa berlaku dan cakupan PLATFORM_ADMIN binding');
     expect(screen.getByTestId('button-edit-binding-expired')).toBeDisabled();
-    expect(screen.getByTestId('button-revoke-binding-expired')).toHaveAccessibleName('Permanently revoke PLATFORM_ADMIN binding');
+    expect(screen.getByTestId('button-revoke-binding-expired')).toHaveAccessibleName('Cabut permanen PLATFORM_ADMIN binding');
     expect(screen.getByTestId('button-revoke-binding-expired')).toBeDisabled();
   });
 
@@ -1342,13 +1342,13 @@ describe('authorization administration browser regressions', () => {
     renderPage();
     await openBindingsForMember(user);
 
-    const trigger = screen.getByRole('button', { name: 'Permanently revoke PLATFORM_ADMIN binding' });
+    const trigger = screen.getByRole('button', { name: 'Cabut permanen PLATFORM_ADMIN binding' });
     trigger.focus();
     await user.keyboard('{Enter}');
 
-    const dialog = screen.getByRole('alertdialog', { name: 'Revoke Binding Permanently?' });
-    const cancel = within(dialog).getByRole('button', { name: 'Cancel permanent revocation of PLATFORM_ADMIN binding' });
-    const confirm = within(dialog).getByRole('button', { name: 'Confirm permanent revocation of PLATFORM_ADMIN binding' });
+    const dialog = screen.getByRole('alertdialog', { name: 'Cabut Penetapan Secara Permanen?' });
+    const cancel = within(dialog).getByRole('button', { name: 'Batalkan pencabutan permanen PLATFORM_ADMIN binding' });
+    const confirm = within(dialog).getByRole('button', { name: 'Konfirmasi pencabutan permanen PLATFORM_ADMIN binding' });
     expect(cancel).toHaveFocus();
 
     await user.tab({ shift: true });
@@ -1361,9 +1361,9 @@ describe('authorization administration browser regressions', () => {
     expect(revoke).not.toHaveBeenCalled();
 
     await user.keyboard('{Enter}');
-    const reopenedDialog = screen.getByRole('alertdialog', { name: 'Revoke Binding Permanently?' });
-    const reopenedCancel = within(reopenedDialog).getByRole('button', { name: 'Cancel permanent revocation of PLATFORM_ADMIN binding' });
-    const reopenedConfirm = within(reopenedDialog).getByRole('button', { name: 'Confirm permanent revocation of PLATFORM_ADMIN binding' });
+    const reopenedDialog = screen.getByRole('alertdialog', { name: 'Cabut Penetapan Secara Permanen?' });
+    const reopenedCancel = within(reopenedDialog).getByRole('button', { name: 'Batalkan pencabutan permanen PLATFORM_ADMIN binding' });
+    const reopenedConfirm = within(reopenedDialog).getByRole('button', { name: 'Konfirmasi pencabutan permanen PLATFORM_ADMIN binding' });
     expect(reopenedCancel).toHaveFocus();
     await user.tab();
     expect(reopenedConfirm).toHaveFocus();
@@ -1486,7 +1486,7 @@ describe('authorization administration browser regressions', () => {
     await user.click(screen.getByTestId('tab-audit'));
     await user.click(await screen.findByTestId('button-audit-details-audit-1'));
     const details = screen.getByRole('dialog');
-    expect(within(details).getByText('Audit Record Details')).toBeVisible();
+    expect(within(details).getByText('Detail Catatan Audit')).toBeVisible();
     expect(within(details).getByText('ROLE_REVOKED')).toBeVisible();
     expect(within(details).getByText(/"status": "REVOKED"/)).toBeVisible();
     expect(within(details).queryByRole('textbox')).not.toBeInTheDocument();
