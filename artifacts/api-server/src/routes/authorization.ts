@@ -84,19 +84,135 @@ function csvCell(value: unknown) {
   return `"${text.replaceAll('"', '""')}"`;
 }
 
+const selectableScopeTables = {
+  FACILITY: facilitiesTable,
+  BUILDING: buildingsTable,
+  SPACE: spacesTable,
+  ASSET: assetsTable,
+  TEAM: teamsTable,
+  VENDOR_ASSIGNMENT: vendorAssignmentsTable,
+} as const;
+
+type RegistryScopeType = keyof typeof selectableScopeTables;
+type RegistryTarget = {
+  id: string;
+  organizationId: string;
+  name: string;
+  code: string | null;
+  status: string;
+  parentPath: string[];
+};
+
+// Both the directory and saved bindings use the same organization-scoped hierarchy projection.
+// Only directory searches constrain status, match ancestor names, sort, and limit results.
+async function lookupRegistryScopeTargets(
+  scopeType: RegistryScopeType,
+  organizationIds: string[],
+  database: typeof db,
+  options: { ids?: string[]; query?: string; limit?: number } = {},
+): Promise<RegistryTarget[]> {
+  if (!organizationIds.length || (options.ids && !options.ids.length)) return [];
+  const table = selectableScopeTables[scopeType];
+  const filters = [
+    inArray(table.organizationId, organizationIds),
+    ...(options.ids ? [inArray(table.id, options.ids)] : []),
+    ...(options.limit !== undefined ? [eq(table.status, "ACTIVE")] : []),
+  ];
+  const queryPattern = `%${options.query ?? ""}%`;
+  const targetMatchesQuery = options.query
+    ? or(ilike(table.name, queryPattern), ilike(table.code, queryPattern))
+    : undefined;
+  const selection = {
+    id: table.id,
+    name: table.name,
+    code: table.code,
+    organizationId: table.organizationId,
+    status: table.status,
+  };
+
+  if (scopeType === "BUILDING") {
+    if (targetMatchesQuery) filters.push(or(targetMatchesQuery, ilike(facilitiesTable.name, queryPattern))!);
+    let statement = database.select({
+      ...selection,
+      facilityName: facilitiesTable.name,
+    }).from(buildingsTable).innerJoin(facilitiesTable, and(
+      eq(buildingsTable.facilityId, facilitiesTable.id),
+      eq(buildingsTable.organizationId, facilitiesTable.organizationId),
+    )).where(and(...filters)).$dynamic();
+    if (options.limit !== undefined) statement = statement.orderBy(asc(table.name), asc(table.id)).limit(options.limit);
+    const results = await statement;
+    return results.map(({ facilityName, ...target }) => ({ ...target, parentPath: [facilityName] }));
+  }
+  if (scopeType === "SPACE") {
+    if (targetMatchesQuery) filters.push(or(
+      targetMatchesQuery,
+      ilike(facilitiesTable.name, queryPattern),
+      ilike(buildingsTable.name, queryPattern),
+    )!);
+    let statement = database.select({
+      ...selection,
+      facilityName: facilitiesTable.name,
+      buildingName: buildingsTable.name,
+    }).from(spacesTable)
+      .innerJoin(buildingsTable, and(
+        eq(spacesTable.buildingId, buildingsTable.id),
+        eq(spacesTable.organizationId, buildingsTable.organizationId),
+      ))
+      .innerJoin(facilitiesTable, and(
+        eq(spacesTable.facilityId, facilitiesTable.id),
+        eq(spacesTable.organizationId, facilitiesTable.organizationId),
+      ))
+      .where(and(...filters)).$dynamic();
+    if (options.limit !== undefined) statement = statement.orderBy(asc(table.name), asc(table.id)).limit(options.limit);
+    const results = await statement;
+    return results.map(({ facilityName, buildingName, ...target }) => ({
+      ...target, parentPath: [facilityName, buildingName],
+    }));
+  }
+  if (scopeType === "ASSET") {
+    if (targetMatchesQuery) filters.push(or(
+      targetMatchesQuery,
+      ilike(facilitiesTable.name, queryPattern),
+      ilike(buildingsTable.name, queryPattern),
+      ilike(spacesTable.name, queryPattern),
+    )!);
+    let statement = database.select({
+      ...selection,
+      facilityName: facilitiesTable.name,
+      buildingName: buildingsTable.name,
+      spaceName: spacesTable.name,
+    }).from(assetsTable)
+      .innerJoin(spacesTable, and(
+        eq(assetsTable.spaceId, spacesTable.id),
+        eq(assetsTable.organizationId, spacesTable.organizationId),
+      ))
+      .innerJoin(buildingsTable, and(
+        eq(assetsTable.buildingId, buildingsTable.id),
+        eq(assetsTable.organizationId, buildingsTable.organizationId),
+      ))
+      .innerJoin(facilitiesTable, and(
+        eq(assetsTable.facilityId, facilitiesTable.id),
+        eq(assetsTable.organizationId, facilitiesTable.organizationId),
+      ))
+      .where(and(...filters)).$dynamic();
+    if (options.limit !== undefined) statement = statement.orderBy(asc(table.name), asc(table.id)).limit(options.limit);
+    const results = await statement;
+    return results.map(({ facilityName, buildingName, spaceName, ...target }) => ({
+      ...target, parentPath: [facilityName, buildingName, spaceName],
+    }));
+  }
+  if (targetMatchesQuery) filters.push(targetMatchesQuery);
+  let statement = database.select(selection).from(table).where(and(...filters)).$dynamic();
+  if (options.limit !== undefined) statement = statement.orderBy(asc(table.name), asc(table.id)).limit(options.limit);
+  const results = await statement;
+  return results.map((target) => ({ ...target, parentPath: [] }));
+}
+
 async function resolveBindingScopeTargets(
   rows: BindingScope[],
   database: typeof db,
 ): Promise<ScopeTarget[]> {
   const organizationIds = [...new Set(rows.map((row) => row.organizationId))];
-  const registryTables = {
-    FACILITY: facilitiesTable,
-    BUILDING: buildingsTable,
-    SPACE: spacesTable,
-    ASSET: assetsTable,
-    TEAM: teamsTable,
-    VENDOR_ASSIGNMENT: vendorAssignmentsTable,
-  } as const;
   const organizationNames = new Map<string, string>();
 
   if (organizationIds.length) {
@@ -107,110 +223,15 @@ async function resolveBindingScopeTargets(
     for (const organization of organizations) organizationNames.set(organization.id, organization.name);
   }
 
-  const registryTargets = new Map<string, {
-    name: string;
-    code: string | null;
-    parentPath: string[];
-    status: string;
-  }>();
-  await Promise.all(Object.entries(registryTables).map(async ([scopeType, table]) => {
+  const registryTargets = new Map<string, RegistryTarget>();
+  await Promise.all((Object.keys(selectableScopeTables) as RegistryScopeType[]).map(async (scopeType) => {
     const ids = [...new Set(rows
       .filter((row) => row.scopeType === scopeType && row.scopeId)
       .map((row) => row.scopeId!))];
     if (!ids.length || !organizationIds.length) return;
-    const targetFilters = and(
-      inArray(table.id, ids),
-      inArray(table.organizationId, organizationIds),
-    );
-    let targets: Array<{
-      id: string;
-      organizationId: string;
-      name: string;
-      code: string | null;
-      status: string;
-      parentPath: string[];
-    }>;
-    if (scopeType === "BUILDING") {
-      const results = await database.select({
-        id: buildingsTable.id,
-        organizationId: buildingsTable.organizationId,
-        name: buildingsTable.name,
-        code: buildingsTable.code,
-        status: buildingsTable.status,
-        facilityName: facilitiesTable.name,
-      }).from(buildingsTable).innerJoin(facilitiesTable, and(
-        eq(buildingsTable.facilityId, facilitiesTable.id),
-        eq(buildingsTable.organizationId, facilitiesTable.organizationId),
-      )).where(targetFilters);
-      targets = results.map(({ facilityName, ...target }) => ({ ...target, parentPath: [facilityName] }));
-    } else if (scopeType === "SPACE") {
-      const results = await database.select({
-        id: spacesTable.id,
-        organizationId: spacesTable.organizationId,
-        name: spacesTable.name,
-        code: spacesTable.code,
-        status: spacesTable.status,
-        facilityName: facilitiesTable.name,
-        buildingName: buildingsTable.name,
-      }).from(spacesTable)
-        .innerJoin(buildingsTable, and(
-          eq(spacesTable.buildingId, buildingsTable.id),
-          eq(spacesTable.organizationId, buildingsTable.organizationId),
-        ))
-        .innerJoin(facilitiesTable, and(
-          eq(spacesTable.facilityId, facilitiesTable.id),
-          eq(spacesTable.organizationId, facilitiesTable.organizationId),
-        ))
-        .where(targetFilters);
-      targets = results.map(({ facilityName, buildingName, ...target }) => ({
-        ...target,
-        parentPath: [facilityName, buildingName],
-      }));
-    } else if (scopeType === "ASSET") {
-      const results = await database.select({
-        id: assetsTable.id,
-        organizationId: assetsTable.organizationId,
-        name: assetsTable.name,
-        code: assetsTable.code,
-        status: assetsTable.status,
-        facilityName: facilitiesTable.name,
-        buildingName: buildingsTable.name,
-        spaceName: spacesTable.name,
-      }).from(assetsTable)
-        .innerJoin(spacesTable, and(
-          eq(assetsTable.spaceId, spacesTable.id),
-          eq(assetsTable.organizationId, spacesTable.organizationId),
-        ))
-        .innerJoin(buildingsTable, and(
-          eq(assetsTable.buildingId, buildingsTable.id),
-          eq(assetsTable.organizationId, buildingsTable.organizationId),
-        ))
-        .innerJoin(facilitiesTable, and(
-          eq(assetsTable.facilityId, facilitiesTable.id),
-          eq(assetsTable.organizationId, facilitiesTable.organizationId),
-        ))
-        .where(targetFilters);
-      targets = results.map(({ facilityName, buildingName, spaceName, ...target }) => ({
-        ...target,
-        parentPath: [facilityName, buildingName, spaceName],
-      }));
-    } else {
-      const results = await database.select({
-        id: table.id,
-        organizationId: table.organizationId,
-        name: table.name,
-        code: table.code,
-        status: table.status,
-      }).from(table).where(targetFilters);
-      targets = results.map((target) => ({ ...target, parentPath: [] }));
-    }
+    const targets = await lookupRegistryScopeTargets(scopeType, organizationIds, database, { ids });
     for (const target of targets) {
-      registryTargets.set(`${scopeType}:${target.organizationId}:${target.id}`, {
-        name: target.name,
-        code: target.code,
-        parentPath: target.parentPath,
-        status: target.status,
-      });
+      registryTargets.set(`${scopeType}:${target.organizationId}:${target.id}`, target);
     }
   }));
 
@@ -239,7 +260,7 @@ async function resolveBindingScopeTargets(
             scopeTargetStatus: "MISSING",
           };
     }
-    if (row.scopeType in registryTables && row.scopeId) {
+    if (row.scopeType in selectableScopeTables && row.scopeId) {
       const target = registryTargets.get(`${row.scopeType}:${row.organizationId}:${row.scopeId}`);
       return target
         ? {
@@ -270,15 +291,6 @@ async function resolveBindingScopeTargets(
         };
   });
 }
-
-const selectableScopeTables = {
-  FACILITY: facilitiesTable,
-  BUILDING: buildingsTable,
-  SPACE: spacesTable,
-  ASSET: assetsTable,
-  TEAM: teamsTable,
-  VENDOR_ASSIGNMENT: vendorAssignmentsTable,
-} as const;
 
 function hasScopeTargetDirectory(scopeType: string): scopeType is keyof typeof selectableScopeTables {
   return scopeType in selectableScopeTables;
@@ -616,119 +628,12 @@ router.get("/role-binding-scope-targets", async (req, res): Promise<void> => {
     res.json(SearchRoleBindingScopeTargetsResponse.parse([]));
     return;
   }
-  const query = parsed.data.query?.trim() ?? "";
-  const queryPattern = `%${query}%`;
-  const filters = [
-    eq(table.organizationId, parsed.data.organizationId),
-    eq(table.status, "ACTIVE"),
-  ];
-  const targetMatchesQuery = query
-    ? or(ilike(table.name, queryPattern), ilike(table.code, queryPattern))
-    : undefined;
-  const baseSelection = {
-    id: table.id,
-    name: table.name,
-    code: table.code,
-    organizationId: table.organizationId,
-  };
-  let rows: Array<{
-    id: string;
-    name: string;
-    code: string | null;
-    organizationId: string;
-    parentPath: string[];
-  }>;
+  const rows = await lookupRegistryScopeTargets(scopeType, [parsed.data.organizationId], database, {
+    query: parsed.data.query?.trim(),
+    limit: parsed.data.limit,
+  });
 
-  if (scopeType === "BUILDING") {
-    if (targetMatchesQuery) {
-      filters.push(or(targetMatchesQuery, ilike(facilitiesTable.name, queryPattern))!);
-    }
-    const results = await database.select({
-      ...baseSelection,
-      facilityName: facilitiesTable.name,
-    }).from(buildingsTable)
-      .innerJoin(facilitiesTable, and(
-        eq(buildingsTable.facilityId, facilitiesTable.id),
-        eq(buildingsTable.organizationId, facilitiesTable.organizationId),
-      ))
-      .where(and(...filters))
-      .orderBy(asc(table.name), asc(table.id))
-      .limit(parsed.data.limit);
-    rows = results.map(({ facilityName, ...row }) => ({ ...row, parentPath: [facilityName] }));
-  } else if (scopeType === "SPACE") {
-    if (targetMatchesQuery) {
-      filters.push(or(
-        targetMatchesQuery,
-        ilike(facilitiesTable.name, queryPattern),
-        ilike(buildingsTable.name, queryPattern),
-      )!);
-    }
-    const results = await database.select({
-      ...baseSelection,
-      facilityName: facilitiesTable.name,
-      buildingName: buildingsTable.name,
-    }).from(spacesTable)
-      .innerJoin(buildingsTable, and(
-        eq(spacesTable.buildingId, buildingsTable.id),
-        eq(spacesTable.organizationId, buildingsTable.organizationId),
-      ))
-      .innerJoin(facilitiesTable, and(
-        eq(spacesTable.facilityId, facilitiesTable.id),
-        eq(spacesTable.organizationId, facilitiesTable.organizationId),
-      ))
-      .where(and(...filters))
-      .orderBy(asc(table.name), asc(table.id))
-      .limit(parsed.data.limit);
-    rows = results.map(({ facilityName, buildingName, ...row }) => ({
-      ...row,
-      parentPath: [facilityName, buildingName],
-    }));
-  } else if (scopeType === "ASSET") {
-    if (targetMatchesQuery) {
-      filters.push(or(
-        targetMatchesQuery,
-        ilike(facilitiesTable.name, queryPattern),
-        ilike(buildingsTable.name, queryPattern),
-        ilike(spacesTable.name, queryPattern),
-      )!);
-    }
-    const results = await database.select({
-      ...baseSelection,
-      facilityName: facilitiesTable.name,
-      buildingName: buildingsTable.name,
-      spaceName: spacesTable.name,
-    }).from(assetsTable)
-      .innerJoin(spacesTable, and(
-        eq(assetsTable.spaceId, spacesTable.id),
-        eq(assetsTable.organizationId, spacesTable.organizationId),
-      ))
-      .innerJoin(buildingsTable, and(
-        eq(assetsTable.buildingId, buildingsTable.id),
-        eq(assetsTable.organizationId, buildingsTable.organizationId),
-      ))
-      .innerJoin(facilitiesTable, and(
-        eq(assetsTable.facilityId, facilitiesTable.id),
-        eq(assetsTable.organizationId, facilitiesTable.organizationId),
-      ))
-      .where(and(...filters))
-      .orderBy(asc(table.name), asc(table.id))
-      .limit(parsed.data.limit);
-    rows = results.map(({ facilityName, buildingName, spaceName, ...row }) => ({
-      ...row,
-      parentPath: [facilityName, buildingName, spaceName],
-    }));
-  } else {
-    if (targetMatchesQuery) {
-      filters.push(targetMatchesQuery);
-    }
-    const results = await database.select(baseSelection).from(table)
-      .where(and(...filters))
-      .orderBy(asc(table.name), asc(table.id))
-      .limit(parsed.data.limit);
-    rows = results.map((row) => ({ ...row, parentPath: [] }));
-  }
-
-  res.json(SearchRoleBindingScopeTargetsResponse.parse(rows.map((row) => ({
+  res.json(SearchRoleBindingScopeTargetsResponse.parse(rows.map(({ status: _status, ...row }) => ({
     ...row,
     scopeType,
   }))));

@@ -1829,6 +1829,10 @@ test("authorization routes run through a real HTTP app with injected currentUser
       (spaceParentSearch.body as Array<{ id: string }>).map(({ id }) => id),
       [searchableSpace.id],
     );
+    assert.deepEqual(
+      (spaceParentSearch.body as Array<{ parentPath: string[] }>)[0]?.parentPath,
+      ["North Campus", "Shared Plant"],
+    );
     const [searchableSystem] = await db.insert(systemsTable).values({
       organizationId: target.organizationId,
       facilityId: namedFacility.id,
@@ -1852,6 +1856,10 @@ test("authorization routes run through a real HTTP app with injected currentUser
     assert.deepEqual(
       (assetParentSearch.body as Array<{ id: string }>).map(({ id }) => id),
       [searchableAsset.id],
+    );
+    assert.deepEqual(
+      (assetParentSearch.body as Array<{ parentPath: string[] }>)[0]?.parentPath,
+      ["North Campus", "Shared Plant", "Utility Room"],
     );
     const [foreignFacility] = await db.insert(facilitiesTable).values({
       organizationId: manager.organizationId,
@@ -1947,6 +1955,10 @@ test("authorization routes run through a real HTTP app with injected currentUser
         row.scopeTargetCode === duplicateBuilding.code &&
         row.scopeTargetParentPath.join(" > ") === "North Campus" &&
         row.scopeTargetStatus === "RESOLVED"));
+    assert.deepEqual(
+      listedBindings.find((row) => row.scopeId === duplicateBuilding.id)?.scopeTargetParentPath,
+      (buildingScopeSearch.body as Array<{ parentPath: string[] }>)[0]?.parentPath,
+    );
     assert.ok(listedBindings
       .some((row) => row.scopeId === missingScopeId &&
         row.scopeTargetName === null &&
@@ -2024,6 +2036,9 @@ test("authorization routes run through a real HTTP app with injected currentUser
       line.includes(`"${target.userId}"`) &&
       line.includes('"FACILITY_MANAGER"') &&
       line.includes('"ACTIVE"')));
+    assert.ok(exportedLines.slice(1).some((line) =>
+      line.includes(`"${duplicateBuilding.id}"`) &&
+      line.includes(`"${(buildingScopeSearch.body as Array<{ parentPath: string[] }>)[0]!.parentPath.join(" > ")}"`)));
     const invalidExportFilter = await fetch(
       `${base}/users/${target.userId}/role-bindings/export?status=REVOKED`,
     );
