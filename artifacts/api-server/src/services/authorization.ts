@@ -91,6 +91,18 @@ export async function resolveTeamWorkScope(
   };
 }
 
+/** Assignment targets for authorized team dispatchers; vendor membership is not required. */
+export async function resolveVendorAssignmentTargetWorkScope(
+  database: typeof db,
+  organizationId: string,
+  vendorAssignmentId: string,
+): Promise<WorkScopeResolution> {
+  const assignment = await resolveActiveWorkScope(database, vendorAssignmentsTable, organizationId, vendorAssignmentId);
+  return assignment
+    ? { found: true, verifiedContext: { organizationId, vendorAssignmentId: assignment.id, scopeVerified: true } }
+    : { found: false };
+}
+
 export async function resolveVendorAssignmentWorkScope(
   database: typeof db,
   organizationId: string,

@@ -11,7 +11,105 @@ tags:
   - name: foundation
   - name: authorization
   - name: registry
+  - name: work-orders
 paths:
+  /work-orders/teams/{teamId}:
+    parameters:
+      - {$ref: "#/components/parameters/WorkOrderTeamId"}
+    get:
+      operationId: listTeamWorkOrders
+      tags: [work-orders]
+      summary: List authorized work orders for an active team
+      responses:
+        "200": {description: Work orders, content: {application/json: {schema: {type: array, items: {$ref: "#/components/schemas/WorkOrder"}}}}}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+    post:
+      operationId: createTeamWorkOrder
+      tags: [work-orders]
+      summary: Create a team work order, optionally assigned to an active vendor assignment
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/WorkOrderInput"}}}}
+      responses:
+        "201": {description: Created, content: {application/json: {schema: {$ref: "#/components/schemas/WorkOrder"}}}}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /work-orders/teams/{teamId}/{id}:
+    parameters:
+      - {$ref: "#/components/parameters/WorkOrderTeamId"}
+      - {$ref: "#/components/parameters/WorkOrderId"}
+    get:
+      operationId: getTeamWorkOrder
+      tags: [work-orders]
+      responses:
+        "200": {description: Work order, content: {application/json: {schema: {$ref: "#/components/schemas/WorkOrder"}}}}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+    patch:
+      operationId: updateTeamWorkOrder
+      tags: [work-orders]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/WorkOrderUpdate"}}}}
+      responses:
+        "200": {description: Updated, content: {application/json: {schema: {$ref: "#/components/schemas/WorkOrder"}}}}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
+  /work-orders/teams/{teamId}/{id}/complete:
+    parameters:
+      - {$ref: "#/components/parameters/WorkOrderTeamId"}
+      - {$ref: "#/components/parameters/WorkOrderId"}
+    post:
+      operationId: completeTeamWorkOrder
+      tags: [work-orders]
+      responses:
+        "200": {description: Completed, content: {application/json: {schema: {$ref: "#/components/schemas/WorkOrder"}}}}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
+  /work-orders/vendor-assignments/{vendorAssignmentId}:
+    parameters:
+      - {$ref: "#/components/parameters/WorkOrderVendorAssignmentId"}
+    get:
+      operationId: listVendorWorkOrders
+      tags: [work-orders]
+      responses:
+        "200": {description: Assigned work orders, content: {application/json: {schema: {type: array, items: {$ref: "#/components/schemas/WorkOrder"}}}}}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /work-orders/vendor-assignments/{vendorAssignmentId}/{id}:
+    parameters:
+      - {$ref: "#/components/parameters/WorkOrderVendorAssignmentId"}
+      - {$ref: "#/components/parameters/WorkOrderId"}
+    get:
+      operationId: getVendorWorkOrder
+      tags: [work-orders]
+      responses:
+        "200": {description: Assigned work order, content: {application/json: {schema: {$ref: "#/components/schemas/WorkOrder"}}}}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+    patch:
+      operationId: executeVendorWorkOrder
+      tags: [work-orders]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: "#/components/schemas/VendorWorkOrderUpdate"}}}}
+      responses:
+        "200": {description: Progress saved, content: {application/json: {schema: {$ref: "#/components/schemas/WorkOrder"}}}}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
+  /work-orders/vendor-assignments/{vendorAssignmentId}/{id}/submit:
+    parameters:
+      - {$ref: "#/components/parameters/WorkOrderVendorAssignmentId"}
+      - {$ref: "#/components/parameters/WorkOrderId"}
+    post:
+      operationId: submitVendorWorkOrder
+      tags: [work-orders]
+      responses:
+        "200": {description: Submitted for team completion, content: {application/json: {schema: {$ref: "#/components/schemas/WorkOrder"}}}}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "409": {$ref: "#/components/responses/Conflict"}
   /healthz:
     get:
       operationId: healthCheck
@@ -1165,6 +1263,9 @@ paths:
         "403": {$ref: "#/components/responses/Forbidden"}
 components:
   parameters:
+    WorkOrderTeamId: {name: teamId, in: path, required: true, schema: {type: string, format: uuid}}
+    WorkOrderVendorAssignmentId: {name: vendorAssignmentId, in: path, required: true, schema: {type: string, format: uuid}}
+    WorkOrderId: {name: id, in: path, required: true, schema: {type: string, format: uuid}}
     RoleId: {name: roleId, in: path, required: true, schema: {type: string, format: uuid}}
     UserId: {name: userId, in: path, required: true, schema: {type: string, format: uuid}}
     BindingId: {name: bindingId, in: path, required: true, schema: {type: string, format: uuid}}
@@ -1208,6 +1309,42 @@ components:
       description: An exact policy version precondition is required
       content: {application/json: {schema: {$ref: "#/components/schemas/ErrorResponse"}}}
   schemas:
+    WorkOrder:
+      type: object
+      required: [id, organizationId, teamId, vendorAssignmentId, title, description, status, createdByUserId, createdAt, updatedAt, completedAt]
+      properties:
+        id: {type: string, format: uuid}
+        organizationId: {type: string, format: uuid}
+        teamId: {type: string, format: uuid}
+        vendorAssignmentId: {type: ["string", "null"], format: uuid}
+        title: {type: string}
+        description: {type: ["string", "null"]}
+        status: {type: string, enum: [OPEN, IN_PROGRESS, SUBMITTED, COMPLETED]}
+        createdByUserId: {type: string, format: uuid}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+        completedAt: {type: ["string", "null"], format: date-time}
+    WorkOrderInput:
+      type: object
+      additionalProperties: false
+      required: [title]
+      properties:
+        title: {type: string, minLength: 1, maxLength: 200}
+        description: {type: ["string", "null"], maxLength: 4000}
+        vendorAssignmentId: {type: string, format: uuid}
+    WorkOrderUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        title: {type: string, minLength: 1, maxLength: 200}
+        description: {type: ["string", "null"], maxLength: 4000}
+    VendorWorkOrderUpdate:
+      type: object
+      additionalProperties: false
+      required: [description]
+      properties:
+        description: {type: ["string", "null"], maxLength: 4000}
     RegistryInput:
       type: object
       additionalProperties: false

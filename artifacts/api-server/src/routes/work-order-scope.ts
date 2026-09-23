@@ -6,6 +6,7 @@ import {
 } from "../services/authorization";
 import { currentUser as defaultCurrentUser } from "./foundation";
 import { getActiveOrganizationId as defaultGetActiveOrganizationId } from "./authorization";
+import { z } from "zod";
 
 type WorkOrderScopeKind = "TEAM" | "VENDOR_ASSIGNMENT";
 
@@ -57,8 +58,8 @@ export function createWorkOrderScopeGuard(
       res.status(403).json({ error: "Active organization required" });
       return;
     }
-    if (typeof targetId !== "string" || targetId.length === 0) {
-      res.status(400).json({ error: "Work-order scope ID is required" });
+    if (typeof targetId !== "string" || !z.string().uuid().safeParse(targetId).success) {
+      res.status(404).json({ error: "Work-order scope not found" });
       return;
     }
 

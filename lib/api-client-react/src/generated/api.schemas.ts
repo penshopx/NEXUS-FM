@@ -5,6 +5,68 @@
  * NEXUS-FM foundation API
  * OpenAPI spec version: 0.1.0
  */
+export type WorkOrderStatus = typeof WorkOrderStatus[keyof typeof WorkOrderStatus];
+
+
+export const WorkOrderStatus = {
+  OPEN: 'OPEN',
+  IN_PROGRESS: 'IN_PROGRESS',
+  SUBMITTED: 'SUBMITTED',
+  COMPLETED: 'COMPLETED',
+} as const;
+
+export interface WorkOrder {
+  id: string;
+  organizationId: string;
+  teamId: string;
+  /** @nullable */
+  vendorAssignmentId: string | null;
+  title: string;
+  /** @nullable */
+  description: string | null;
+  status: WorkOrderStatus;
+  createdByUserId: string;
+  createdAt: string;
+  updatedAt: string;
+  /** @nullable */
+  completedAt: string | null;
+}
+
+export interface WorkOrderInput {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  title: string;
+  /**
+     * @maxLength 4000
+     * @nullable
+     */
+  description?: string | null;
+  vendorAssignmentId?: string;
+}
+
+export interface WorkOrderUpdate {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  title?: string;
+  /**
+     * @maxLength 4000
+     * @nullable
+     */
+  description?: string | null;
+}
+
+export interface VendorWorkOrderUpdate {
+  /**
+     * @maxLength 4000
+     * @nullable
+     */
+  description: string | null;
+}
+
 export type RegistryInputStatus = typeof RegistryInputStatus[keyof typeof RegistryInputStatus];
 
 

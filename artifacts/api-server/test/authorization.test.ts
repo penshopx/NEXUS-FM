@@ -27,6 +27,7 @@ import {
   usersTable,
   vendorAssignmentMembershipsTable,
   vendorAssignmentsTable,
+  workOrdersTable,
 } from "@workspace/db";
 import {
   authorize,
@@ -72,6 +73,7 @@ import { createAuthorizationRouter } from "../src/routes/authorization.ts";
 import { createFacilitiesRouter } from "../src/routes/facilities.ts";
 import { waitForCsvDrain } from "../src/lib/csv-stream.ts";
 import { createWorkOrderScopeGuard } from "../src/routes/work-order-scope.ts";
+import { createWorkOrdersRouter } from "../src/routes/work-orders.ts";
 import {
   authorizeRegistryObject,
   parsePortfolioImport,
@@ -3668,4 +3670,88 @@ test("mutation authorization linearizes against concurrent revocation and policy
   assert.equal(afterPolicyDeny.allowed, false);
   await db.update(rolePermissionsTable).set({ effect: "ALLOW" })
     .where(and(eq(rolePermissionsTable.roleId, actor.roleId), eq(rolePermissionsTable.permissionId, permission)));
+});
+
+test("work orders persist through authorized team and vendor routes without exposing other scopes", async () => {
+  const org = (await db.insert(organizationsTable).values({
+    name: "Work orders", slug: `work-orders-${randomUUID()}`,
+  }).returning())[0]!;
+  const otherOrg = (await db.insert(organizationsTable).values({
+    name: "Other work orders", slug: `other-work-orders-${randomUUID()}`,
+  }).returning())[0]!;
+  const [team] = await db.insert(teamsTable).values({ organizationId: org.id, name: "Work team" }).returning();
+  const [inactiveTeam] = await db.insert(teamsTable).values({
+    organizationId: org.id, name: "Inactive work team", status: "INACTIVE",
+  }).returning();
+  const [otherTeam] = await db.insert(teamsTable).values({ organizationId: otherOrg.id, name: "Other team" }).returning();
+  const [assignment] = await db.insert(vendorAssignmentsTable).values({ organizationId: org.id, name: "Work vendor" }).returning();
+  const supervisor = await makeFixture("FACILITY_SUPERVISOR", "TEAM", team.id, org.id);
+  const vendor = await makeFixture("VENDOR", "VENDOR_ASSIGNMENT", assignment.id, org.id);
+  const outsider = await makeFixture("FACILITY_SUPERVISOR", "TEAM", otherTeam.id, otherOrg.id);
+  await db.insert(vendorAssignmentMembershipsTable).values({
+    organizationId: org.id, vendorAssignmentId: assignment.id, userId: vendor.userId,
+  });
+  for (const actor of [supervisor, vendor, outsider]) {
+    await db.insert(userContextsTable).values({
+      userId: actor.userId, activeOrganizationId: actor.organizationId,
+    });
+  }
+  let activeActor = supervisor.userId;
+  const app = express();
+  app.use(express.json());
+  app.use(createWorkOrdersRouter(db, async () =>
+    (await db.select().from(usersTable).where(eq(usersTable.id, activeActor)))[0] ?? null));
+  const server = createServer(app);
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  assert.ok(address && typeof address !== "string");
+  const base = `http://127.0.0.1:${address.port}/work-orders`;
+  const teamPath = `${base}/teams/${team.id}`;
+  const vendorPath = `${base}/vendor-assignments/${assignment.id}`;
+  const call = (path: string, method = "GET", body?: object) => fetch(path, {
+    method, ...(body ? { headers: { "content-type": "application/json" }, body: JSON.stringify(body) } : {}),
+  });
+  try {
+    const created = await call(teamPath, "POST", {
+      title: "Repair air handler", description: "Needs service", vendorAssignmentId: assignment.id,
+    });
+    assert.equal(created.status, 201, await created.clone().text());
+    const order = await created.json() as { id: string; status: string };
+    assert.equal(order.status, "OPEN");
+    assert.equal((await call(`${teamPath}/${order.id}`)).status, 200);
+    assert.equal((await call(teamPath).then((r) => r.json()) as unknown[]).length, 1);
+    assert.equal((await call(`${base}/teams/${inactiveTeam.id}`)).status, 404);
+    assert.equal((await call(`${base}/teams/${otherTeam.id}`)).status, 404);
+    assert.equal((await call(`${teamPath}/${randomUUID()}`)).status, 404);
+    assert.equal((await call(`${teamPath}/${order.id}`, "PATCH", { status: "COMPLETED" })).status, 400);
+    assert.equal((await call(`${teamPath}/${order.id}/complete`, "POST")).status, 409);
+    activeActor = outsider.userId;
+    assert.equal((await call(`${teamPath}/${order.id}`)).status, 404);
+    assert.equal((await call(`${teamPath}/${order.id}`, "PATCH", { title: "No" })).status, 404);
+    activeActor = vendor.userId;
+    assert.equal((await call(vendorPath)).status, 200);
+    assert.equal((await call(`${vendorPath}/${order.id}`)).status, 200);
+    assert.equal((await call(`${vendorPath}/${order.id}/submit`, "POST")).status, 409);
+    const executed = await call(`${vendorPath}/${order.id}`, "PATCH", { description: "Repaired" });
+    assert.equal(executed.status, 200, await executed.clone().text());
+    assert.equal((await executed.json() as { status: string }).status, "IN_PROGRESS");
+    const submitted = await call(`${vendorPath}/${order.id}/submit`, "POST");
+    assert.equal(submitted.status, 200, await submitted.clone().text());
+    assert.equal((await submitted.json() as { status: string }).status, "SUBMITTED");
+    assert.equal((await call(`${vendorPath}/${order.id}`, "PATCH", { description: "Again" })).status, 409);
+    activeActor = supervisor.userId;
+    const completed = await call(`${teamPath}/${order.id}/complete`, "POST");
+    assert.equal(completed.status, 200, await completed.clone().text());
+    assert.equal((await completed.json() as { status: string }).status, "COMPLETED");
+    assert.equal((await call(`${teamPath}/${order.id}`, "PATCH", { title: "Again" })).status, 409);
+    await db.update(teamsTable).set({ status: "INACTIVE" }).where(eq(teamsTable.id, team.id));
+    assert.equal((await call(`${teamPath}/${order.id}`)).status, 404);
+    activeActor = vendor.userId;
+    await db.update(vendorAssignmentsTable).set({ status: "INACTIVE" }).where(eq(vendorAssignmentsTable.id, assignment.id));
+    assert.equal((await call(`${vendorPath}/${order.id}`)).status, 404);
+  } finally {
+    server.close();
+    await db.delete(workOrdersTable).where(eq(workOrdersTable.organizationId, org.id));
+    await db.delete(organizationsTable).where(inArray(organizationsTable.id, [org.id, otherOrg.id]));
+  }
 });

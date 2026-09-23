@@ -6,6 +6,7 @@ export * from "./memberships";
 export * from "./organizations";
 export * from "./user-contexts";
 export * from "./users";
+export * from "./work-orders";
 // Export your models here. Add one export per file
 // export * from "./posts";
 //

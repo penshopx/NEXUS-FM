@@ -9,6 +9,222 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary List authorized work orders for an active team
+ */
+export const ListTeamWorkOrdersParams = zod.object({
+  "teamId": zod.coerce.string().uuid()
+})
+
+export const ListTeamWorkOrdersResponseItem = zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "teamId": zod.string().uuid(),
+  "vendorAssignmentId": zod.string().uuid().nullable(),
+  "title": zod.string(),
+  "description": zod.string().nullable(),
+  "status": zod.enum(['OPEN', 'IN_PROGRESS', 'SUBMITTED', 'COMPLETED']),
+  "createdByUserId": zod.string().uuid(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "completedAt": zod.coerce.date().nullable()
+})
+export const ListTeamWorkOrdersResponse = zod.array(ListTeamWorkOrdersResponseItem)
+
+
+/**
+ * @summary Create a team work order, optionally assigned to an active vendor assignment
+ */
+export const CreateTeamWorkOrderParams = zod.object({
+  "teamId": zod.coerce.string().uuid()
+})
+
+export const createTeamWorkOrderBodyTitleMax = 200;
+
+export const createTeamWorkOrderBodyDescriptionMax = 4000;
+
+
+
+export const CreateTeamWorkOrderBody = zod.object({
+  "title": zod.string().min(1).max(createTeamWorkOrderBodyTitleMax),
+  "description": zod.string().max(createTeamWorkOrderBodyDescriptionMax).nullish(),
+  "vendorAssignmentId": zod.string().uuid().optional()
+})
+
+export const CreateTeamWorkOrderResponse = zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "teamId": zod.string().uuid(),
+  "vendorAssignmentId": zod.string().uuid().nullable(),
+  "title": zod.string(),
+  "description": zod.string().nullable(),
+  "status": zod.enum(['OPEN', 'IN_PROGRESS', 'SUBMITTED', 'COMPLETED']),
+  "createdByUserId": zod.string().uuid(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "completedAt": zod.coerce.date().nullable()
+})
+
+
+export const GetTeamWorkOrderParams = zod.object({
+  "teamId": zod.coerce.string().uuid(),
+  "id": zod.coerce.string().uuid()
+})
+
+export const GetTeamWorkOrderResponse = zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "teamId": zod.string().uuid(),
+  "vendorAssignmentId": zod.string().uuid().nullable(),
+  "title": zod.string(),
+  "description": zod.string().nullable(),
+  "status": zod.enum(['OPEN', 'IN_PROGRESS', 'SUBMITTED', 'COMPLETED']),
+  "createdByUserId": zod.string().uuid(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "completedAt": zod.coerce.date().nullable()
+})
+
+
+export const UpdateTeamWorkOrderParams = zod.object({
+  "teamId": zod.coerce.string().uuid(),
+  "id": zod.coerce.string().uuid()
+})
+
+export const updateTeamWorkOrderBodyTitleMax = 200;
+
+export const updateTeamWorkOrderBodyDescriptionMax = 4000;
+
+
+
+export const UpdateTeamWorkOrderBody = zod.object({
+  "title": zod.string().min(1).max(updateTeamWorkOrderBodyTitleMax).optional(),
+  "description": zod.string().max(updateTeamWorkOrderBodyDescriptionMax).nullish()
+})
+
+export const UpdateTeamWorkOrderResponse = zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "teamId": zod.string().uuid(),
+  "vendorAssignmentId": zod.string().uuid().nullable(),
+  "title": zod.string(),
+  "description": zod.string().nullable(),
+  "status": zod.enum(['OPEN', 'IN_PROGRESS', 'SUBMITTED', 'COMPLETED']),
+  "createdByUserId": zod.string().uuid(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "completedAt": zod.coerce.date().nullable()
+})
+
+
+export const CompleteTeamWorkOrderParams = zod.object({
+  "teamId": zod.coerce.string().uuid(),
+  "id": zod.coerce.string().uuid()
+})
+
+export const CompleteTeamWorkOrderResponse = zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "teamId": zod.string().uuid(),
+  "vendorAssignmentId": zod.string().uuid().nullable(),
+  "title": zod.string(),
+  "description": zod.string().nullable(),
+  "status": zod.enum(['OPEN', 'IN_PROGRESS', 'SUBMITTED', 'COMPLETED']),
+  "createdByUserId": zod.string().uuid(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "completedAt": zod.coerce.date().nullable()
+})
+
+
+export const ListVendorWorkOrdersParams = zod.object({
+  "vendorAssignmentId": zod.coerce.string().uuid()
+})
+
+export const ListVendorWorkOrdersResponseItem = zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "teamId": zod.string().uuid(),
+  "vendorAssignmentId": zod.string().uuid().nullable(),
+  "title": zod.string(),
+  "description": zod.string().nullable(),
+  "status": zod.enum(['OPEN', 'IN_PROGRESS', 'SUBMITTED', 'COMPLETED']),
+  "createdByUserId": zod.string().uuid(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "completedAt": zod.coerce.date().nullable()
+})
+export const ListVendorWorkOrdersResponse = zod.array(ListVendorWorkOrdersResponseItem)
+
+
+export const GetVendorWorkOrderParams = zod.object({
+  "vendorAssignmentId": zod.coerce.string().uuid(),
+  "id": zod.coerce.string().uuid()
+})
+
+export const GetVendorWorkOrderResponse = zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "teamId": zod.string().uuid(),
+  "vendorAssignmentId": zod.string().uuid().nullable(),
+  "title": zod.string(),
+  "description": zod.string().nullable(),
+  "status": zod.enum(['OPEN', 'IN_PROGRESS', 'SUBMITTED', 'COMPLETED']),
+  "createdByUserId": zod.string().uuid(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "completedAt": zod.coerce.date().nullable()
+})
+
+
+export const ExecuteVendorWorkOrderParams = zod.object({
+  "vendorAssignmentId": zod.coerce.string().uuid(),
+  "id": zod.coerce.string().uuid()
+})
+
+export const executeVendorWorkOrderBodyDescriptionMax = 4000;
+
+
+
+export const ExecuteVendorWorkOrderBody = zod.object({
+  "description": zod.string().max(executeVendorWorkOrderBodyDescriptionMax).nullable()
+})
+
+export const ExecuteVendorWorkOrderResponse = zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "teamId": zod.string().uuid(),
+  "vendorAssignmentId": zod.string().uuid().nullable(),
+  "title": zod.string(),
+  "description": zod.string().nullable(),
+  "status": zod.enum(['OPEN', 'IN_PROGRESS', 'SUBMITTED', 'COMPLETED']),
+  "createdByUserId": zod.string().uuid(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "completedAt": zod.coerce.date().nullable()
+})
+
+
+export const SubmitVendorWorkOrderParams = zod.object({
+  "vendorAssignmentId": zod.coerce.string().uuid(),
+  "id": zod.coerce.string().uuid()
+})
+
+export const SubmitVendorWorkOrderResponse = zod.object({
+  "id": zod.string().uuid(),
+  "organizationId": zod.string().uuid(),
+  "teamId": zod.string().uuid(),
+  "vendorAssignmentId": zod.string().uuid().nullable(),
+  "title": zod.string(),
+  "description": zod.string().nullable(),
+  "status": zod.enum(['OPEN', 'IN_PROGRESS', 'SUBMITTED', 'COMPLETED']),
+  "createdByUserId": zod.string().uuid(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "completedAt": zod.coerce.date().nullable()
+})
+
+
+/**
  * @summary Health check
  */
 export const HealthCheckResponse = zod.object({

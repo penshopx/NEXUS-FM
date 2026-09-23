@@ -31,6 +31,7 @@ import type {
   BadRequestResponse,
   Building,
   BuildingInput,
+  ConflictResponse,
   ErrorResponse,
   ExportUserRoleBindingsParams,
   Facility,
@@ -83,7 +84,11 @@ import type {
   UserRoleBinding,
   UserRoleBindingInput,
   UserRoleBindingPage,
-  UserRoleBindingUpdate
+  UserRoleBindingUpdate,
+  VendorWorkOrderUpdate,
+  WorkOrder,
+  WorkOrderInput,
+  WorkOrderUpdate
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -112,6 +117,705 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getListTeamWorkOrdersUrl = (teamId: string,) => {
+
+
+
+
+  return `/api/work-orders/teams/${teamId}`
+}
+
+/**
+ * @summary List authorized work orders for an active team
+ */
+export const listTeamWorkOrders = async (teamId: string, options?: Parameters<typeof customFetch>[1]): Promise<WorkOrder[]> => {
+
+  return customFetch<WorkOrder[]>(getListTeamWorkOrdersUrl(teamId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListTeamWorkOrdersQueryKey = (teamId: string,) => {
+    return [
+    `/api/work-orders/teams/${teamId}`
+    ] as const;
+    }
+
+
+export const getListTeamWorkOrdersQueryOptions = <TData = Awaited<ReturnType<typeof listTeamWorkOrders>>, TError = ErrorType<UnauthorizedResponse | NotFoundResponse>>(teamId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTeamWorkOrders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListTeamWorkOrdersQueryKey(teamId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listTeamWorkOrders>>> = ({ signal }) => listTeamWorkOrders(teamId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: teamId !== null && teamId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listTeamWorkOrders>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListTeamWorkOrdersQueryResult = NonNullable<Awaited<ReturnType<typeof listTeamWorkOrders>>>
+export type ListTeamWorkOrdersQueryError = ErrorType<UnauthorizedResponse | NotFoundResponse>
+
+
+/**
+ * @summary List authorized work orders for an active team
+ */
+
+export function useListTeamWorkOrders<TData = Awaited<ReturnType<typeof listTeamWorkOrders>>, TError = ErrorType<UnauthorizedResponse | NotFoundResponse>>(
+ teamId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTeamWorkOrders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListTeamWorkOrdersQueryOptions(teamId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateTeamWorkOrderUrl = (teamId: string,) => {
+
+
+
+
+  return `/api/work-orders/teams/${teamId}`
+}
+
+/**
+ * @summary Create a team work order, optionally assigned to an active vendor assignment
+ */
+export const createTeamWorkOrder = async (teamId: string,
+    workOrderInput: WorkOrderInput, options?: Parameters<typeof customFetch>[1]): Promise<WorkOrder> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<WorkOrder>(getCreateTeamWorkOrderUrl(teamId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(workOrderInput)
+  }
+);}
+
+
+
+
+
+export const getCreateTeamWorkOrderMutationKey = () => ['createTeamWorkOrder'] as const;
+
+export const getCreateTeamWorkOrderMutationOptions = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTeamWorkOrder>>, TError,CreateTeamWorkOrderMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createTeamWorkOrder>>, TError,CreateTeamWorkOrderMutationVariables, TContext> => {
+
+const mutationKey = getCreateTeamWorkOrderMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createTeamWorkOrder>>, CreateTeamWorkOrderMutationVariables> = (props) => {
+          const {teamId,data} = props ?? {};
+
+          return  createTeamWorkOrder(teamId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateTeamWorkOrderMutationResult = NonNullable<Awaited<ReturnType<typeof createTeamWorkOrder>>>
+    export type CreateTeamWorkOrderMutationBody = BodyType<WorkOrderInput>
+    export type CreateTeamWorkOrderMutationError = ErrorType<BadRequestResponse | UnauthorizedResponse | NotFoundResponse>
+    export type CreateTeamWorkOrderMutationVariables = {teamId: string;data: BodyType<WorkOrderInput>}
+
+    /**
+ * @summary Create a team work order, optionally assigned to an active vendor assignment
+ */
+export const useCreateTeamWorkOrder = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTeamWorkOrder>>, TError,CreateTeamWorkOrderMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createTeamWorkOrder>>,
+        TError,
+        CreateTeamWorkOrderMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateTeamWorkOrderMutationOptions(options));
+    }
+
+export const getGetTeamWorkOrderUrl = (teamId: string,
+    id: string,) => {
+
+
+
+
+  return `/api/work-orders/teams/${teamId}/${id}`
+}
+
+export const getTeamWorkOrder = async (teamId: string,
+    id: string, options?: Parameters<typeof customFetch>[1]): Promise<WorkOrder> => {
+
+  return customFetch<WorkOrder>(getGetTeamWorkOrderUrl(teamId,id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTeamWorkOrderQueryKey = (teamId: string,
+    id: string,) => {
+    return [
+    `/api/work-orders/teams/${teamId}/${id}`
+    ] as const;
+    }
+
+
+export const getGetTeamWorkOrderQueryOptions = <TData = Awaited<ReturnType<typeof getTeamWorkOrder>>, TError = ErrorType<UnauthorizedResponse | NotFoundResponse>>(teamId: string,
+    id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTeamWorkOrder>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTeamWorkOrderQueryKey(teamId,id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTeamWorkOrder>>> = ({ signal }) => getTeamWorkOrder(teamId,id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: teamId !== null && teamId !== undefined && id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTeamWorkOrder>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetTeamWorkOrderQueryResult = NonNullable<Awaited<ReturnType<typeof getTeamWorkOrder>>>
+export type GetTeamWorkOrderQueryError = ErrorType<UnauthorizedResponse | NotFoundResponse>
+
+
+
+export function useGetTeamWorkOrder<TData = Awaited<ReturnType<typeof getTeamWorkOrder>>, TError = ErrorType<UnauthorizedResponse | NotFoundResponse>>(
+ teamId: string,
+    id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTeamWorkOrder>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetTeamWorkOrderQueryOptions(teamId,id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateTeamWorkOrderUrl = (teamId: string,
+    id: string,) => {
+
+
+
+
+  return `/api/work-orders/teams/${teamId}/${id}`
+}
+
+export const updateTeamWorkOrder = async (teamId: string,
+    id: string,
+    workOrderUpdate: WorkOrderUpdate, options?: Parameters<typeof customFetch>[1]): Promise<WorkOrder> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<WorkOrder>(getUpdateTeamWorkOrderUrl(teamId,id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(workOrderUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateTeamWorkOrderMutationKey = () => ['updateTeamWorkOrder'] as const;
+
+export const getUpdateTeamWorkOrderMutationOptions = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | NotFoundResponse | ConflictResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateTeamWorkOrder>>, TError,UpdateTeamWorkOrderMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateTeamWorkOrder>>, TError,UpdateTeamWorkOrderMutationVariables, TContext> => {
+
+const mutationKey = getUpdateTeamWorkOrderMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateTeamWorkOrder>>, UpdateTeamWorkOrderMutationVariables> = (props) => {
+          const {teamId,id,data} = props ?? {};
+
+          return  updateTeamWorkOrder(teamId,id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateTeamWorkOrderMutationResult = NonNullable<Awaited<ReturnType<typeof updateTeamWorkOrder>>>
+    export type UpdateTeamWorkOrderMutationBody = BodyType<WorkOrderUpdate>
+    export type UpdateTeamWorkOrderMutationError = ErrorType<BadRequestResponse | UnauthorizedResponse | NotFoundResponse | ConflictResponse>
+    export type UpdateTeamWorkOrderMutationVariables = {teamId: string;id: string;data: BodyType<WorkOrderUpdate>}
+
+    export const useUpdateTeamWorkOrder = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | NotFoundResponse | ConflictResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateTeamWorkOrder>>, TError,UpdateTeamWorkOrderMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateTeamWorkOrder>>,
+        TError,
+        UpdateTeamWorkOrderMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateTeamWorkOrderMutationOptions(options));
+    }
+
+export const getCompleteTeamWorkOrderUrl = (teamId: string,
+    id: string,) => {
+
+
+
+
+  return `/api/work-orders/teams/${teamId}/${id}/complete`
+}
+
+export const completeTeamWorkOrder = async (teamId: string,
+    id: string, options?: Parameters<typeof customFetch>[1]): Promise<WorkOrder> => {
+
+  return customFetch<WorkOrder>(getCompleteTeamWorkOrderUrl(teamId,id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getCompleteTeamWorkOrderMutationKey = () => ['completeTeamWorkOrder'] as const;
+
+export const getCompleteTeamWorkOrderMutationOptions = <TError = ErrorType<UnauthorizedResponse | NotFoundResponse | ConflictResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeTeamWorkOrder>>, TError,CompleteTeamWorkOrderMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof completeTeamWorkOrder>>, TError,CompleteTeamWorkOrderMutationVariables, TContext> => {
+
+const mutationKey = getCompleteTeamWorkOrderMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof completeTeamWorkOrder>>, CompleteTeamWorkOrderMutationVariables> = (props) => {
+          const {teamId,id} = props ?? {};
+
+          return  completeTeamWorkOrder(teamId,id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CompleteTeamWorkOrderMutationResult = NonNullable<Awaited<ReturnType<typeof completeTeamWorkOrder>>>
+
+    export type CompleteTeamWorkOrderMutationError = ErrorType<UnauthorizedResponse | NotFoundResponse | ConflictResponse>
+    export type CompleteTeamWorkOrderMutationVariables = {teamId: string;id: string}
+
+    export const useCompleteTeamWorkOrder = <TError = ErrorType<UnauthorizedResponse | NotFoundResponse | ConflictResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeTeamWorkOrder>>, TError,CompleteTeamWorkOrderMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof completeTeamWorkOrder>>,
+        TError,
+        CompleteTeamWorkOrderMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCompleteTeamWorkOrderMutationOptions(options));
+    }
+
+export const getListVendorWorkOrdersUrl = (vendorAssignmentId: string,) => {
+
+
+
+
+  return `/api/work-orders/vendor-assignments/${vendorAssignmentId}`
+}
+
+export const listVendorWorkOrders = async (vendorAssignmentId: string, options?: Parameters<typeof customFetch>[1]): Promise<WorkOrder[]> => {
+
+  return customFetch<WorkOrder[]>(getListVendorWorkOrdersUrl(vendorAssignmentId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListVendorWorkOrdersQueryKey = (vendorAssignmentId: string,) => {
+    return [
+    `/api/work-orders/vendor-assignments/${vendorAssignmentId}`
+    ] as const;
+    }
+
+
+export const getListVendorWorkOrdersQueryOptions = <TData = Awaited<ReturnType<typeof listVendorWorkOrders>>, TError = ErrorType<UnauthorizedResponse | NotFoundResponse>>(vendorAssignmentId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listVendorWorkOrders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListVendorWorkOrdersQueryKey(vendorAssignmentId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listVendorWorkOrders>>> = ({ signal }) => listVendorWorkOrders(vendorAssignmentId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: vendorAssignmentId !== null && vendorAssignmentId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listVendorWorkOrders>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListVendorWorkOrdersQueryResult = NonNullable<Awaited<ReturnType<typeof listVendorWorkOrders>>>
+export type ListVendorWorkOrdersQueryError = ErrorType<UnauthorizedResponse | NotFoundResponse>
+
+
+
+export function useListVendorWorkOrders<TData = Awaited<ReturnType<typeof listVendorWorkOrders>>, TError = ErrorType<UnauthorizedResponse | NotFoundResponse>>(
+ vendorAssignmentId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listVendorWorkOrders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListVendorWorkOrdersQueryOptions(vendorAssignmentId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetVendorWorkOrderUrl = (vendorAssignmentId: string,
+    id: string,) => {
+
+
+
+
+  return `/api/work-orders/vendor-assignments/${vendorAssignmentId}/${id}`
+}
+
+export const getVendorWorkOrder = async (vendorAssignmentId: string,
+    id: string, options?: Parameters<typeof customFetch>[1]): Promise<WorkOrder> => {
+
+  return customFetch<WorkOrder>(getGetVendorWorkOrderUrl(vendorAssignmentId,id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetVendorWorkOrderQueryKey = (vendorAssignmentId: string,
+    id: string,) => {
+    return [
+    `/api/work-orders/vendor-assignments/${vendorAssignmentId}/${id}`
+    ] as const;
+    }
+
+
+export const getGetVendorWorkOrderQueryOptions = <TData = Awaited<ReturnType<typeof getVendorWorkOrder>>, TError = ErrorType<UnauthorizedResponse | NotFoundResponse>>(vendorAssignmentId: string,
+    id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVendorWorkOrder>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetVendorWorkOrderQueryKey(vendorAssignmentId,id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getVendorWorkOrder>>> = ({ signal }) => getVendorWorkOrder(vendorAssignmentId,id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: vendorAssignmentId !== null && vendorAssignmentId !== undefined && id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getVendorWorkOrder>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetVendorWorkOrderQueryResult = NonNullable<Awaited<ReturnType<typeof getVendorWorkOrder>>>
+export type GetVendorWorkOrderQueryError = ErrorType<UnauthorizedResponse | NotFoundResponse>
+
+
+
+export function useGetVendorWorkOrder<TData = Awaited<ReturnType<typeof getVendorWorkOrder>>, TError = ErrorType<UnauthorizedResponse | NotFoundResponse>>(
+ vendorAssignmentId: string,
+    id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVendorWorkOrder>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetVendorWorkOrderQueryOptions(vendorAssignmentId,id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getExecuteVendorWorkOrderUrl = (vendorAssignmentId: string,
+    id: string,) => {
+
+
+
+
+  return `/api/work-orders/vendor-assignments/${vendorAssignmentId}/${id}`
+}
+
+export const executeVendorWorkOrder = async (vendorAssignmentId: string,
+    id: string,
+    vendorWorkOrderUpdate: VendorWorkOrderUpdate, options?: Parameters<typeof customFetch>[1]): Promise<WorkOrder> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<WorkOrder>(getExecuteVendorWorkOrderUrl(vendorAssignmentId,id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(vendorWorkOrderUpdate)
+  }
+);}
+
+
+
+
+
+export const getExecuteVendorWorkOrderMutationKey = () => ['executeVendorWorkOrder'] as const;
+
+export const getExecuteVendorWorkOrderMutationOptions = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | NotFoundResponse | ConflictResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof executeVendorWorkOrder>>, TError,ExecuteVendorWorkOrderMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof executeVendorWorkOrder>>, TError,ExecuteVendorWorkOrderMutationVariables, TContext> => {
+
+const mutationKey = getExecuteVendorWorkOrderMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof executeVendorWorkOrder>>, ExecuteVendorWorkOrderMutationVariables> = (props) => {
+          const {vendorAssignmentId,id,data} = props ?? {};
+
+          return  executeVendorWorkOrder(vendorAssignmentId,id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ExecuteVendorWorkOrderMutationResult = NonNullable<Awaited<ReturnType<typeof executeVendorWorkOrder>>>
+    export type ExecuteVendorWorkOrderMutationBody = BodyType<VendorWorkOrderUpdate>
+    export type ExecuteVendorWorkOrderMutationError = ErrorType<BadRequestResponse | UnauthorizedResponse | NotFoundResponse | ConflictResponse>
+    export type ExecuteVendorWorkOrderMutationVariables = {vendorAssignmentId: string;id: string;data: BodyType<VendorWorkOrderUpdate>}
+
+    export const useExecuteVendorWorkOrder = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | NotFoundResponse | ConflictResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof executeVendorWorkOrder>>, TError,ExecuteVendorWorkOrderMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof executeVendorWorkOrder>>,
+        TError,
+        ExecuteVendorWorkOrderMutationVariables,
+        TContext
+      > => {
+      return useMutation(getExecuteVendorWorkOrderMutationOptions(options));
+    }
+
+export const getSubmitVendorWorkOrderUrl = (vendorAssignmentId: string,
+    id: string,) => {
+
+
+
+
+  return `/api/work-orders/vendor-assignments/${vendorAssignmentId}/${id}/submit`
+}
+
+export const submitVendorWorkOrder = async (vendorAssignmentId: string,
+    id: string, options?: Parameters<typeof customFetch>[1]): Promise<WorkOrder> => {
+
+  return customFetch<WorkOrder>(getSubmitVendorWorkOrderUrl(vendorAssignmentId,id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getSubmitVendorWorkOrderMutationKey = () => ['submitVendorWorkOrder'] as const;
+
+export const getSubmitVendorWorkOrderMutationOptions = <TError = ErrorType<UnauthorizedResponse | NotFoundResponse | ConflictResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitVendorWorkOrder>>, TError,SubmitVendorWorkOrderMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof submitVendorWorkOrder>>, TError,SubmitVendorWorkOrderMutationVariables, TContext> => {
+
+const mutationKey = getSubmitVendorWorkOrderMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof submitVendorWorkOrder>>, SubmitVendorWorkOrderMutationVariables> = (props) => {
+          const {vendorAssignmentId,id} = props ?? {};
+
+          return  submitVendorWorkOrder(vendorAssignmentId,id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SubmitVendorWorkOrderMutationResult = NonNullable<Awaited<ReturnType<typeof submitVendorWorkOrder>>>
+
+    export type SubmitVendorWorkOrderMutationError = ErrorType<UnauthorizedResponse | NotFoundResponse | ConflictResponse>
+    export type SubmitVendorWorkOrderMutationVariables = {vendorAssignmentId: string;id: string}
+
+    export const useSubmitVendorWorkOrder = <TError = ErrorType<UnauthorizedResponse | NotFoundResponse | ConflictResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitVendorWorkOrder>>, TError,SubmitVendorWorkOrderMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof submitVendorWorkOrder>>,
+        TError,
+        SubmitVendorWorkOrderMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSubmitVendorWorkOrderMutationOptions(options));
+    }
 
 export const getHealthCheckUrl = () => {
 

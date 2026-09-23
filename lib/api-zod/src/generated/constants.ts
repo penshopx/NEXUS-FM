@@ -1,5 +1,10 @@
 // Generated from OpenAPI constraints by lib/api-spec codegen.
 // This module is browser-safe and intentionally has no schema-library imports.
+export const createTeamWorkOrderBodyTitleMax = 200;
+export const createTeamWorkOrderBodyDescriptionMax = 4000;
+export const updateTeamWorkOrderBodyTitleMax = 200;
+export const updateTeamWorkOrderBodyDescriptionMax = 4000;
+export const executeVendorWorkOrderBodyDescriptionMax = 4000;
 export const getFoundationSummaryResponseMemberCountMin = 0;
 export const getFoundationSummaryResponseCanonicalRoleCountMin = 0;
 export const searchOrganizationMembersQueryQueryMin = 2;

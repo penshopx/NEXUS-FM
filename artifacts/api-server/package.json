@@ -7,7 +7,7 @@
     "dev": "export NODE_ENV=development && pnpm run build && pnpm run start",
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
-    "test": "test_dir=$(mktemp -d /tmp/nexus-fm-authorization-test.XXXXXX); test_output=$test_dir/test.mjs; mkdir \"$test_dir/node_modules\"; ln -s \"$PWD/node_modules/express\" \"$test_dir/node_modules/express\"; ln -s \"$PWD/node_modules/drizzle-orm\" \"$test_dir/node_modules/drizzle-orm\"; ln -s \"$PWD/node_modules/drizzle-zod\" \"$test_dir/node_modules/drizzle-zod\"; ln -s \"$PWD/../../lib/db/node_modules/pg\" \"$test_dir/node_modules/pg\"; node_modules/.bin/esbuild test/authorization.test.ts --bundle --platform=node --format=esm --external:pg --external:express --external:drizzle-orm --external:drizzle-zod --outfile=$test_output && node --test $test_output; status=$?; rm -rf $test_dir; exit $status",
+    "test": "test_dir=$(mktemp -d /tmp/nexus-fm-authorization-test.XXXXXX); test_output=$test_dir/test.mjs; mkdir \"$test_dir/node_modules\"; ln -s \"$PWD/node_modules/express\" \"$test_dir/node_modules/express\"; ln -s \"$PWD/node_modules/drizzle-orm\" \"$test_dir/node_modules/drizzle-orm\"; ln -s \"$PWD/../../lib/db/node_modules/drizzle-zod\" \"$test_dir/node_modules/drizzle-zod\"; ln -s \"$PWD/../../lib/db/node_modules/pg\" \"$test_dir/node_modules/pg\"; node_modules/.bin/esbuild test/authorization.test.ts --bundle --platform=node --format=esm --external:pg --external:express --external:drizzle-orm --external:drizzle-zod --outfile=$test_output && node --test $test_output; status=$?; rm -rf $test_dir; exit $status",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
