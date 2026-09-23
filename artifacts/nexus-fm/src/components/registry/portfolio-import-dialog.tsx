@@ -25,6 +25,11 @@ import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { trackEvent } from '@/lib/analytics';
+import {
+  commitFailureReason,
+  validationFailureReason,
+  type ValidationFailureReason,
+} from '@/lib/portfolio-import-failure';
 
 const MAX_IMPORT_BYTES = 2 * 1024 * 1024;
 const MAX_ANALYTICS_COUNT = 100_000;
@@ -346,25 +351,6 @@ function getErrorReport(error: unknown) {
 function boundedCount(count: number) {
   if (!Number.isFinite(count)) return 0;
   return Math.min(Math.max(Math.trunc(count), 0), MAX_ANALYTICS_COUNT);
-}
-
-function validationFailureReason(error: unknown) {
-  const status = getErrorStatus(error);
-  if (status === 400) return 'invalid_csv';
-  if (status === 403) return 'forbidden';
-  if (status === 413) return 'file_too_large';
-  return 'request_failed';
-}
-
-type ValidationFailureReason = ReturnType<typeof validationFailureReason>;
-
-function commitFailureReason(error: unknown) {
-  const status = getErrorStatus(error);
-  if (status === 400 || status === 413 || status === 422) return 'validation_error';
-  if (status === 401 || status === 403) return 'authorization_error';
-  if (status === 409) return 'conflict';
-  if (typeof status === 'number' && status >= 500) return 'server_error';
-  return 'request_failed';
 }
 
 function describeImportFailure(error: unknown): ImportFailure {
