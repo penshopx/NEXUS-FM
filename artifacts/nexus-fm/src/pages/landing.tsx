@@ -57,16 +57,15 @@ export default function Landing() {
           <div className="container relative z-10 flex flex-col items-center text-center">
             <div className="inline-flex items-center border border-primary/40 bg-primary/10 px-3 py-1.5 text-sm text-primary mb-8 font-mono">
               <span className="flex size-2 bg-primary mr-3 animate-pulse" />
-              <span className="text-xs uppercase tracking-widest font-semibold">Sistem Tata Kelola & Eksekusi Teknis</span>
+              <span className="text-xs uppercase tracking-widest font-semibold">Sistem Tata Kelola Gedung, Gudang, dan Infrastruktur</span>
             </div>
             
-            <h1 className="max-w-4xl text-5xl font-black tracking-tight sm:text-6xl md:text-7xl lg:text-8xl uppercase leading-[1.1]">
-              Eksekusi Teknis <span className="text-primary">Presisi.</span> <br />
-              Kepatuhan <span className="text-primary">Terjamin.</span>
+             <h1 className="max-w-4xl text-4xl font-black tracking-tight sm:text-5xl md:text-6xl lg:text-7xl leading-[1.1]">
+               Kelola fasilitasnya. <span className="text-primary">Pastikan kompetensinya.</span> Buktikan kepatuhannya.
             </h1>
             
             <p className="mt-8 max-w-2xl text-lg text-muted-foreground sm:text-xl leading-relaxed">
-              Sistem tata kelola untuk gedung, gudang, dan infrastruktur. Dirancang untuk tim teknis di lapangan, memastikan setiap aset terpantau dan setiap pekerjaan terdokumentasi dengan kepastian matematis.
+               TATABANGUN adalah sistem tata kelola gedung, gudang, dan infrastruktur. Dirancang untuk tim teknis di lapangan, memastikan setiap aset terpantau dan setiap pekerjaan terdokumentasi.
             </p>
             
             <div className="mt-10 flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
@@ -214,10 +213,10 @@ export default function Landing() {
             <div className="size-8 border-2 border-primary flex items-center justify-center font-bold text-primary bg-primary/10">
               TB
             </div>
-            <span className="uppercase tracking-widest font-semibold">Tatabangun Platform &copy; {new Date().getFullYear()}</span>
+             <span className="uppercase tracking-widest font-semibold">TATABANGUN &copy; {new Date().getFullYear()}</span>
           </div>
           <div className="text-xs text-muted-foreground font-mono tracking-widest uppercase">
-            Sistem Eksekusi Teknis
+             Sistem Tata Kelola Gedung, Gudang, dan Infrastruktur
           </div>
         </div>
       </footer>

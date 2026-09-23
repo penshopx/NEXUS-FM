@@ -41,7 +41,6 @@ const allowedTerms = new Set([
   "MINIMUM_RBAC",
   "MISSING",
   "N/A",
-  "NEXUS-FM",
   "NEW_FACILITY",
   "NOT_APPLICABLE",
   "404_NOT_FOUND",

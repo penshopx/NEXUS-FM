@@ -72,7 +72,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <div className="size-7 bg-primary flex items-center justify-center">
               <HardHat className="size-4 text-primary-foreground" />
             </div>
-            <span className="font-mono font-bold tracking-tight hidden md:inline-block uppercase text-lg">Tatabangun</span>
+             <span className="font-mono font-bold tracking-tight hidden sm:inline-block text-sm md:text-lg">TATABANGUN</span>
           </Link>
 
           <div className="flex-1 flex items-center min-w-0">

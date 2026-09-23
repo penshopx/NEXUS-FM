@@ -16,3 +16,4 @@
 - [SKKNI building governance](skkni-building-governance.md) — product scope centers on building and warehouse governance with competency-based construction roles.
 - [Facility reference boundaries](facility-reference-boundaries.md) — regulations drive maintenance evidence; BMS/BAS integrate externally; inventory WMS remains out of core scope.
 - [Portfolio import review versions](portfolio-import-review-versions.md) — reviewed CSV commits use an organization-wide registry fingerprint; direct legacy imports remain available without it.
+- [Brand migration boundaries](brand-migration-boundaries.md) — keep legacy package names and persisted client keys stable when changing user-visible product branding.

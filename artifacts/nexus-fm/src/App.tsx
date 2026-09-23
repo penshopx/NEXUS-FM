@@ -136,8 +136,8 @@ function ClerkProviderWithRoutes() {
       signInUrl={`${basePath}/sign-in`}
       signUpUrl={`${basePath}/sign-up`}
       localization={{
-        signIn: { start: { title: 'Akses TATABANGUN', subtitle: 'Masuk ke sistem tata kelola fasilitas' } },
-        signUp: { start: { title: 'Buat identitas pengguna', subtitle: 'Siapkan akses aman ke TATABANGUN' } },
+        signIn: { start: { title: 'Akses TATABANGUN', subtitle: 'Sistem Tata Kelola Gedung, Gudang, dan Infrastruktur' } },
+        signUp: { start: { title: 'Buat identitas pengguna', subtitle: 'Akses TATABANGUN — Sistem Tata Kelola Gedung, Gudang, dan Infrastruktur' } },
       }}
       routerPush={(to) => setLocation(stripBase(to))}
       routerReplace={(to) => setLocation(stripBase(to), { replace: true })}

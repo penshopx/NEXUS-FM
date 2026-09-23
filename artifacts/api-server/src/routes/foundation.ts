@@ -32,9 +32,9 @@ async function identityFromRequest(req: Request) {
     throw new Error("Authenticated Clerk user has no primary email address");
   }
   const displayName =
-    clerkUser.fullName ??
-    [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ") ??
-    "NEXUS-FM User";
+    clerkUser.fullName?.trim() ||
+    [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ").trim() ||
+    "Pengguna TATABANGUN";
   return { externalAuthId, email, displayName };
 }
 
