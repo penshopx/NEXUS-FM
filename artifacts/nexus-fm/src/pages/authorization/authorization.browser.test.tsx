@@ -569,6 +569,7 @@ describe('authorization administration browser regressions', () => {
       isFetching: false,
       isError: false,
     });
+    const replace = vi.spyOn(window.history, 'replaceState');
 
     renderPage();
 
@@ -580,36 +581,77 @@ describe('authorization administration browser regressions', () => {
       expect.anything(),
     );
     expect(screen.queryByTestId('member-review-url-repaired')).not.toBeInTheDocument();
+    expect(window.location.search).toBe(
+      '?query=Target&organizationId=org-2&organizationName=Acme+Facilities&organizationSlug=acme-facilities&page=2',
+    );
+    expect(replace).not.toHaveBeenCalled();
   });
 
   it.each([
     {
       name: 'a malformed page',
-      search: 'query=Target&page=not-a-page',
+      search: 'query=Target&page=not-a-page&other=keep&other=also',
+      expected: 'query=Target&other=keep&other=also',
       sensitiveValues: ['not-a-page'],
     },
     {
-      name: 'incomplete organization metadata',
-      search: 'query=Target&organizationId=private-org',
+      name: 'an out-of-range page',
+      search: 'query=Target&page=9007199254740992&other=keep&other=also',
+      expected: 'query=Target&other=keep&other=also',
+      sensitiveValues: ['9007199254740992'],
+    },
+    {
+      name: 'incomplete organization metadata with an ID',
+      search: 'query=Target&organizationId=private-org&organizationName=+&other=keep&other=also',
+      expected: 'query=Target&organizationId=private-org&organizationName=private-org&other=keep&other=also&organizationSlug=private-org',
       sensitiveValues: ['private-org'],
     },
     {
+      name: 'orphaned organization metadata',
+      search: 'query=Target&organizationName=Orphan&organizationSlug=orphan&other=keep&other=also',
+      expected: 'query=Target&other=keep&other=also',
+      sensitiveValues: ['Orphan'],
+    },
+    {
       name: 'an incomplete member selection',
-      search: 'query=Target&memberId=private-member',
+      search: 'query=Target&memberId=private-member&other=keep&other=also',
+      expected: 'query=Target&other=keep&other=also',
       sensitiveValues: ['private-member'],
     },
-  ])('explains when an old access-review link contains $name', async ({ search, sensitiveValues }) => {
+    {
+      name: 'an orphaned member organization',
+      search: 'query=Target&memberOrganizationId=private-org&other=keep&other=also',
+      expected: 'query=Target&other=keep&other=also',
+      sensitiveValues: ['private-org'],
+    },
+  ])('repairs and explains an old access-review link with $name', async ({ search, expected, sensitiveValues }) => {
     window.history.replaceState(null, '', `/authorization?${search}`);
+    const replace = vi.spyOn(window.history, 'replaceState');
+    const push = vi.spyOn(window.history, 'pushState');
 
     renderPage();
 
-    const notice = await screen.findByTestId('member-review-url-repaired');
+    await waitFor(() => expect(window.location.search).toBe(`?${expected}`));
+    const notice = screen.getByTestId('member-review-url-repaired');
     expect(notice).toHaveTextContent(
       'Beberapa detail tautan tersimpan tidak valid atau tidak lengkap',
     );
+    expect(replace).toHaveBeenCalledOnce();
+    expect(push).not.toHaveBeenCalled();
     for (const sensitiveValue of sensitiveValues) {
       expect(notice).not.toHaveTextContent(sensitiveValue);
     }
+  });
+
+  it('keeps the previous history entry when repairing a saved link', async () => {
+    window.history.replaceState(null, '', '/authorization?query=Earlier');
+    window.history.pushState(null, '', '/authorization?query=Target&page=0&memberId=orphan');
+    renderPage();
+
+    await waitFor(() => expect(window.location.search).toBe('?query=Target'));
+    window.history.back();
+    await waitFor(() => expect(window.location.search).toBe('?query=Earlier'));
+    expect(screen.getByTestId('input-target-user')).toHaveValue('Earlier');
   });
 
   it('bookmarks and restores an authorized selected member from the URL', async () => {

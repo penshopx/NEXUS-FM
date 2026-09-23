@@ -39,25 +39,25 @@ function readTrimmed(params: URLSearchParams, name: string) {
   return (params.get(name) ?? '').trim();
 }
 
+function readPage(params: URLSearchParams) {
+  const raw = readTrimmed(params, 'page');
+  const parsed = /^\d+$/.test(raw) ? Number(raw) : 1;
+  const valid = /^\d+$/.test(raw) && Number.isSafeInteger(parsed) && parsed > 0;
+  return { page: valid ? parsed : 1, invalid: params.has('page') && !valid };
+}
+
 export function parseMemberReviewUrlState(params: URLSearchParams): MemberReviewUrlState {
   const query = readTrimmed(params, 'query');
   const organizationId = readTrimmed(params, 'organizationId');
   const organizationName = readTrimmed(params, 'organizationName');
   const organizationSlug = readTrimmed(params, 'organizationSlug');
-  const rawPage = readTrimmed(params, 'page');
-  const parsedPage = /^\d+$/.test(rawPage) ? Number(rawPage) : 1;
-  const page = Number.isSafeInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+  const { page, invalid: hasInvalidPage } = readPage(params);
   const memberId = readTrimmed(params, 'memberId');
   const memberOrganizationId = readTrimmed(params, 'memberOrganizationId');
   const hasOrganizationValues = Boolean(organizationId || organizationName || organizationSlug);
   const hasCompleteOrganization = Boolean(organizationId && organizationName && organizationSlug);
   const hasSelectionValues = Boolean(memberId || memberOrganizationId);
   const hasCompleteSelection = Boolean(memberId && memberOrganizationId);
-  const hasInvalidPage = params.has('page') && (
-    !/^\d+$/.test(rawPage) ||
-    !Number.isSafeInteger(parsedPage) ||
-    parsedPage <= 0
-  );
 
   return {
     query,
@@ -88,6 +88,28 @@ function clearOrganization(params: URLSearchParams) {
   params.delete('organizationId');
   params.delete('organizationName');
   params.delete('organizationSlug');
+}
+
+// Return null for valid bookmarks, so mounting the page never rewrites them.
+export function normalizeMemberReviewUrlState(current: URLSearchParams): URLSearchParams | null {
+  const state = parseMemberReviewUrlState(current);
+  if (!state.wasRepaired) return null;
+
+  const next = new URLSearchParams(current);
+  if (readPage(current).invalid) next.delete('page');
+
+  if (state.organization) {
+    // A stable ID is sufficient to keep the filter; missing display metadata
+    // uses the same safe fallback as the parser.
+    next.set('organizationId', state.organization.id);
+    next.set('organizationName', state.organization.name);
+    next.set('organizationSlug', state.organization.slug);
+  } else {
+    clearOrganization(next);
+  }
+
+  if (!state.selection) clearSelection(next);
+  return next;
 }
 
 export function transitionMemberReviewUrlState(

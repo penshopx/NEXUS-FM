@@ -61,6 +61,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
+  normalizeMemberReviewUrlState,
   parseMemberReviewUrlState,
   transitionMemberReviewUrlState,
 } from './member-review-url-state';
@@ -120,6 +121,7 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
   const page = urlState.page;
   const hasActiveMemberSearch = urlState.hasActiveState;
   const wasMemberReviewUrlRepaired = urlState.wasRepaired;
+  const [repairedUrlNotice, setRepairedUrlNotice] = useState<string | null>(null);
   const urlOrganization = urlState.organization;
   const [searchInput, setSearchInput] = useState(submittedQuery);
   const [organizationPickerOpen, setOrganizationPickerOpen] = useState(false);
@@ -168,6 +170,18 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
       },
     },
   );
+
+  useEffect(() => {
+    if (wasMemberReviewUrlRepaired) {
+      const normalized = normalizeMemberReviewUrlState(urlSearchParams);
+      if (normalized) {
+        setRepairedUrlNotice(normalized.toString());
+        setUrlSearchParams((current) => normalizeMemberReviewUrlState(current) ?? current, { replace: true });
+      }
+    } else if (repairedUrlNotice !== null && repairedUrlNotice !== urlSearchParams.toString()) {
+      setRepairedUrlNotice(null);
+    }
+  }, [wasMemberReviewUrlRepaired, urlSearchParams, repairedUrlNotice, setUrlSearchParams]);
 
   useEffect(() => {
     const recovery = recoverySearchSubmission.current;
@@ -332,7 +346,7 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
   return (
     <div className="space-y-6">
       <div className="p-6 border border-border rounded-lg bg-card shadow-sm">
-        {wasMemberReviewUrlRepaired && (
+        {(wasMemberReviewUrlRepaired || repairedUrlNotice === urlSearchParams.toString()) && (
           <div
             className="mb-4 rounded border border-border bg-muted/40 p-3 text-sm"
             data-testid="member-review-url-repaired"
