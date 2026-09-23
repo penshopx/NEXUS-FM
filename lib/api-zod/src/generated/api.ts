@@ -693,9 +693,16 @@ export const DownloadFacilityPortfolioImportTemplateResponse = zod.unknown()
 
 
 /**
- * Accepts a bounded CSV containing facilities, buildings, spaces, systems, and assets. Invalid CSV is returned as a downloadable row-level error report and never mutates the portfolio.
+ * Accepts a bounded CSV containing facilities, buildings, spaces, systems, and assets. Send the registry version from validation to reject a commit if the CSV or registry has changed since review. Invalid CSV is returned as a downloadable row-level error report and never mutates the portfolio.
  * @summary Validate and atomically import a facility portfolio
  */
+export const importFacilityPortfolioHeaderXPortfolioRegistryVersionRegExp = new RegExp('^[a-f0-9]{64}$');
+
+
+export const ImportFacilityPortfolioHeader = zod.object({
+  "X-Portfolio-Registry-Version": zod.string().regex(importFacilityPortfolioHeaderXPortfolioRegistryVersionRegExp).optional()
+})
+
 
 
 
@@ -737,6 +744,7 @@ export const validateFacilityPortfolioImportResponseFacilityGroupsItemRecordsIte
 
 
 export const ValidateFacilityPortfolioImportResponse = zod.object({
+  "registryVersion": zod.string().describe('Opaque version of the reviewed CSV and active organization\'s registry; return in X-Portfolio-Registry-Version when committing.'),
   "total": zod.number().int().min(1),
   "facilities": zod.number().int().min(validateFacilityPortfolioImportResponseFacilitiesMin),
   "newFacilities": zod.number().int().min(validateFacilityPortfolioImportResponseNewFacilitiesMin).describe('Number of facilities that commit will create.'),

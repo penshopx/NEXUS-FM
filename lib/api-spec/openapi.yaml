@@ -619,7 +619,12 @@ paths:
       operationId: importFacilityPortfolio
       tags: [registry]
       summary: Validate and atomically import a facility portfolio
-      description: Accepts a bounded CSV containing facilities, buildings, spaces, systems, and assets. Invalid CSV is returned as a downloadable row-level error report and never mutates the portfolio.
+      description: Accepts a bounded CSV containing facilities, buildings, spaces, systems, and assets. Send the registry version from validation to reject a commit if the CSV or registry has changed since review. Invalid CSV is returned as a downloadable row-level error report and never mutates the portfolio.
+      parameters:
+        - name: X-Portfolio-Registry-Version
+          in: header
+          required: false
+          schema: {type: string, pattern: "^[a-f0-9]{64}$"}
       requestBody:
         required: true
         content:
@@ -642,6 +647,11 @@ paths:
               schema: {type: string}
         "401": {$ref: "#/components/responses/Unauthorized"}
         "403": {$ref: "#/components/responses/Forbidden"}
+        "409":
+          description: The reviewed CSV or registry changed; validate and review again
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ErrorResponse"}
         "413":
           description: CSV exceeds the upload byte limit
           content:
@@ -1216,8 +1226,11 @@ components:
     PortfolioImportPreview:
       type: object
       additionalProperties: false
-      required: [total, facilities, newFacilities, existingFacilities, buildings, spaces, systems, assets, facilityGroups]
+      required: [total, facilities, newFacilities, existingFacilities, buildings, spaces, systems, assets, facilityGroups, registryVersion]
       properties:
+        registryVersion:
+          type: string
+          description: Opaque version of the reviewed CSV and active organization's registry; return in X-Portfolio-Registry-Version when committing.
         total: {type: integer, minimum: 1}
         facilities: {type: integer, minimum: 0}
         newFacilities:

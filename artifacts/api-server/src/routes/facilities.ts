@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import {
@@ -70,6 +70,20 @@ const plural: Record<RegistryKind, string> = {
   SYSTEM: "systems",
   ASSET: "assets",
 };
+
+// A preview is tied to both its CSV and the registry it was reviewed against.
+// Include all five tables: changes to ancestors, names shown in the review,
+// and codes used by duplicate checks all invalidate the same preview.
+async function portfolioRegistryVersion(database: Database, organizationId: string, text: string) {
+  const hash = createHash("sha256");
+  hash.update(JSON.stringify([organizationId, text]));
+  for (const table of [facilitiesTable, buildingsTable, spacesTable, systemsTable, assetsTable]) {
+    const rows = await database.select().from(table).where(eq(table.organizationId, organizationId));
+    rows.sort((a, b) => a.id.localeCompare(b.id));
+    hash.update(JSON.stringify(rows));
+  }
+  return hash.digest("hex");
+}
 
 function parsePage(value: unknown, fallback: number, max: number) {
   const parsed = typeof value === "string" ? Number(value) : fallback;
@@ -476,6 +490,7 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
       return;
     }
     const outcome = await database.transaction(async (tx: any) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${actor.organizationId}))`);
       const parentSpec = parentFor(kind, input);
       let parentContext: Record<string, unknown> = {
         organizationId: actor.organizationId,
@@ -562,14 +577,26 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
       sendImportErrors(res, [{ row: 1, error: `CSV exceeds the ${PORTFOLIO_IMPORT_MAX_BYTES}-byte limit` }]);
       return;
     }
+    const reviewedVersion = req.get("X-Portfolio-Registry-Version");
+    if (reviewedVersion && !/^[a-f0-9]{64}$/.test(reviewedVersion)) {
+      res.status(409).json({ error: "Registry changed since validation" });
+      return;
+    }
     try {
       const outcome = await database.transaction(async (tx: any) => {
         // Duplicate checks and writes must observe prior imports for this
         // organization. The transaction-scoped lock is acquired before any
         // validation reads and is released automatically on commit/rollback.
         await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${actor.organizationId}))`);
+        if (reviewedVersion && reviewedVersion !== await portfolioRegistryVersion(tx, actor.organizationId, text)) {
+          return { conflict: true };
+        }
         return processPortfolioImport(tx, text, actor, String(req.id), true);
       });
+      if ("conflict" in outcome) {
+        res.status(409).json({ error: "Registry changed since validation" });
+        return;
+      }
       if ("validation" in outcome && outcome.validation) {
         sendImportErrors(res, outcome.validation.errors);
         return;
@@ -816,12 +843,18 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
       return;
     }
     try {
+      const versionBefore = await portfolioRegistryVersion(database, actor.organizationId, text);
       const outcome = await processPortfolioImport(database, text, actor, String(req.id), false);
       if ("validation" in outcome && outcome.validation) {
         sendImportErrors(res, outcome.validation.errors);
         return;
       }
-      res.json(outcome);
+      const registryVersion = await portfolioRegistryVersion(database, actor.organizationId, text);
+      if (registryVersion !== versionBefore) {
+        res.status(409).json({ error: "Registry changed during validation" });
+        return;
+      }
+      res.json({ ...outcome, registryVersion });
     } catch (error) {
       if (error instanceof PortfolioImportAuthorizationError) {
         res.status(403).json({
@@ -875,6 +908,7 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
     }
     const id = String(req.params.id);
     const outcome = await database.transaction(async (tx: any) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${actor.organizationId}))`);
       const result = await authorizeRegistryObject({
         database: tx, actorUserId: actor.user.id, organizationId: actor.organizationId, kind,
         action: "UPDATE", id, requestId: String(req.id),
@@ -919,6 +953,7 @@ export function createFacilitiesRouter(dependencies: FacilitiesRouteDependencies
     if (!actor) return;
     const id = String(req.params.id);
     const outcome = await database.transaction(async (tx: any) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${actor.organizationId}))`);
       const result = await authorizeRegistryObject({
         database: tx, actorUserId: actor.user.id, organizationId: actor.organizationId, kind,
         action: "MANAGE", id, requestId: String(req.id),

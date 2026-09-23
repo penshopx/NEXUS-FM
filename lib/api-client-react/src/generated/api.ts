@@ -2349,7 +2349,7 @@ export const getImportFacilityPortfolioUrl = () => {
 }
 
 /**
- * Accepts a bounded CSV containing facilities, buildings, spaces, systems, and assets. Invalid CSV is returned as a downloadable row-level error report and never mutates the portfolio.
+ * Accepts a bounded CSV containing facilities, buildings, spaces, systems, and assets. Send the registry version from validation to reject a commit if the CSV or registry has changed since review. Invalid CSV is returned as a downloadable row-level error report and never mutates the portfolio.
  * @summary Validate and atomically import a facility portfolio
  */
 export const importFacilityPortfolio = async (importFacilityPortfolioBody: Blob, options?: Parameters<typeof customFetch>[1]): Promise<PortfolioImportResult> => {
@@ -2383,7 +2383,7 @@ return customFetch<PortfolioImportResult>(getImportFacilityPortfolioUrl(),
 
 export const getImportFacilityPortfolioMutationKey = () => ['importFacilityPortfolio'] as const;
 
-export const getImportFacilityPortfolioMutationOptions = <TError = ErrorType<string | UnauthorizedResponse | ForbiddenResponse>,
+export const getImportFacilityPortfolioMutationOptions = <TError = ErrorType<string | UnauthorizedResponse | ForbiddenResponse | ErrorResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importFacilityPortfolio>>, TError,ImportFacilityPortfolioMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof importFacilityPortfolio>>, TError,ImportFacilityPortfolioMutationVariables, TContext> => {
 
@@ -2412,13 +2412,13 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type ImportFacilityPortfolioMutationResult = NonNullable<Awaited<ReturnType<typeof importFacilityPortfolio>>>
     export type ImportFacilityPortfolioMutationBody = BodyType<Blob>
-    export type ImportFacilityPortfolioMutationError = ErrorType<string | UnauthorizedResponse | ForbiddenResponse>
+    export type ImportFacilityPortfolioMutationError = ErrorType<string | UnauthorizedResponse | ForbiddenResponse | ErrorResponse>
     export type ImportFacilityPortfolioMutationVariables = {data: BodyType<Blob>}
 
     /**
  * @summary Validate and atomically import a facility portfolio
  */
-export const useImportFacilityPortfolio = <TError = ErrorType<string | UnauthorizedResponse | ForbiddenResponse>,
+export const useImportFacilityPortfolio = <TError = ErrorType<string | UnauthorizedResponse | ForbiddenResponse | ErrorResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importFacilityPortfolio>>, TError,ImportFacilityPortfolioMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof importFacilityPortfolio>>,

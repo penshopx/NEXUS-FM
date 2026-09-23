@@ -119,6 +119,7 @@ describe('facility portfolio import browser regressions', () => {
     const user = userEvent.setup();
     const validate = vi.fn((_variables: unknown, options: MutationOptions<unknown>) => {
       options.onSuccess?.({
+        registryVersion: 'a'.repeat(64),
         total: 8,
         facilities: 2,
         newFacilities: 1,
@@ -159,6 +160,9 @@ describe('facility portfolio import browser regressions', () => {
     api.validateImport.mockReturnValue(idleMutation(validate));
     api.importPortfolio.mockReturnValue(idleMutation(commit));
     const { invalidateQueries } = renderPage();
+    expect(api.importPortfolio).toHaveBeenCalledWith({
+      request: { headers: {} },
+    });
 
     await openImportDialog(user);
     await user.click(screen.getByTestId('button-download-import-template'));
@@ -179,6 +183,9 @@ describe('facility portfolio import browser regressions', () => {
     expect(await screen.findByTestId('alert-import-preview')).toHaveTextContent(
       'Validasi berhasil. Commit akan membuat 8 catatan.',
     );
+    expect(api.importPortfolio).toHaveBeenLastCalledWith({
+      request: { headers: { 'X-Portfolio-Registry-Version': 'a'.repeat(64) } },
+    });
     expect(screen.getByTestId('summary-import-new-facilities')).toHaveTextContent('Fasilitas baru1');
     expect(screen.getByTestId('summary-import-existing-facilities')).toHaveTextContent(
       'Fasilitas registry yang ada1',

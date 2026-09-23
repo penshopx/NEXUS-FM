@@ -404,7 +404,13 @@ export function PortfolioImportDialog({
   const [preview, setPreview] = useState<PortfolioImportPreview | null>(null);
   const [previewFilter, setPreviewFilter] = useState('');
   const [facilityOriginFilter, setFacilityOriginFilter] = useState<FacilityOriginFilter>('ALL');
-  const importPortfolio = useImportFacilityPortfolio();
+  const importPortfolio = useImportFacilityPortfolio({
+    request: {
+      headers: preview?.registryVersion
+        ? { 'X-Portfolio-Registry-Version': preview.registryVersion }
+        : {},
+    },
+  });
   const validatePortfolio = useValidateFacilityPortfolioImport();
 
   const reset = () => {

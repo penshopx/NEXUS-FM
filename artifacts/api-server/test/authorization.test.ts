@@ -5,7 +5,7 @@ import express from "express";
 import { createServer, request as httpRequest } from "node:http";
 import { setTimeout as delay } from "node:timers/promises";
 import { EventEmitter } from "node:events";
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import {
   authorizationAuditLogsTable,
   assetsTable,
@@ -456,7 +456,9 @@ test("portfolio import preview summarizes the hierarchy without registry or audi
     });
     const responseBody = await response.text();
     assert.equal(response.status, 200, responseBody);
-    assert.deepEqual(JSON.parse(responseBody), {
+    const { registryVersion, ...preview } = JSON.parse(responseBody);
+    assert.match(registryVersion, /^[a-f0-9]{64}$/);
+    assert.deepEqual(preview, {
       total: 6,
       facilities: 1,
       newFacilities: 1,
@@ -512,6 +514,112 @@ test("portfolio import preview summarizes the hierarchy without registry or audi
       eq(authorizationAuditLogsTable.actorUserId, manager.userId),
     );
     assert.equal(auditsAfter.length, auditsBefore.length);
+  } finally {
+    server.close();
+  }
+});
+
+test("portfolio import rejects a stale registry review without writes, then accepts a fresh review", async () => {
+  const manager = await makeFixture("FACILITY_MANAGER", "ORGANIZATION");
+  await db.insert(userContextsTable).values({
+    userId: manager.userId,
+    activeOrganizationId: manager.organizationId,
+  });
+  const [existing] = await db.insert(facilitiesTable).values({
+    organizationId: manager.organizationId,
+    name: "Campus Before Review",
+    code: "REVIEW-CAMPUS",
+    status: "ACTIVE",
+  }).returning();
+  await db.insert(userRoleBindingsTable).values({
+    userId: manager.userId,
+    organizationId: manager.organizationId,
+    roleId: manager.roleCode,
+    scopeType: "FACILITY",
+    scopeId: existing.id,
+    grantedBy: manager.userId,
+  });
+  const app = express();
+  app.use(express.json());
+  app.use(express.text({ type: "text/csv", limit: "2mb" }));
+  app.use(createFacilitiesRouter({
+    currentUser: async () => (await db.select().from(usersTable).where(eq(usersTable.id, manager.userId)))[0] ?? null,
+  }));
+  const server = createServer(app);
+  await new Promise<void>((resolve) => server.listen(0, resolve));
+  const address = server.address();
+  assert.ok(address && typeof address === "object");
+  const csv = portfolioImportHeaderLine
+    + `BUILDING,review-building,,,${existing.id},,Reviewed Annex,REVIEW-ANNEX,,ACTIVE\n`;
+  const endpoint = `http://127.0.0.1:${address.port}/facilities/import`;
+  const validate = () => fetch(`${endpoint}/validate`, {
+    method: "POST", headers: { "content-type": "text/csv" }, body: csv,
+  });
+  const commit = (registryVersion: string) => fetch(endpoint, {
+    method: "POST",
+    headers: { "content-type": "text/csv", "X-Portfolio-Registry-Version": registryVersion },
+    body: csv,
+  });
+  try {
+    const firstReview = await validate();
+    assert.equal(firstReview.status, 200);
+    const firstPreview = await firstReview.json() as { registryVersion: string; facilityGroups: Array<{ name: string }> };
+    assert.equal(firstPreview.facilityGroups[0]?.name, "Campus Before Review");
+    assert.match(firstPreview.registryVersion, /^[a-f0-9]{64}$/);
+
+    let editCompleted = false;
+    let commitCompleted = false;
+    let editPromise!: Promise<Response>;
+    let staleCommitPromise!: Promise<Response>;
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${manager.organizationId}))`);
+      editPromise = fetch(`http://127.0.0.1:${address.port}/facilities/${existing.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: "Campus After Review" }),
+      }).then((response) => {
+        editCompleted = true;
+        return response;
+      });
+      // The edit must wait for the organization lock, before authorization
+      // reads or writes. Queue the reviewed commit behind that edit.
+      await delay(100);
+      assert.equal(editCompleted, false, "registry edit must wait for the transaction lock");
+      staleCommitPromise = commit(firstPreview.registryVersion).then((response) => {
+        commitCompleted = true;
+        return response;
+      });
+      await delay(100);
+      assert.equal(commitCompleted, false, "reviewed commit must wait for the lock");
+    });
+    const edit = await editPromise;
+    assert.equal(edit.status, 200);
+    const staleCommit = await staleCommitPromise;
+    assert.equal(staleCommit.status, 409);
+    assert.deepEqual(await staleCommit.json(), { error: "Registry changed since validation" });
+    assert.deepEqual(await db.select().from(buildingsTable).where(
+      eq(buildingsTable.organizationId, manager.organizationId),
+    ), []);
+    const auditsAfterConflict = await db.select().from(authorizationAuditLogsTable).where(and(
+      eq(authorizationAuditLogsTable.actorUserId, manager.userId),
+      eq(authorizationAuditLogsTable.action, "IMPORT"),
+    ));
+    assert.equal(auditsAfterConflict.length, 0);
+
+    const newReview = await validate();
+    assert.equal(newReview.status, 200);
+    const newPreview = await newReview.json() as { registryVersion: string; facilityGroups: Array<{ name: string }> };
+    assert.equal(newPreview.facilityGroups[0]?.name, "Campus After Review");
+    assert.notEqual(newPreview.registryVersion, firstPreview.registryVersion);
+    const accepted = await commit(newPreview.registryVersion);
+    assert.equal(accepted.status, 201);
+    assert.equal((await accepted.json() as { imported: number }).imported, 1);
+    const created = await db.select().from(buildingsTable).where(and(
+      eq(buildingsTable.organizationId, manager.organizationId),
+      eq(buildingsTable.code, "REVIEW-ANNEX"),
+    ));
+    assert.equal(created.length, 1);
+    assert.equal(created[0]?.facilityId, existing.id);
   } finally {
     server.close();
   }

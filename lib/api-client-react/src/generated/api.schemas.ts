@@ -110,6 +110,8 @@ export interface PortfolioImportFacilityGroup {
 }
 
 export interface PortfolioImportPreview {
+  /** Opaque version of the reviewed CSV and active organization's registry; return in X-Portfolio-Registry-Version when committing. */
+  registryVersion: string;
   /** @minimum 1 */
   total: number;
   /** @minimum 0 */
