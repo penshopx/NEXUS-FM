@@ -42,7 +42,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { getResultCountBucket, trackEvent } from '@/lib/analytics';
+import { getResultCountBucket, trackAccessReviewEvent } from '@/lib/analytics';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Search, UserPlus, Trash2, Calendar, Edit2, Play, Pause, AlertTriangle, Mail, Building2, UserRound, ChevronLeft, ChevronRight, Check, ChevronsUpDown, X, Download } from 'lucide-react';
@@ -209,7 +209,7 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
 
     recoverySearchSubmission.current = null;
     memberSearchResetContext.current = null;
-    trackEvent('member_search_after_reset', {
+    trackAccessReviewEvent('member_search_after_reset', {
       reset_had_pagination: recovery.resetHadPagination,
       reset_had_organization_filter: recovery.resetHadOrganizationFilter,
       has_organization_filter: recovery.hasOrganizationFilter,
@@ -243,7 +243,7 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
       : null;
 
     if (isSavedMemberUnavailable && trackedUnavailableSelection.current !== selectionKey) {
-      trackEvent('saved_member_unavailable_shown');
+      trackAccessReviewEvent('saved_member_unavailable_shown');
       trackedUnavailableSelection.current = selectionKey;
     } else if (!isSavedMemberUnavailable) {
       trackedUnavailableSelection.current = null;
@@ -283,7 +283,7 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
   }, [search.data, selectedMemberId, selectedMemberOrganizationId]);
 
   const handleClearUnavailableMember = () => {
-    trackEvent('saved_member_unavailable_cleared');
+    trackAccessReviewEvent('saved_member_unavailable_cleared');
     trackedUnavailableSelection.current = null;
     setSelectedMember(null);
     setUrlSearchParams((current) => transitionMemberReviewUrlState(current, {
@@ -335,7 +335,7 @@ export function BindingsTab({ canManage }: { canManage: boolean }) {
     };
     recoverySearchSubmission.current = null;
     setUrlSearchParams((current) => transitionMemberReviewUrlState(current, { type: 'clear' }));
-    trackEvent('member_search_reset', {
+    trackAccessReviewEvent('member_search_reset', {
       had_pagination: hadPagination,
       had_organization_filter: hadOrganizationFilter,
     });
@@ -644,7 +644,7 @@ function BindingsManager({ userId, member, canManage }: {
     if (bindings && bindingPage > bindingTotalPages) {
       const recoveryKey = `${bindingPage}:${bindingTotalPages}:${roleFilter}:${statusFilter}`;
       if (trackedBindingPageRecovery.current !== recoveryKey) {
-        trackEvent('binding_page_recovered', {
+        trackAccessReviewEvent('binding_page_recovered', {
           previous_page: bindingPage,
           recovered_page: bindingTotalPages,
           role_filter: roleFilter,
@@ -676,7 +676,7 @@ function BindingsManager({ userId, member, canManage }: {
     }
 
     pendingFilterAnalytics.current = null;
-    trackEvent(pending.event, {
+    trackAccessReviewEvent(pending.event, {
       role_filter: roleFilter,
       status_filter: statusFilter,
       result_count_bucket: getResultCountBucket(bindings.total),
@@ -704,7 +704,7 @@ function BindingsManager({ userId, member, canManage }: {
       : bindingPage + 1;
 
     setBindingPage(nextPage);
-    trackEvent('binding_page_navigated', {
+    trackAccessReviewEvent('binding_page_navigated', {
       direction,
       page: nextPage,
       role_filter: roleFilter,
@@ -733,12 +733,12 @@ function BindingsManager({ userId, member, canManage }: {
       link.remove();
       URL.revokeObjectURL(url);
       toast({ title: 'Access review exported' });
-      trackEvent('access_review_export', {
+      trackAccessReviewEvent('access_review_export', {
         outcome: 'success',
         ...analyticsDimensions,
       });
     } catch (error) {
-      trackEvent('access_review_export', {
+      trackAccessReviewEvent('access_review_export', {
         outcome: 'failure',
         ...analyticsDimensions,
       });
