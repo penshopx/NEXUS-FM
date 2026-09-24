@@ -1,0 +1,26 @@
+Ya, Gustafta sudah memiliki API yang bisa dipakai aplikasi lain, tetapi cakupannya masih spesifik—belum berupa satu API umum untuk mengakses seluruh fitur dan data Gustafta.
+
+Kebutuhan integrasi	API yang tersedia	Akses
+Menampilkan produk dan paket Gustafta	GET /api/v1/catalog/*	Publik, hanya baca
+Membuat pesanan produk atau paket	POST /api/v1/orders	Kunci API, server-ke-server
+Meminta bantuan AI	POST /api/v1/ai/assist	Kunci API, server-ke-server
+Basis URL yang didokumentasikan adalah https://gustafta.my.id. Kontraknya ada di docs/catalog-api.md, docs/order-api.md, dan docs/gaia-siap-ai-api.md.
+
+Penting untuk aplikasi yang baru kita masukkan ke navigasi: tautan dari Header ke LKPM, LKUT–PUB, ISO Hub, dan aplikasi lainnya belum berarti data atau akun antaraplikasi sudah terintegrasi. Saat ini itu adalah navigasi menuju aplikasi masing-masing. Jika ingin, misalnya, Sistem Informasi Proyek mengambil katalog Gustafta atau membuat pesanan, API di atas dapat menjadi titik awal. Jika ingin login bersama, pertukaran dokumen, status proyek, atau sinkronisasi data pengguna, perlu kontrak API dan izin akses tambahan yang dirancang untuk kebutuhan tersebut.
+
+Kunci API pesanan dan AI harus disimpan di backend aplikasi pemanggil, bukan di kode browser. API katalog bisa dibaca tanpa kunci, tetapi akses langsung dari browser dibatasi ke domain yang diizinkan.
+
+
+
+Worked for 1 minute
+Ya, itu jenis informasi API yang saya maksud. Namun, tiga endpoint tersebut punya kegunaan yang berbeda untuk ERP:
+
+Endpoint	Kecocokan
+GET /api/v1/catalog/*	Untuk menampilkan produk dan paket Gustafta; bukan integrasi pengetahuan proyek.
+POST /api/v1/orders	Untuk pemesanan; tidak diperlukan untuk tahap awal copilot.
+POST /api/v1/ai/assist	Calon titik integrasi bantuan AI baca-saja, jika kontraknya mendukung kasus penggunaan dokumen proyek.
+Sebelum memakai ai/assist, saya perlu melihat dokumentasi request/response-nya: data apa yang dikirim, apakah hasil menyertakan kutipan dan versi dokumen, bagaimana cakupan proyek/tenant dijaga, serta aturan penyimpanan data, batas pemakaian, dan penanganan kegagalan. Kunci API nantinya hanya boleh digunakan server-ke-server, tidak di browser.
+
+Jadi, **ini cukup untuk menentukan arah, tetapi belum cukup untuk langsung menyambungkan ERP atau aplikasi lainnya **. Apakah Anda memiliki dokumentasi teknis POST /api/v1/ai/assist yang boleh dibagikan tanpa kunci API?
+
+34 minutes ago
