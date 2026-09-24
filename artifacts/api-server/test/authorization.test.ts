@@ -3755,3 +3755,104 @@ test("work orders persist through authorized team and vendor routes without expo
     await db.delete(organizationsTable).where(inArray(organizationsTable.id, [org.id, otherOrg.id]));
   }
 });
+
+test("open work orders reject mutations after scope deactivation and recover only when that scope is re-enabled", async () => {
+  const [org] = await db.insert(organizationsTable).values({
+    name: "Work order scope changes", slug: `work-order-scope-changes-${randomUUID()}`,
+  }).returning();
+  const [team] = await db.insert(teamsTable).values({
+    organizationId: org.id, name: "Scope change team",
+  }).returning();
+  const [assignment] = await db.insert(vendorAssignmentsTable).values({
+    organizationId: org.id, name: "Scope change vendor",
+  }).returning();
+  const supervisor = await makeFixture("FACILITY_SUPERVISOR", "TEAM", team.id, org.id);
+  const vendor = await makeFixture("VENDOR", "VENDOR_ASSIGNMENT", assignment.id, org.id);
+  await db.insert(vendorAssignmentMembershipsTable).values({
+    organizationId: org.id, vendorAssignmentId: assignment.id, userId: vendor.userId,
+  });
+  for (const actor of [supervisor, vendor]) {
+    await db.insert(userContextsTable).values({
+      userId: actor.userId, activeOrganizationId: org.id,
+    });
+  }
+
+  let activeActor = supervisor.userId;
+  const app = express();
+  app.use(express.json());
+  app.use(createWorkOrdersRouter(db, async () =>
+    (await db.select().from(usersTable).where(eq(usersTable.id, activeActor)))[0] ?? null));
+  const server = createServer(app);
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  assert.ok(address && typeof address !== "string");
+  const base = `http://127.0.0.1:${address.port}/work-orders`;
+  const teamPath = `${base}/teams/${team.id}`;
+  const vendorPath = `${base}/vendor-assignments/${assignment.id}`;
+  const call = (path: string, method = "GET", body?: object) => fetch(path, {
+    method, ...(body ? { headers: { "content-type": "application/json" }, body: JSON.stringify(body) } : {}),
+  });
+  const persisted = async (id: string) =>
+    (await db.select().from(workOrdersTable).where(eq(workOrdersTable.id, id)))[0];
+  const assertDeniedWithoutWrite = async (id: string, path: string, method: string, body?: object) => {
+    const before = await persisted(id);
+    assert.ok(before);
+    const response = await call(path, method, body);
+    assert.equal(response.status, 404, await response.text());
+    assert.deepEqual(await persisted(id), before);
+  };
+
+  try {
+    const createdTeam = await call(teamPath, "POST", { title: "Team-only repair" });
+    assert.equal(createdTeam.status, 201, await createdTeam.clone().text());
+    const teamOrder = await createdTeam.json() as { id: string };
+    const createdVendor = await call(teamPath, "POST", {
+      title: "Vendor repair", vendorAssignmentId: assignment.id,
+    });
+    assert.equal(createdVendor.status, 201, await createdVendor.clone().text());
+    const vendorOrder = await createdVendor.json() as { id: string };
+
+    // Both actors have already opened their order before directory access changes.
+    assert.equal((await call(`${teamPath}/${teamOrder.id}`)).status, 200);
+    activeActor = vendor.userId;
+    assert.equal((await call(`${vendorPath}/${vendorOrder.id}`)).status, 200);
+
+    activeActor = supervisor.userId;
+    await db.update(teamsTable).set({ status: "INACTIVE" }).where(eq(teamsTable.id, team.id));
+    await assertDeniedWithoutWrite(teamOrder.id, `${teamPath}/${teamOrder.id}`, "PATCH", { title: "Blocked" });
+    await assertDeniedWithoutWrite(teamOrder.id, `${teamPath}/${teamOrder.id}/complete`, "POST");
+    await db.update(teamsTable).set({ status: "ACTIVE" }).where(eq(teamsTable.id, team.id));
+    const updatedTeam = await call(`${teamPath}/${teamOrder.id}`, "PATCH", { title: "Allowed again" });
+    assert.equal(updatedTeam.status, 200, await updatedTeam.clone().text());
+    assert.equal((await persisted(teamOrder.id))?.title, "Allowed again");
+    const completedTeam = await call(`${teamPath}/${teamOrder.id}/complete`, "POST");
+    assert.equal(completedTeam.status, 200, await completedTeam.clone().text());
+    assert.equal((await persisted(teamOrder.id))?.status, "COMPLETED");
+
+    activeActor = vendor.userId;
+    await db.update(vendorAssignmentsTable).set({ status: "INACTIVE" }).where(eq(vendorAssignmentsTable.id, assignment.id));
+    await assertDeniedWithoutWrite(vendorOrder.id, `${vendorPath}/${vendorOrder.id}`, "PATCH", { description: "Blocked" });
+    await assertDeniedWithoutWrite(vendorOrder.id, `${vendorPath}/${vendorOrder.id}/submit`, "POST");
+    await db.update(vendorAssignmentsTable).set({ status: "ACTIVE" }).where(eq(vendorAssignmentsTable.id, assignment.id));
+    const executed = await call(`${vendorPath}/${vendorOrder.id}`, "PATCH", { description: "Work started" });
+    assert.equal(executed.status, 200, await executed.clone().text());
+    assert.equal((await persisted(vendorOrder.id))?.status, "IN_PROGRESS");
+
+    const membershipFilter = and(
+      eq(vendorAssignmentMembershipsTable.organizationId, org.id),
+      eq(vendorAssignmentMembershipsTable.vendorAssignmentId, assignment.id),
+      eq(vendorAssignmentMembershipsTable.userId, vendor.userId),
+    );
+    await db.update(vendorAssignmentMembershipsTable).set({ status: "INACTIVE" }).where(membershipFilter);
+    await assertDeniedWithoutWrite(vendorOrder.id, `${vendorPath}/${vendorOrder.id}`, "PATCH", { description: "Blocked again" });
+    await assertDeniedWithoutWrite(vendorOrder.id, `${vendorPath}/${vendorOrder.id}/submit`, "POST");
+    await db.update(vendorAssignmentMembershipsTable).set({ status: "ACTIVE" }).where(membershipFilter);
+    const submitted = await call(`${vendorPath}/${vendorOrder.id}/submit`, "POST");
+    assert.equal(submitted.status, 200, await submitted.clone().text());
+    assert.equal((await persisted(vendorOrder.id))?.status, "SUBMITTED");
+  } finally {
+    server.close();
+    await db.delete(workOrdersTable).where(eq(workOrdersTable.organizationId, org.id));
+    await db.delete(organizationsTable).where(eq(organizationsTable.id, org.id));
+  }
+});
