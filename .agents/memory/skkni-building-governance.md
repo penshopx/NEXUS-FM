@@ -18,3 +18,9 @@ Support specialist construction classifications as legal and work-package refere
 **Why:** The product is centered on technical execution and governance for buildings, warehouses, and infrastructure facilities; authorization, audit, construction classifications, and analytics support that work rather than replacing it.
 
 **How to apply:** Frame features and navigation around governance activities, facilities, work assignments, competency-qualified personnel, inspections, and maintenance. Keep technical access roles separate from SKKNI occupations and qualification levels. Attach BG/BS and specialist subclassifications to the relevant organization, license, contract, project, or work package. Physical assets may reference the governing project scope, while workers remain linked through assignments and competency requirements.
+
+Agentic AI and external construction-support services may augment TATABANGUN, but must not replace its operational source of truth, deterministic authorization/qualification gates, or evidence-based technical decisions. An external support service can supply cited guidance or verified reference data only through an agreed, authorized interface; AI output is a suggestion requiring review before it changes a work order, assignment, or compliance record.
+
+**Why:** The user explicitly requested an OpenClaw/MultiClaw/Hermes-style approach and a supporting role for gustafta.my.id, while warning against forced integration that damages the existing application or overrides the current blueprint.
+
+**How to apply:** Start with a narrowly scoped, read-only advisory pilot; verify external contracts, identity mapping, data-sharing permission, provenance, failure isolation, and rollback before any synchronization or write access. Do not adopt agent runtimes merely for branding or claim an integration exists because a public website describes related services.
