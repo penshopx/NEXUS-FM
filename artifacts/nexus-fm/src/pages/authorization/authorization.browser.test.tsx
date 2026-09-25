@@ -1561,6 +1561,26 @@ describe('authorization administration browser regressions', () => {
     }
   });
 
+  it('releases the temporary download link and blob URL when the browser click throws', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await openBindingsForMember(user);
+    vi.mocked(HTMLAnchorElement.prototype.click).mockImplementation(() => {
+      throw new Error('download blocked');
+    });
+    const remove = vi.spyOn(HTMLAnchorElement.prototype, 'remove');
+
+    await user.click(screen.getByTestId('button-export-bindings'));
+
+    expect(await screen.findByText('Failed to export access review')).toBeVisible();
+    expect(URL.createObjectURL).toHaveBeenCalledOnce();
+    expect(HTMLAnchorElement.prototype.click).toHaveBeenCalledOnce();
+    expect(remove).toHaveBeenCalledOnce();
+    expect(document.querySelector(`a[download="member-access-review-${member.userId}.csv"]`)).toBeNull();
+    expect(URL.revokeObjectURL).toHaveBeenCalledExactlyOnceWith('blob:access-review');
+    expect(screen.getByTestId('button-export-bindings')).toBeEnabled();
+  });
+
   it('completes and confirms an access-review download when analytics throws', async () => {
     const user = userEvent.setup();
     analytics.track.mockImplementation(() => {

@@ -725,13 +725,20 @@ function BindingsManager({ userId, member, canManage }: {
         ...(statusFilter === 'ALL' ? {} : { status: statusFilter }),
       });
       const url = URL.createObjectURL(new Blob([contents], { type: 'text/csv;charset=utf-8' }));
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `member-access-review-${userId}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
+      let link: HTMLAnchorElement | undefined;
+      try {
+        link = document.createElement('a');
+        link.href = url;
+        link.download = `member-access-review-${userId}.csv`;
+        document.body.appendChild(link);
+        link.click();
+      } finally {
+        try {
+          link?.remove();
+        } finally {
+          URL.revokeObjectURL(url);
+        }
+      }
       toast({ title: 'Access review exported' });
       trackAccessReviewEvent('access_review_export', {
         outcome: 'success',
