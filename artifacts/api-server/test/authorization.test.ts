@@ -3547,6 +3547,20 @@ test("organization-scoped member access export stops after active organization c
   assert.equal(lines.length, 501);
 });
 
+test("organization-scoped member access export stops after administrator membership deactivation", async () => {
+  const actor = await makeFixture("FACILITY_MANAGER", "ORGANIZATION");
+  const lines = await runPausedMemberAccessExport(actor, async () => {
+    const [deactivated] = await db.update(membershipsTable).set({ isActive: false })
+      .where(and(
+        eq(membershipsTable.userId, actor.userId),
+        eq(membershipsTable.organizationId, actor.organizationId),
+        eq(membershipsTable.isActive, true),
+      )).returning();
+    assert.ok(deactivated, "administrator membership was active before deactivation");
+  });
+  assert.equal(lines.length, 501);
+});
+
 test("platform member access export continues only while platform USER.VIEW remains effective", async () => {
   const continuingActor = await makeFixture("PLATFORM_ADMIN", "PLATFORM");
   const completeLines = await runPausedMemberAccessExport(continuingActor, async () => {});
