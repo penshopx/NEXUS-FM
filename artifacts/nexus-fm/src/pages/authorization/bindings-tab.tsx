@@ -42,7 +42,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { getResultCountBucket, trackAccessReviewEvent } from '@/lib/analytics';
+import { getResultCountBucket, trackAccessReviewEvent, type AccessReviewEventProperties } from '@/lib/analytics';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Search, UserPlus, Trash2, Calendar, Edit2, Play, Pause, AlertTriangle, Mail, Building2, UserRound, ChevronLeft, ChevronRight, Check, ChevronsUpDown, X, Download } from 'lucide-react';
@@ -716,7 +716,7 @@ function BindingsManager({ userId, member, canManage }: {
     const analyticsDimensions = {
       role_filter_active: roleFilter !== 'ALL',
       status_filter_active: statusFilter !== 'ALL',
-    };
+    } satisfies Pick<AccessReviewEventProperties['access_review_export'], 'role_filter_active' | 'status_filter_active'>;
 
     setIsExporting(true);
     try {
